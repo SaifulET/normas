@@ -1,0 +1,409 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { AppIcon } from "@/components/home/icons";
+import { searchCountries, searchListings, searchSectors, searchStages } from "./data";
+
+type ViewMode = "grid" | "list";
+
+const RESULTS_PER_PAGE = 6;
+const MAX_RANGE = 2500000;
+
+function GridGlyph({ active }: { active: boolean }) {
+  return (
+    <span className={`grid grid-cols-2 gap-0.5 ${active ? "text-[#2B425D]" : "text-[#2B425D]/45"}`}>
+      {Array.from({ length: 4 }, (_, index) => (
+        <span key={index} className="h-1.5 w-1.5 rounded-[2px] bg-current" />
+      ))}
+    </span>
+  );
+}
+
+function ListGlyph({ active }: { active: boolean }) {
+  return (
+    <span className={`flex flex-col gap-0.5 ${active ? "text-[#2B425D]" : "text-[#2B425D]/45"}`}>
+      {Array.from({ length: 3 }, (_, index) => (
+        <span key={index} className="h-1 w-3 rounded-full bg-current" />
+      ))}
+    </span>
+  );
+}
+
+interface ResultCardProps {
+  viewMode: ViewMode;
+  listing: (typeof searchListings)[number];
+}
+
+function ResultCard({ viewMode, listing }: ResultCardProps) {
+  if (viewMode === "list") {
+    return (
+      <article className="grid overflow-hidden rounded-2xl border border-[#D7DFEA] bg-white shadow-[0_14px_32px_-28px_rgba(31,41,55,0.55)] md:grid-cols-[260px_1fr]">
+        <div className="relative min-h-[200px]">
+          <Image
+            src={listing.image.src}
+            alt={listing.image.alt}
+            fill
+            className="object-cover"
+            sizes="(min-width: 768px) 260px, 100vw"
+          />
+        </div>
+
+        <div className="flex flex-col gap-4 p-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h3 className="text-[22px] font-semibold text-[#1F2937]">{listing.title}</h3>
+              <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-[#667085]">
+                <span className="inline-flex items-center gap-1.5">
+                  <AppIcon name="mapPin" className="h-4 w-4" />
+                  {listing.location}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <AppIcon name="view" className="h-4 w-4" />
+                  {listing.views} views
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full bg-[#314B6B] px-3 py-1 text-xs font-semibold text-white">
+                {listing.stage}
+              </span>
+              <span className="rounded-full border border-[#D7DFEA] bg-white px-3 py-1 text-xs font-medium text-[#475467]">
+                {listing.sector}
+              </span>
+            </div>
+          </div>
+
+          <p className="max-w-3xl text-sm leading-6 text-[#667085]">{listing.description}</p>
+
+          <div className="mt-auto flex flex-col gap-4 border-t border-[#E8EDF3] pt-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
+                Funding Target
+              </p>
+              <p className="mt-1 text-[28px] font-semibold text-[#243B5A]">{listing.target}</p>
+            </div>
+
+            <Link
+              href={listing.href}
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#ED6A06] px-5 text-sm font-semibold text-white transition hover:bg-[#d35f05]"
+            >
+              View Pitch
+            </Link>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-[#D7DFEA] bg-white shadow-[0_14px_32px_-28px_rgba(31,41,55,0.55)]">
+      <div className="relative h-44">
+        <Image
+          src={listing.image.src}
+          alt={listing.image.alt}
+          fill
+          className="object-cover"
+          sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+        />
+        <div className="absolute left-3 top-3 flex gap-2">
+          <span className="rounded-full bg-[#314B6B] px-3 py-1 text-xs font-semibold text-white">
+            {listing.stage}
+          </span>
+          <span className="rounded-full border border-white/75 bg-white/90 px-3 py-1 text-xs font-medium text-[#475467]">
+            {listing.sector}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <h3 className="text-[22px] font-semibold text-[#1F2937]">{listing.title}</h3>
+          <span className="inline-flex items-center gap-1.5 text-sm text-[#667085]">
+            <AppIcon name="view" className="h-4 w-4" />
+            {listing.views} views
+          </span>
+        </div>
+
+        <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-[#667085]">
+          <AppIcon name="mapPin" className="h-4 w-4" />
+          {listing.location}
+        </p>
+
+        <p className="mt-4 min-h-12 text-sm leading-6 text-[#667085]">{listing.description}</p>
+
+        <div className="mt-6 flex items-end justify-between gap-4 border-t border-[#E8EDF3] pt-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
+              Funding Target
+            </p>
+            <p className="mt-1 text-[28px] font-semibold text-[#243B5A]">{listing.target}</p>
+          </div>
+
+          <Link
+            href={listing.href}
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#ED6A06] px-5 text-sm font-semibold text-white transition hover:bg-[#d35f05]"
+          >
+            View Pitch
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+export function SearchMarketplace({ initialKeyword = "" }: { initialKeyword?: string }) {
+  const [query, setQuery] = useState(initialKeyword);
+  const [selectedSectors, setSelectedSectors] = useState<string[]>(["Climate Tech"]);
+  const [selectedStage, setSelectedStage] = useState("Seed");
+  const [maxFunding, setMaxFunding] = useState(MAX_RANGE);
+  const [country, setCountry] = useState("United Kingdom");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [page, setPage] = useState(1);
+
+  const filteredListings = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return searchListings.filter((listing) => {
+      const matchesQuery =
+        normalizedQuery.length === 0 ||
+        `${listing.title} ${listing.description} ${listing.sector}`.toLowerCase().includes(normalizedQuery);
+      const matchesSector = selectedSectors.length === 0 || selectedSectors.includes(listing.sector);
+      const matchesStage = selectedStage.length === 0 || listing.stage === selectedStage;
+      const matchesFunding = listing.fundingValue <= maxFunding;
+      const matchesCountry = country.length === 0 || listing.country === country;
+
+      return matchesQuery && matchesSector && matchesStage && matchesFunding && matchesCountry;
+    });
+  }, [country, maxFunding, query, selectedSectors, selectedStage]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredListings.length / RESULTS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedListings = filteredListings.slice(
+    (currentPage - 1) * RESULTS_PER_PAGE,
+    currentPage * RESULTS_PER_PAGE,
+  );
+  const paginationStart = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
+  const pageNumbers = Array.from({ length: Math.min(totalPages, 3) }, (_, index) => paginationStart + index);
+
+  function toggleSector(sector: string) {
+    setPage(1);
+    setSelectedSectors((current) =>
+      current.includes(sector) ? current.filter((item) => item !== sector) : [...current, sector],
+    );
+  }
+
+  return (
+    <section className="bg-[#F8FAFC] px-4 pb-20 pt-6 sm:px-6 lg:px-8">
+      <div className=" grid  gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="rounded-2xl border border-[#D7DFEA] bg-white p-5 shadow-[0_14px_32px_-28px_rgba(31,41,55,0.55)]">
+          <div className="flex items-center gap-2 text-[#243B5A]">
+            <span className="text-base font-semibold">Filters</span>
+          </div>
+
+          <div className="mt-5 flex gap-2">
+            <input
+              value={query}
+              onChange={(event) => {
+                setPage(1);
+                setQuery(event.target.value);
+              }}
+              placeholder="Search opportunities..."
+              className="h-12 flex-1 rounded-xl border border-[#D7DFEA] px-4 text-sm text-[#1F2937] outline-none transition placeholder:text-[#98A2B3] focus:border-[#243B5A]"
+            />
+            <button
+              type="button"
+              onClick={() => setPage(1)}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#637792] text-white transition hover:bg-[#51647c]"
+              aria-label="Search opportunities"
+            >
+              <AppIcon name="search" className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold text-[#1F2937]">Sector</h3>
+            <div className="mt-4 space-y-2.5">
+              {searchSectors.map((sector) => {
+                const checked = selectedSectors.includes(sector);
+
+                return (
+                  <label key={sector} className="flex cursor-pointer items-center gap-3 text-sm text-[#667085]">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleSector(sector)}
+                      className="h-4 w-4 rounded border-[#CBD5E1] text-[#ED6A06] focus:ring-[#ED6A06]"
+                    />
+                    <span>{sector}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <button type="button" className="mt-3 text-sm font-medium text-[#243B5A]">
+              See More -{">"}
+            </button>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold text-[#1F2937]">Business Stage</h3>
+            <div className="mt-4 overflow-hidden rounded-xl border border-[#D7DFEA]">
+              {searchStages.map((stage) => (
+                <button
+                  key={stage}
+                  type="button"
+                  onClick={() => {
+                    setPage(1);
+                    setSelectedStage(stage);
+                  }}
+                  className={`flex h-11 w-full items-center px-4 text-left text-sm transition ${
+                    selectedStage === stage
+                      ? "bg-[#637792] text-white"
+                      : "border-t border-[#D7DFEA] bg-white text-[#667085] first:border-t-0 hover:bg-[#F8FAFC]"
+                  }`}
+                >
+                  {stage}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold text-[#1F2937]">Funding Range</h3>
+            <div className="mt-4">
+              <input
+                type="range"
+                min={0}
+                max={MAX_RANGE}
+                step={50000}
+                value={maxFunding}
+                onChange={(event) => {
+                  setPage(1);
+                  setMaxFunding(Number(event.target.value));
+                }}
+                className="w-full accent-[#243B5A]"
+              />
+              <div className="mt-2 flex justify-between text-xs text-[#98A2B3]">
+                <span>\u00A30</span>
+                <span>\u00A32.5M+</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold text-[#1F2937]">Country</h3>
+            <label className="relative mt-4 block">
+              <select
+                value={country}
+                onChange={(event) => {
+                  setPage(1);
+                  setCountry(event.target.value);
+                }}
+                className="h-12 w-full appearance-none rounded-xl border border-[#D7DFEA] bg-white px-4 pr-10 text-sm text-[#667085] outline-none transition focus:border-[#243B5A]"
+              >
+                {searchCountries.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+              <AppIcon
+                name="arrowDown"
+                className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#667085]"
+              />
+            </label>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setPage(1)}
+            className="mt-8 inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#314B6B] px-5 text-sm font-semibold text-white transition hover:bg-[#243B5A]"
+          >
+            Apply Filters
+          </button>
+        </aside>
+
+        <div className="min-w-0">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-[#344054]">Showing {filteredListings.length} Investment Opportunities</p>
+
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setPage(1);
+                  setViewMode("list");
+                }}
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border transition ${
+                  viewMode === "list"
+                    ? "border-[#CBD5E1] bg-[#EFF3F8]"
+                    : "border-[#D7DFEA] bg-white hover:bg-[#F8FAFC]"
+                }`}
+                aria-label="List view"
+              >
+                <ListGlyph active={viewMode === "list"} />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPage(1);
+                  setViewMode("grid");
+                }}
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border transition ${
+                  viewMode === "grid"
+                    ? "border-[#CBD5E1] bg-[#EFF3F8]"
+                    : "border-[#D7DFEA] bg-white hover:bg-[#F8FAFC]"
+                }`}
+                aria-label="Grid view"
+              >
+                <GridGlyph active={viewMode === "grid"} />
+              </button>
+            </div>
+          </div>
+
+          <div className={`mt-5 ${viewMode === "grid" ? "grid gap-5 xl:grid-cols-2" : "space-y-4"}`}>
+            {paginatedListings.map((listing) => (
+              <ResultCard key={listing.id} viewMode={viewMode} listing={listing} />
+            ))}
+          </div>
+
+          <div className="mt-8 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#D7DFEA] bg-white text-[#98A2B3] transition hover:text-[#243B5A]"
+              aria-label="Previous page"
+            >
+              {"<"}
+            </button>
+
+            {pageNumbers.map((pageNumber) => (
+              <button
+                key={pageNumber}
+                type="button"
+                onClick={() => setPage(pageNumber)}
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-medium transition ${
+                  currentPage === pageNumber
+                    ? "border-[#CBD5E1] bg-white text-[#243B5A]"
+                    : "border-[#D7DFEA] bg-transparent text-[#98A2B3] hover:text-[#243B5A]"
+                }`}
+              >
+                {pageNumber}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#D7DFEA] bg-white text-[#98A2B3] transition hover:text-[#243B5A]"
+              aria-label="Next page"
+            >
+              {">"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
