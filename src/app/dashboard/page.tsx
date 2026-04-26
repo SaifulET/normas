@@ -1,58 +1,66 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
-import {
-  createSiteNav,
-  siteFooterLinkGroups,
-  sitePrimaryCta,
-  siteSocialLinks,
-} from "@/components/site/site-data";
-import { isAuthenticated } from "@/lib/auth";
+import { dashboardOverviewPitches, dashboardScheduleHighlights } from "@/components/dashboard/data";
+import { ListingCard } from "@/components/dashboard/listing-card";
+import { DashboardPageHeader } from "@/components/dashboard/page-header";
 
-export default async function Page() {
-  const authenticated = await isAuthenticated();
-
-  if (!authenticated) {
-    redirect("/");
-  }
-
+export default function Page() {
   return (
-    <main className="min-h-screen bg-white text-[#243041]">
-      <section className="bg-white px-4 py-6 sm:px-6 lg:px-[147px]">
-        <SiteHeader navItems={createSiteNav()} primaryCta={sitePrimaryCta} />
-      </section>
+    <section className="space-y-6">
+      <DashboardPageHeader title="Dashboard Overview" subtitle="Here&apos;s what&apos;s happened recently">
+        <Link
+          href="/dashboard/save-list"
+          className="inline-flex h-11 items-center justify-center rounded-2xl border border-[#E5EAF2] bg-white px-4 text-sm font-semibold text-[#314B6B] transition hover:bg-[#F7F9FC]"
+        >
+          See all
+        </Link>
+      </DashboardPageHeader>
 
-      <section className="bg-white px-4 pb-24 pt-16 sm:px-6 lg:px-[147px]">
-        <div className="rounded-[28px] border border-[#E7ECF3] bg-[#F8FAFC] px-8 py-10 shadow-[0_24px_60px_-54px_rgba(15,23,42,0.24)]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#F97316]">
-            Account Overview
-          </p>
-          <h1 className="mt-5 text-[40px] font-semibold leading-[52px] text-[#1F2937]">
-            Dashboard
-          </h1>
-          <p className="mt-4 max-w-[760px] text-[18px] leading-8 text-[#5F6B7A]">
-            You&apos;re logged in. From here you can continue reviewing listings, unlock protected
-            pitch details, and move through the investment workflow with full access.
-          </p>
-
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-            <Link
-              href="/search"
-              className="inline-flex h-12 items-center justify-center rounded-[12px] bg-[#314B6B] px-6 text-sm font-semibold text-white transition hover:bg-[#243B5A]"
-            >
-              Browse Listings
-            </Link>
-            <Link
-              href="/pricing"
-              className="inline-flex h-12 items-center justify-center rounded-[12px] border border-[#D7DFEA] bg-white px-6 text-sm font-semibold text-[#314B6B] transition hover:bg-[#F3F6FA]"
-            >
-              Manage Plan
-            </Link>
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-[#1E2746]">Save list</h2>
+            <p className="mt-1 text-sm text-[#6B7280]">Pitch cards that are ready for your next step.</p>
           </div>
+          <Link href="/dashboard/save-list" className="text-sm font-semibold text-[#314B6B]">
+            See all
+          </Link>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {dashboardOverviewPitches.map((pitch) => (
+            <ListingCard key={pitch.slug} pitch={pitch} />
+          ))}
         </div>
       </section>
 
-      <SiteFooter linkGroups={siteFooterLinkGroups} socialLinks={siteSocialLinks} />
-    </main>
+      <section className="rounded-[30px] border border-[#E6EBF3] bg-white p-5 shadow-[0_28px_80px_-60px_rgba(30,39,70,0.45)] lg:p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-[#1E2746]">Schedule</h2>
+            <p className="mt-1 text-sm text-[#6B7280]">Your schedule has been listed here</p>
+          </div>
+          <Link href="/dashboard/schedule" className="text-sm font-semibold text-[#314B6B]">
+            See all
+          </Link>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {dashboardScheduleHighlights.map((item) => (
+            <Link
+              key={item.day}
+              href="/dashboard/schedule"
+              className="flex items-center justify-between gap-4 rounded-[22px] bg-[#F8FAFC] px-4 py-4 transition hover:bg-[#F2F6FB]"
+            >
+              <div>
+                <p className="text-sm font-semibold text-[#1E2746]">{item.day}</p>
+                <p className="mt-1 text-sm text-[#6B7280]">{item.time}</p>
+                <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#98A2B3]">{item.note}</p>
+              </div>
+              <span className="text-xl text-[#314B6B]">→</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </section>
   );
 }
