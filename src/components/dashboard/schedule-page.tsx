@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { dashboardCalendarEvent, dashboardCalendarSlots } from "./data";
 import { DashboardIcon } from "./icons";
 import { DashboardPageHeader } from "./page-header";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon, Location05Icon } from "@hugeicons/core-free-icons";
 
 function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -242,21 +244,21 @@ export function SchedulePage() {
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/35 p-4">
-          <div className="w-full max-w-[272px] rounded-[18px] bg-white p-3 shadow-2xl">
+          <div className="w-full max-w-[424px] h-[318px] rounded-[18px] bg-white p-[24px] shadow-2xl">
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="inline-flex h-6 w-6 items-center justify-center text-[#111827]"
+                className="inline-flex h-[24px] w-[24px] items-center justify-center text-[#111827]"
                 aria-label="Close schedule modal"
               >
-                ×
+                <HugeiconsIcon icon={Cancel01Icon} />
               </button>
             </div>
 
             <div className="mt-1 space-y-4">
               <div className="inline-flex items-center gap-2 text-sm text-[#1F2937]">
-                <DashboardIcon name="schedule" className="h-4 w-4" />
+                <DashboardIcon name="schedule"  className="h-[24px] w-[24px]" />
                 {formatModalDate(selectedDate)}
               </div>
 
@@ -286,7 +288,7 @@ export function SchedulePage() {
               </div>
 
               <div className="inline-flex items-center gap-2 text-sm text-[#1F2937]">
-                <DashboardIcon name="website" className="h-4 w-4" />
+                <HugeiconsIcon icon={Location05Icon} className="h-[24px] w-[24px]" />
                 {location}
               </div>
 

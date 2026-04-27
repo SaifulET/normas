@@ -4,7 +4,7 @@ import { Poppins } from "next/font/google";
 import { AppIcon } from "@/components/home/icons";
 import type { FooterLinkGroup, LinkItem, SocialLink } from "@/components/home/types";
 import { NavbarAuthControls } from "@/components/site/auth-controls";
-import { isAuthenticated, login, logout } from "@/lib/auth";
+import { isAuthenticated, logout } from "@/lib/auth";
 
 const headerNavFont = Poppins({
   subsets: ["latin"],
@@ -39,7 +39,6 @@ export async function SiteHeader({ navItems, primaryCta }: SiteHeaderProps) {
         <NavbarAuthControls
           authenticated={authenticated}
           primaryCta={primaryCta}
-          loginAction={login}
           logoutAction={logout}
         />
       </div>

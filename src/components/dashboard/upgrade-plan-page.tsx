@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { checkoutSummary, dashboardPlans } from "./data";
 import { DashboardIcon } from "./icons";
@@ -12,13 +13,15 @@ function cx(...values: Array<string | false | null | undefined>) {
 
 export function UpgradePlanPage() {
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+  const pathname = usePathname();
+  const dashboardBase = pathname.startsWith("/investee-dashboard") ? "/investee-dashboard" : "/dashboard";
 
   return (
     <section className="space-y-6">
       <DashboardPageHeader title="Upgrade Plan" subtitle="See your plan details" />
 
-      <div className="rounded-[32px] border border-[#E6EBF3] bg-white px-6 py-10 shadow-[0_28px_80px_-60px_rgba(30,39,70,0.45)] lg:px-10">
-        <div className="mx-auto max-w-4xl text-center">
+      <div className=" bg-white px-6 py-10  lg:px-10">
+        <div className="text-center">
           <h2 className="text-[2.3rem] font-semibold tracking-[-0.05em] text-[#1E2746]">
             Simple, Transparent Pricing
           </h2>
@@ -89,7 +92,7 @@ export function UpgradePlanPage() {
                 </button>
               ) : (
                 <Link
-                  href="/dashboard/upgrade-plan/checkout"
+                  href={`${dashboardBase}/upgrade-plan/checkout`}
                   className="mt-8 inline-flex h-12 w-full items-center justify-center rounded-2xl bg-[#314B6B] px-4 text-sm font-semibold text-white transition hover:bg-[#243B5A]"
                 >
                   {plan.cta}
@@ -100,43 +103,7 @@ export function UpgradePlanPage() {
         </div>
       </div>
 
-      <div className="rounded-[32px] border border-[#E6EBF3] bg-white p-6 shadow-[0_28px_80px_-60px_rgba(30,39,70,0.45)] lg:p-8">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#98A2B3]">What you unlock</p>
-            <h3 className="mt-3 text-2xl font-semibold text-[#1E2746]">Configure your plan</h3>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-[#6B7280]">
-              Move from the starter plan to the full investor workflow with unlimited queries, more saved listings, and early access to fresh opportunities.
-            </p>
-          </div>
-
-          <div className="rounded-[28px] bg-[#F8FAFC] p-5">
-            <h4 className="text-lg font-semibold text-[#1E2746]">{checkoutSummary.planName}</h4>
-            <ul className="mt-4 space-y-2 text-sm text-[#475467]">
-              {checkoutSummary.features.map((feature) => (
-                <li key={feature} className="flex items-start gap-2">
-                  <span className="mt-0.5 text-[#16A34A]">✓</span>
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-6 space-y-2 border-t border-[#E2E8F0] pt-4 text-sm text-[#475467]">
-              <div className="flex items-center justify-between">
-                <span>Monthly subscription</span>
-                <span>{checkoutSummary.subscription}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>VAT (15%)</span>
-                <span>{checkoutSummary.vat}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2 text-lg font-semibold text-[#1E2746]">
-                <span>Due today</span>
-                <span>{checkoutSummary.dueToday}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+     
     </section>
   );
 }

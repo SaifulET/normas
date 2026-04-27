@@ -1,4 +1,4 @@
-import { DashboardIcon } from "./icons";
+import Image from "next/image";
 
 export function DashboardPageHeader({
   title,
@@ -22,11 +22,11 @@ export function DashboardPageHeader({
         {children}
         <button
           type="button"
-          className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E5EAF2] bg-white text-[#314B6B] shadow-[0_14px_35px_-28px_rgba(36,59,90,0.55)]"
+          className="relative inline-flex items-center justify-center rounded-[8px] border border-[#E5EAF2] bg-white p-[13px] text-[#314B6B] shadow-[0_14px_35px_-28px_rgba(36,59,90,0.55)]"
           aria-label="Notifications"
         >
-          <DashboardIcon name="bell" className="h-5 w-5" />
-          <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#EF4444]" />
+          <Image src="/notification-01.svg" alt="" width={20} height={20} aria-hidden="true" />
+          <span className="absolute right-[9px] top-[9px] h-[6px] w-[6px] rounded-full bg-[#EF4444]" />
         </button>
       </div>
     </div>

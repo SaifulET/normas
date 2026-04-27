@@ -6,14 +6,7 @@ import { DashboardPageHeader } from "@/components/dashboard/page-header";
 export default function Page() {
   return (
     <section className="space-y-6">
-      <DashboardPageHeader title="Dashboard Overview" subtitle="Here&apos;s what&apos;s happened recently">
-        <Link
-          href="/dashboard/save-list"
-          className="inline-flex h-11 items-center justify-center rounded-2xl border border-[#E5EAF2] bg-white px-4 text-sm font-semibold text-[#314B6B] transition hover:bg-[#F7F9FC]"
-        >
-          See all
-        </Link>
-      </DashboardPageHeader>
+      <DashboardPageHeader title="Dashboard Overview" subtitle="Here&apos;s what&apos;s happened recently" />
 
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-4">

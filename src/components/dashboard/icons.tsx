@@ -1,3 +1,5 @@
+import { Bookmark02FreeIcons, Bookmark02Icon, Calendar03Icon, ChatIcon, CrownIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { SVGProps } from "react";
 
 type DashboardIconName =
@@ -37,9 +39,11 @@ function iconProps(className?: string): SVGProps<SVGSVGElement> {
 export function DashboardIcon({
   name,
   className,
+  filled = false,
 }: {
   name: DashboardIconName;
   className?: string;
+  filled?: boolean;
 }) {
   switch (name) {
     case "bell":
@@ -106,9 +110,7 @@ export function DashboardIcon({
       );
     case "messages":
       return (
-        <svg {...iconProps(className)}>
-          <path d="M5.5 7.5a3 3 0 0 1 3-3h7a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H11l-3.5 3v-3H8.5a3 3 0 0 1-3-3z" />
-        </svg>
+        <HugeiconsIcon icon={ChatIcon} className="w-[20px] h-[20px]" />
       );
     case "plus":
       return (
@@ -133,17 +135,30 @@ export function DashboardIcon({
         </svg>
       );
     case "save":
+      if (filled) {
+        return (
+          <svg
+            className={className ?? "h-5 w-5"}
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="currentColor"
+            strokeWidth={1.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M7 4.5h10a2 2 0 0 1 2 2v13l-7-3-7 3v-13a2 2 0 0 1 2-2Z" />
+          </svg>
+        );
+      }
+
       return (
-        <svg {...iconProps(className)}>
-          <path d="M7 4.5h10a2 2 0 0 1 2 2v13l-7-3-7 3v-13a2 2 0 0 1 2-2Z" />
-        </svg>
+       <HugeiconsIcon icon={Bookmark02Icon} className="w-[20px] h-[20px]" />
+       
       );
     case "schedule":
       return (
-        <svg {...iconProps(className)}>
-          <circle cx="12" cy="12" r="8.5" />
-          <path d="M12 8v4l2.5 2.5" />
-        </svg>
+        <HugeiconsIcon icon={Calendar03Icon} className="w-[20px] h-[20px] " />
       );
     case "settings":
       return (
@@ -160,10 +175,7 @@ export function DashboardIcon({
       );
     case "upgrade":
       return (
-        <svg {...iconProps(className)}>
-          <path d="m6.5 17.5 2.2-8 3.3 3 3.3-3 2.2 8" />
-          <path d="m8 9 4-4 4 4" />
-        </svg>
+        <HugeiconsIcon icon={CrownIcon} className="w-[20px] h-[20px]" />
       );
     case "views":
       return (

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import { getPitchBySlug } from "@/components/pitch/data";
 import { dashboardMessageThreads } from "./data";
@@ -15,6 +16,7 @@ const scheduleDays = ["S", "M", "T", "W", "T", "F", "S"];
 const scheduleDates = Array.from({ length: 31 }, (_, index) => index + 1);
 
 export function MessagesPage() {
+  const pathname = usePathname();
   const [selectedId, setSelectedId] = useState(dashboardMessageThreads[0]?.id ?? "");
   const [draft, setDraft] = useState("");
   const [sentMessages, setSentMessages] = useState<Record<string, string[]>>({});
@@ -30,6 +32,7 @@ export function MessagesPage() {
 
   const selectedPitch = selectedThread ? getPitchBySlug(selectedThread.pitchSlug) : undefined;
   const extraMessages = sentMessages[selectedId] ?? [];
+  const dashboardBase = pathname.startsWith("/investee-dashboard") ? "/investee-dashboard" : "/dashboard";
 
   return (
     <section className="space-y-6">
@@ -188,7 +191,7 @@ export function MessagesPage() {
 
                       <div className="flex items-center gap-2">
                         <Link
-                          href="/dashboard/upgrade-plan"
+                          href={`${dashboardBase}/upgrade-plan`}
                           className="inline-flex h-10 items-center justify-center rounded-xl bg-[#ED6A06] px-4 text-sm font-semibold text-white transition hover:bg-[#d35f05]"
                         >
                           Ready to invest

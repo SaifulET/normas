@@ -3,7 +3,7 @@ import { getPitchBySlug, pitchDetails, type PitchDetail } from "@/components/pit
 export interface DashboardNavItem {
   label: string;
   href: string;
-  icon: "website" | "dashboard" | "save" | "messages" | "schedule" | "upgrade";
+  icon: "website" | "dashboard" | "plus" | "save" | "messages" | "schedule" | "upgrade";
 }
 
 export interface DashboardProfileLink {
@@ -66,9 +66,29 @@ export const dashboardNavItems: DashboardNavItem[] = [
   { label: "Upgrade Plan", href: "/dashboard/upgrade-plan", icon: "upgrade" },
 ];
 
+export const investeeDashboardUser = {
+  ...dashboardUser,
+  role: "Investee",
+};
+
+export const investeeDashboardNavItems: DashboardNavItem[] = [
+  { label: "Website", href: "/", icon: "website" },
+  { label: "Dashboard", href: "/investee-dashboard", icon: "dashboard" },
+  { label: "Create list", href: "/investee-dashboard/create-list", icon: "plus" },
+  { label: "Created list", href: "/investee-dashboard/created-list", icon: "save" },
+  { label: "Messages", href: "/investee-dashboard/messages", icon: "messages" },
+  { label: "Schedule", href: "/investee-dashboard/schedule", icon: "schedule" },
+  { label: "Upgrade Plan", href: "/investee-dashboard/upgrade-plan", icon: "upgrade" },
+];
+
 export const dashboardProfileLinks: DashboardProfileLink[] = [
   { label: "Profile", href: "/dashboard/profile", icon: "profile" },
   { label: "Settings", href: "/dashboard/settings", icon: "settings" },
+];
+
+export const investeeDashboardProfileLinks: DashboardProfileLink[] = [
+  { label: "Profile", href: "/investee-dashboard/profile", icon: "profile" },
+  { label: "Settings", href: "/investee-dashboard/settings", icon: "settings" },
 ];
 
 function requirePitch(slug: string) {

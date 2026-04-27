@@ -8,6 +8,9 @@ import {
   dashboardNavItems,
   dashboardProfileLinks,
   dashboardUser,
+  investeeDashboardNavItems,
+  investeeDashboardProfileLinks,
+  investeeDashboardUser,
   type DashboardNavItem,
 } from "./data";
 import { DashboardIcon } from "./icons";
@@ -33,7 +36,7 @@ function SidebarLogoMark({ light = false }: { light?: boolean }) {
   );
 }
 
-function SidebarBrand({ light = false }: { light?: boolean }) {
+function SidebarBrand({ light = false, role }: { light?: boolean; role: string }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
       <SidebarLogoMark light={light} />
@@ -41,7 +44,9 @@ function SidebarBrand({ light = false }: { light?: boolean }) {
         <p className={cx("truncate text-[1.08rem] font-semibold", light ? "text-[#1E2746]" : "text-white")}>
           Early-N
         </p>
-        <p className={cx("truncate text-xs", light ? "text-[#6B7280]" : "text-white/65")}>Investor</p>
+        <p className={cx("truncate text-xs", light ? "text-[#6B7280]" : "text-white/65")}>
+          {role}
+        </p>
       </div>
     </div>
   );
@@ -60,23 +65,36 @@ function isActivePath(pathname: string, item: DashboardNavItem) {
 }
 
 function isProfileSection(pathname: string) {
-  return pathname.startsWith("/dashboard/profile") || pathname.startsWith("/dashboard/settings");
+  return (
+    pathname.startsWith("/dashboard/profile") ||
+    pathname.startsWith("/dashboard/settings") ||
+    pathname.startsWith("/investee-dashboard/profile") ||
+    pathname.startsWith("/investee-dashboard/settings")
+  );
 }
 
 function SidebarContent({
   collapsed,
+  homeHref,
+  navItems,
   pathname,
   onCollapseToggle,
   onNavigate,
+  profileLinks,
   profileOpen,
   onProfileToggle,
+  user,
 }: {
   collapsed: boolean;
+  homeHref: string;
+  navItems: DashboardNavItem[];
   pathname: string;
   onCollapseToggle: () => void;
   onNavigate: () => void;
+  profileLinks: typeof dashboardProfileLinks;
   profileOpen: boolean;
   onProfileToggle: () => void;
+  user: typeof dashboardUser;
 }) {
   return (
     <>
@@ -94,11 +112,11 @@ function SidebarContent({
       ) : (
         <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-5">
           <Link
-            href="/dashboard"
+            href={homeHref}
             className="flex min-w-0 items-center rounded-2xl px-1.5 py-1.5 transition hover:bg-white/5"
             onClick={onNavigate}
           >
-            <SidebarBrand />
+            <SidebarBrand role={user.role} />
           </Link>
 
           <button
@@ -113,7 +131,7 @@ function SidebarContent({
       )}
 
       <nav className="flex-1 space-y-1 px-3 py-5">
-        {dashboardNavItems.map((item) => {
+        {navItems.map((item) => {
           const active = isActivePath(pathname, item);
 
           return (
@@ -148,13 +166,13 @@ function SidebarContent({
           )}
         >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-[#243B5A]">
-            {dashboardUser.initials}
+            {user.initials}
           </div>
           {!collapsed ? (
             <>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white">{dashboardUser.name}</p>
-                <p className="truncate text-xs text-white/55">{dashboardUser.email}</p>
+                <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+                <p className="truncate text-xs text-white/55">{user.email}</p>
               </div>
               <DashboardIcon
                 name="chevronDown"
@@ -166,7 +184,7 @@ function SidebarContent({
 
         {!collapsed && profileOpen ? (
           <div className="mt-2 space-y-1 pl-[3.5rem]">
-            {dashboardProfileLinks.map((item) => {
+            {profileLinks.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
               return (
@@ -197,21 +215,30 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const sidebarProfileOpen = isProfileSection(pathname) || profileOpen;
+  const desktopSidebarWidth = collapsed ? "lg:pl-[96px]" : "lg:pl-[276px]";
+  const investeeDashboard = pathname.startsWith("/investee-dashboard");
+  const sidebarUser = investeeDashboard ? investeeDashboardUser : dashboardUser;
+  const sidebarNavItems = investeeDashboard ? investeeDashboardNavItems : dashboardNavItems;
+  const sidebarProfileLinks = investeeDashboard ? investeeDashboardProfileLinks : dashboardProfileLinks;
+  const dashboardHomeHref = investeeDashboard ? "/investee-dashboard" : "/dashboard";
 
   return (
-    <div className="min-h-screen bg-[#F4F6FB] text-[#1E2746]">
-      <div className="flex min-h-screen">
+    <div className="min-h-screen bg-white text-[#1E2746]">
+      <div className="min-h-screen">
         <aside
           className={cx(
-            "hidden shrink-0 flex-col bg-[#243B5A] text-white lg:flex",
+            "fixed inset-y-0 left-0 z-30 hidden flex-col bg-[#243B5A] text-white lg:flex",
             collapsed ? "w-[96px]" : "w-[276px]",
           )}
         >
           <SidebarContent
             collapsed={collapsed}
+            homeHref={dashboardHomeHref}
+            navItems={sidebarNavItems}
             pathname={pathname}
             onCollapseToggle={() => setCollapsed((value) => !value)}
             onNavigate={() => undefined}
+            profileLinks={sidebarProfileLinks}
             profileOpen={sidebarProfileOpen}
             onProfileToggle={() => {
               if (collapsed) {
@@ -222,6 +249,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
               setProfileOpen((value) => !value);
             }}
+            user={sidebarUser}
           />
         </aside>
 
@@ -233,17 +261,21 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             >
               <SidebarContent
                 collapsed={false}
+                homeHref={dashboardHomeHref}
+                navItems={sidebarNavItems}
                 pathname={pathname}
                 onCollapseToggle={() => setMobileOpen(false)}
                 onNavigate={() => setMobileOpen(false)}
+                profileLinks={sidebarProfileLinks}
                 profileOpen={sidebarProfileOpen}
                 onProfileToggle={() => setProfileOpen((value) => !value)}
+                user={sidebarUser}
               />
             </aside>
           </div>
         ) : null}
 
-        <div className="min-w-0 flex-1">
+        <div className={cx("min-w-0", desktopSidebarWidth)}>
           <header className="sticky top-0 z-20 border-b border-[#E7ECF3]/80 bg-[#F4F6FB]/90 px-4 py-4 backdrop-blur lg:hidden">
             <div className="flex items-center justify-between gap-3">
               <button
@@ -255,8 +287,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <DashboardIcon name="dashboard" className="h-5 w-5" />
               </button>
 
-              <Link href="/dashboard" className="flex items-center">
-                <SidebarBrand light />
+              <Link href={dashboardHomeHref} className="flex items-center">
+                <SidebarBrand light role={sidebarUser.role} />
               </Link>
 
               <Link

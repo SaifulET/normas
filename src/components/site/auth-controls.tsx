@@ -41,12 +41,10 @@ function AuthSubmitButton({
 export function NavbarAuthControls({
   authenticated,
   primaryCta,
-  loginAction,
   logoutAction,
 }: {
   authenticated: boolean;
   primaryCta: LinkItem;
-  loginAction: () => Promise<void>;
   logoutAction: () => Promise<void>;
 }) {
   return authenticated ? (
@@ -63,9 +61,12 @@ export function NavbarAuthControls({
     </>
   ) : (
     <>
-      <form action={loginAction}>
-        <AuthSubmitButton idleLabel="Login" pendingLabel="Logging In..." variant="text" />
-      </form>
+      <Link
+        className="hidden uppercase tracking-[0.18em] text-[#2B425D] transition-colors duration-200 hover:text-[#E65E02] sm:inline"
+        href="/login"
+      >
+        Login
+      </Link>
       <Link
         className="rounded-full bg-[#E65E02] px-7 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#c84f00]"
         href={primaryCta.href}

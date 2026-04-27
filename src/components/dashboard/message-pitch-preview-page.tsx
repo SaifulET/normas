@@ -2,11 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import type { PitchDetail } from "@/components/pitch/data";
 import { DashboardIcon } from "./icons";
+import { SavePitchButton } from "./save-pitch-button";
 
 export function MessagePitchPreviewPage({ pitch }: { pitch: PitchDetail }) {
   return (
     <main className="min-h-screen bg-[#F4F6FB] px-3 py-3 sm:px-6 sm:py-6">
-      <div className="mx-auto max-w-5xl">
+      <div className="">
         <div className="mb-3 flex justify-end">
           <Link
             href="/dashboard/messages"
@@ -18,35 +19,31 @@ export function MessagePitchPreviewPage({ pitch }: { pitch: PitchDetail }) {
         </div>
 
         <article className="rounded-[24px] bg-white p-3 shadow-[0_28px_80px_-60px_rgba(30,39,70,0.45)] sm:p-4 lg:p-5">
-          <div className="relative h-[180px] overflow-hidden rounded-[16px] sm:h-[240px] lg:h-[320px]">
-            <Image src={pitch.image} alt={pitch.title} fill className="object-cover" priority sizes="100vw" />
+          <div className="relative h-[180px] overflow-hidden rounded-[16px] sm:h-[240px] lg:h-[352px]">
+            <Image src={pitch.image} alt={pitch.title} fill className="object-fit" priority sizes="100vw" />
           </div>
 
           <div className="px-1 py-4 sm:px-2 lg:px-4">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="flex flex-wrap items-center gap-4 text-xs text-[#7B8496]">
-                  <span className="inline-flex items-center gap-1.5">
-                    <DashboardIcon name="website" className="h-3.5 w-3.5" />
-                    {pitch.location}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <DashboardIcon name="views" className="h-3.5 w-3.5" />
-                    {pitch.views} views
-                  </span>
+              <div className="w-full ">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-[#7B8496]">
+                    <span className="inline-flex items-center gap-1.5">
+                      <DashboardIcon name="website" className="h-3.5 w-3.5" />
+                      {pitch.location}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <DashboardIcon name="views" className="h-3.5 w-3.5" />
+                      {pitch.views} views
+                    </span>
+                  </div>
+                  <SavePitchButton />
                 </div>
 
-                <div className="mt-3 flex items-start justify-between gap-3">
+                <div className="mt-3">
                   <h1 className="text-[1.8rem] font-semibold tracking-[-0.04em] text-[#1E2746] sm:text-[2.1rem]">
                     {pitch.title}
                   </h1>
-                  <button
-                    type="button"
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#ED6A06]"
-                    aria-label="Save pitch"
-                  >
-                    <DashboardIcon name="save" className="h-4 w-4" />
-                  </button>
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">

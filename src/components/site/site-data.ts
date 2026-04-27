@@ -17,7 +17,7 @@ export function createSiteNav(activeLabel?: string) {
 
 export const sitePrimaryCta: LinkItem = {
   label: "Get Started",
-  href: "/pricing",
+  href: "/signup",
 };
 
 export const siteFooterLinkGroups: FooterLinkGroup[] = [
