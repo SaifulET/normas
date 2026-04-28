@@ -192,8 +192,8 @@ export function ValuesSection({
 }) {
   return (
     <SectionShell className="bg-white px-4 py-[72px] sm:px-6 lg:px-[147px]">
-      <div id="values" className="grid items-center gap-12 lg:grid-cols-[0.9fr_1fr]">
-        <div className="grid grid-cols-2 gap-4">
+      <div id="values" className="grid items-start gap-14 lg:grid-cols-[520px_minmax(0,480px)] lg:justify-center lg:gap-16">
+        <div className="grid max-w-[520px] grid-cols-2 gap-4 pt-9">
           {images.map((image, index) => (
             <Image
               key={image.src}
@@ -201,31 +201,32 @@ export function ValuesSection({
               alt={image.alt}
               width={image.width}
               height={image.height}
-              className={`aspect-square rounded-lg object-cover ${
-                index === 0 ? "mt-8" : index === 3 ? "mt-6" : ""
+              className={`aspect-square rounded-[14px] object-cover shadow-[0_16px_32px_-24px_rgba(15,23,42,0.35)] ${
+                index === 0 ? "mt-8" : index === 2 ? "-mt-6" : index === 3 ? "mt-2" : ""
               }`}
             />
           ))}
         </div>
 
-        <div>
+        <div className="max-w-[480px] pt-1">
           <SectionHeading
             eyebrow="Philosophy & Core Values"
             title="The Ubuntu Standard:"
             accentTitle="Unified Humanity"
             description='At the heart of EARLY-N lies the ancient African wisdom of Ubuntu: "I am because we are." We believe that true growth is only possible when it is shared, inclusive, and ethical.'
             align="left"
+            titleClassName="max-w-[420px]"
           />
 
-          <div className="mt-8 space-y-7">
+          <div className="mt-10 space-y-7">
             {values.map((value) => (
-              <div key={value.title} className="flex gap-5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#2B425D] text-white">
-                  <AppIcon name={value.icon} className="h-5 w-5" />
+              <div key={value.title} className="flex items-start gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-[#2B425D] text-white">
+                  <AppIcon name={value.icon} className="h-4.5 w-4.5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-[#182231]">{value.title}</h3>
-                  <p className="mt-1 text-sm leading-6 text-[#182231]/65">{value.text}</p>
+                  <p className="mt-1 max-w-[390px] text-sm leading-6 text-[#182231]/65">{value.text}</p>
                 </div>
               </div>
             ))}

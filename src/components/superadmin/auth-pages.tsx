@@ -51,25 +51,25 @@ function AuthShell({
           <section className="relative hidden h-[680px] overflow-hidden rounded-[32px] bg-[#101015] lg:block">
             <Image src="/login.jpg" alt="Superadmin access" fill priority className="object-cover" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,20,34,0.20)_0%,rgba(12,12,20,0.86)_100%)]" />
-            <div className="relative flex h-full flex-col justify-between p-10 text-white">
-              <div className="flex items-center gap-4">
+            <div className="relative flex h-full items-center p-10 text-white">
+              <div className="ml-[48px] flex max-w-[380px] flex-col items-start text-left">
                 <LogoMark />
-                <div>
+                <div className="mt-5">
                   <p className="text-lg font-semibold">Mooment</p>
                   <p className="text-sm text-white/66">Super Admin Console</p>
                 </div>
-              </div>
 
-              <div className="max-w-[380px] pb-10">
-                <div className="mb-6 inline-flex rounded-full border border-white/14 bg-white/10 px-3 py-1 text-[11px] font-medium">
-                  Protected Workspace
+                <div className="mt-10">
+                  <div className="mb-6 inline-flex rounded-full border border-white/14 bg-white/10 px-3 py-1 text-[11px] font-medium">
+                    Protected Workspace
+                  </div>
+                  <h1 className="text-[42px] font-semibold leading-[1.05] tracking-[-0.04em]">
+                    Manage platform operations from one secure panel
+                  </h1>
+                  <p className="mt-5 text-[15px] leading-7 text-white/78">
+                    Monitor users, payments, reports, support, and configuration settings without affecting your investor or investee workspaces.
+                  </p>
                 </div>
-                <h1 className="text-[42px] font-semibold leading-[1.05] tracking-[-0.04em]">
-                  Manage platform operations from one secure panel
-                </h1>
-                <p className="mt-5 text-[15px] leading-7 text-white/78">
-                  Monitor users, payments, reports, support, and configuration settings without affecting your investor or investee workspaces.
-                </p>
               </div>
             </div>
           </section>

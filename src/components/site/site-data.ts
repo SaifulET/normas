@@ -40,7 +40,7 @@ export const siteFooterLinkGroups: FooterLinkGroup[] = [
     title: "Legal",
     links: [
       { label: "Privacy Policy", href: "/privacy-policy" },
-      { label: "KYC", href: "#" },
+      { label: "KYC", href: "/kyc" },
       { label: "Terms & Conditions", href: "/terms-and-conditions" },
     ],
   },

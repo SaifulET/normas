@@ -284,6 +284,12 @@ export const checkoutSummary = {
   features: dashboardPlans[1].features,
 };
 
+export const dashboardBillingHistory = [
+  { date: "Sep 12, 2026", invoiceId: "INV-2023-009", amount: "$49.00", status: "Paid" },
+  { date: "Aug 12, 2026", invoiceId: "INV-2023-008", amount: "$49.00", status: "Paid" },
+  { date: "Jul 12, 2026", invoiceId: "INV-2023-007", amount: "$49.00", status: "Paid" },
+];
+
 export const dashboardProfileStats = [
   { label: "Saved listings", value: "48" },
   { label: "Live conversations", value: "12" },

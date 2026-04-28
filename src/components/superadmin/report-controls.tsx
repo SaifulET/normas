@@ -179,30 +179,7 @@ function ReportActionMenu({
           >
             Delete
           </button>
-          <div className="border-t border-[#EEF1F6] px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">
-            Action
-          </div>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="block w-full px-4 py-3 text-left text-[14px] text-[#202350] transition hover:bg-[#F7F8FC]"
-          >
-            Remove Content
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="block w-full px-4 py-3 text-left text-[14px] text-[#202350] transition hover:bg-[#F7F8FC]"
-          >
-            Warn User
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="block w-full px-4 py-3 text-left text-[14px] text-[#202350] transition hover:bg-[#F7F8FC]"
-          >
-            Dismiss Report
-          </button>
+          
         </div>
       ) : null}
     </div>

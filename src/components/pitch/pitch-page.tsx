@@ -10,6 +10,7 @@ import {
 } from "@/components/site/site-data";
 import { isAuthenticated } from "@/lib/auth";
 import type { PitchDetail } from "./data";
+import { PitchActions } from "./pitch-actions";
 
 function RelatedPitchCard({ pitch }: { pitch: PitchDetail }) {
   return (
@@ -216,15 +217,19 @@ export async function PitchPage({
 
         <div className="px-0 py-8 lg:px-[172px]">
           <div>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-[#667085]">
-              <span className="inline-flex items-center gap-1.5">
-                <AppIcon name="mapPin" className="h-4 w-4" />
-                {pitch.location}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <AppIcon name="view" className="h-4 w-4" />
-                {pitch.views} views
-              </span>
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-[#667085]">
+                <span className="inline-flex items-center gap-1.5">
+                  <AppIcon name="mapPin" className="h-4 w-4" />
+                  {pitch.location}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <AppIcon name="view" className="h-4 w-4" />
+                  {pitch.views} views
+                </span>
+              </div>
+
+              <PitchActions authenticated={authenticated} />
             </div>
             <h1 className="mt-4 text-[38px] font-semibold leading-[50px] text-[#1F2937]">
               {pitch.title}

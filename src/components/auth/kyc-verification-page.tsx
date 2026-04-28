@@ -369,10 +369,19 @@ function CloseIcon() {
 
 function UploadGlyph() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <path d="M12 14V7" />
-      <path d="m8.5 10.5 3.5-3.5 3.5 3.5" />
-      <path d="M7.5 16.5H16.5" />
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+      <path d="M12 14V7.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="m8.75 10.75 3.25-3.25 3.25 3.25" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.75 16.25h8.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function UploadMetaIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.35" aria-hidden="true">
+      <path d="M5 2.75h3.5l2.75 2.75v6.75a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8.5a1 1 0 0 1 1-1Z" />
+      <path d="M8.5 2.75V5.5h2.75" />
     </svg>
   );
 }
@@ -456,23 +465,29 @@ function UploadArea({
   const inputId = useId();
 
   return (
-    <div className="rounded-[8px] border border-dashed border-[#D5DDE8] bg-white px-4 py-6">
+    <div className="rounded-[12px] border border-dashed border-[#D0D5DD] bg-[#FCFCFD] px-4 py-7">
       {file ? (
         <div className="flex justify-center">
           <FileChip file={file} onCancel={onCancel} onDownload={onDownload} onPreview={onPreview} />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center text-center">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#F2F4F7] text-[#475467]">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#EAECF0] text-[#344054]">
             <UploadGlyph />
           </span>
-          <p className="mt-4 text-[14px] font-medium text-[#344054]">Upload your document here</p>
-          <label htmlFor={inputId} className="mt-1 cursor-pointer text-[12px] text-[#667085]">
-            or <span className="font-medium text-[#F97316]">browse files</span>
+          <p className="mt-4 text-[14px] font-medium leading-5 text-[#344054]">Upload your document here</p>
+          <label htmlFor={inputId} className="mt-1 cursor-pointer text-[12px] leading-4 text-[#667085]">
+            or <span className="font-semibold text-[#F97316]">browse files</span>
           </label>
-          <div className="mt-4 flex items-center gap-3 text-[9px] text-[#98A2B3]">
-            <span>PDF</span>
-            <span>JPG/PNG</span>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px] text-[#98A2B3]">
+            <span className="inline-flex items-center gap-1">
+              <UploadMetaIcon />
+              <span>PDF</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <UploadMetaIcon />
+              <span>JPG/PNG</span>
+            </span>
             <span>Max size: 10MB</span>
           </div>
         </div>

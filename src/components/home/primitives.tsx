@@ -60,18 +60,22 @@ export function HeroField({ field }: { field: HeroSearchField }) {
   }
 
   return (
-    <label className="relative flex min-h-16 flex-col justify-center border-b border-[#2B425D]/10 px-5 text-left md:border-b-0 md:border-r">
-      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#182231]/60">
+    <label className="relative flex min-h-16 flex-col justify-center border-b border-[#2B425D]/10 pl-7 pr-5 text-left md:border-b-0 md:border-r">
+      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#182231]/60 pl-[8px]">
         {field.label}
       </span>
       <select
         name={field.name}
         defaultValue={field.defaultValue}
-        className="mt-1 w-full appearance-none bg-transparent pr-7 text-sm text-[#182231] outline-none"
+        className="mt-1 w-full appearance-none bg-transparent pl-[8px] pr-7 text-[15px] font-medium text-[#2B425D] outline-none"
       >
-        {!field.options.includes(field.defaultValue) ? <option>{field.defaultValue}</option> : null}
+        {!field.options.includes(field.defaultValue) ? (
+          <option style={{ backgroundColor: "#9FC4F1", color: "#2B425D" }}>{field.defaultValue}</option>
+        ) : null}
         {field.options.map((option) => (
-          <option key={option}>{option}</option>
+          <option key={option} style={{ backgroundColor: option === field.defaultValue ? "#9FC4F1" : "#FFFFFF", color: "#2B425D" }}>
+            {option}
+          </option>
         ))}
       </select>
       <AppIcon

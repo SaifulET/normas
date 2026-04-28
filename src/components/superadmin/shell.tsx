@@ -1,11 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { superadminNavItems, superadminUser, type SuperadminNavIcon } from "./data";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Notification01Icon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Notification01Icon, Settings01Icon, SidebarRightIcon, User02Icon } from "@hugeicons/core-free-icons";
 
 function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -23,66 +24,43 @@ function SuperadminIcon({
   switch (name) {
     case "analytics":
       return (
-        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <rect x="4.5" y="10" width="3.5" height="8" rx="1" />
-          <rect x="10.25" y="6.5" width="3.5" height="11.5" rx="1" />
-          <rect x="16" y="8.5" width="3.5" height="9.5" rx="1" />
-        </svg>
+        <HugeiconsIcon icon={Analytics01Icon} className="w-[24px] h-[24px]" />
       );
     case "dashboard":
       return (
-        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <rect x="4.5" y="4.5" width="6" height="6" rx="1.5" />
-          <rect x="13.5" y="4.5" width="6" height="6" rx="1.5" />
-          <rect x="4.5" y="13.5" width="6" height="6" rx="1.5" />
-          <rect x="13.5" y="13.5" width="6" height="6" rx="1.5" />
-        </svg>
+        <HugeiconsIcon icon={DashboardSquare01Icon} className="w-[24px] h-[24px]"/>
       );
     case "payment":
       return (
-        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <path d="M5 7.5h14a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 19 16.5H5A1.5 1.5 0 0 1 3.5 15V9A1.5 1.5 0 0 1 5 7.5Z" />
-          <path d="M3.5 10.5h17" />
-          <path d="M7.5 14h3" />
-        </svg>
+       <HugeiconsIcon icon={CreditCardPosIcon} className="w-[24px] h-[24px]" />
+      );
+    case "messages":
+      return (
+       <HugeiconsIcon icon={ChatIcon} className="w-[24px] h-[24px]" />
       );
     case "reports":
       return (
-        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <circle cx="12" cy="12" r="8" />
-          <path d="M12 8v4l2.5 2.5" />
-        </svg>
+       <HugeiconsIcon icon={Flag02Icon} className="w-[24px] h-[24px]" />
+      );
+    case "schedule":
+      return (
+       <HugeiconsIcon icon={Calendar03Icon} className="w-[24px] h-[24px]" />
       );
     case "settings":
       return (
-        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <path d="M10.5 4.5h3l.8 2.2 2.4 1.4 2.2-.6 1.5 2.6-1.5 1.7v2.8l1.5 1.7-1.5 2.6-2.2-.6-2.4 1.4-.8 2.2h-3l-.8-2.2-2.4-1.4-2.2.6-1.5-2.6 1.5-1.7v-2.8l-1.5-1.7 1.5-2.6 2.2.6 2.4-1.4Z" />
-          <circle cx="12" cy="12" r="2.5" />
-        </svg>
+        <HugeiconsIcon icon={Settings01Icon} className="w-[24px] h-[24px]" />
       );
     case "support":
       return (
-        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <path d="M6 10.5v-.7A6 6 0 0 1 18 9.8v.7" />
-          <path d="M6 10.5A2.5 2.5 0 0 0 3.5 13v2A2.5 2.5 0 0 0 6 17.5h1v-7Z" />
-          <path d="M18 10.5A2.5 2.5 0 0 1 20.5 13v2a2.5 2.5 0 0 1-2.5 2.5h-1v-7Z" />
-          <path d="M9.5 19.5h5" />
-        </svg>
+       <HugeiconsIcon icon={HeadsetIcon} className="w-[24px] h-[24px]" />
       );
     case "users":
       return (
-        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-          <path d="M15.5 10a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-          <path d="M4.5 18a4.5 4.5 0 0 1 9 0" />
-          <path d="M14 18a3.5 3.5 0 0 1 6 0" />
-        </svg>
+     <HugeiconsIcon icon={User02Icon} className="w-[24px] h-[24px]" />
       );
     case "back":
       return (
-        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <path d="m14.5 6.5-5 5 5 5" />
-        </svg>
+        <HugeiconsIcon icon={ArrowLeft02Icon} className="w-[24px] h-[24px]"/>
       );
     case "bell":
       return (
@@ -90,11 +68,7 @@ function SuperadminIcon({
       );
     case "collapse":
       return (
-        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <rect x="4.5" y="5.5" width="15" height="13" rx="2.5" />
-          <path d="M15 5.5v13" />
-          <path d="m10 9.5 3 3-3 3" />
-        </svg>
+        <HugeiconsIcon icon={SidebarRightIcon} />
       );
     case "chevronDown":
       return (
@@ -157,15 +131,23 @@ function SidebarLogo({
 }) {
   return (
     <div className={cx("border-b border-white/8 py-4", collapsed ? "flex flex-col items-center gap-3 px-2" : "flex items-center gap-2.5 px-3")}>
-      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-white/12 bg-white/6 text-white">
-        <SuperadminIcon name="logo" className="h-5 w-5" />
-      </span>
-
       {!collapsed ? (
         <>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">Mooment</p>
-            <p className="truncate text-xs text-white/60">Super Admin</p>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="relative h-[28px] w-[62px] shrink-0 overflow-hidden">
+              <Image
+                src="/footer-logo.svg"
+                alt="EARLY-N"
+                fill
+                priority
+                sizes="62px"
+                className="object-left object-contain"
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[1.08rem] font-semibold text-white">Early-N</p>
+              <p className="truncate text-xs text-white/65">Super Admin</p>
+            </div>
           </div>
 
           <button
@@ -178,14 +160,26 @@ function SidebarLogo({
           </button>
         </>
       ) : (
-        <button
-          type="button"
-          onClick={onToggle}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-white/10 bg-white/6 text-white/70 transition hover:bg-white/10 hover:text-white"
-          aria-label="Expand sidebar"
-        >
-          <SuperadminIcon name="collapse" className="h-4 w-4 rotate-180" />
-        </button>
+        <>
+          <div className="relative h-[28px] w-[34px] shrink-0 overflow-hidden">
+            <Image
+              src="/footer-logo.svg"
+              alt="EARLY-N"
+              fill
+              priority
+              sizes="34px"
+              className="object-left object-contain"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={onToggle}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-white/10 bg-white/6 text-white/70 transition hover:bg-white/10 hover:text-white"
+            aria-label="Expand sidebar"
+          >
+            <SuperadminIcon name="collapse" className="h-4 w-4 rotate-180" />
+          </button>
+        </>
       )}
     </div>
   );
@@ -241,12 +235,12 @@ export function SuperadminShell({
 
   return (
     <div className="min-h-screen bg-[#F4F4F7] text-[#212443]">
-      <aside className={cx("fixed inset-y-0 left-0 z-30 flex flex-col border-r border-[#D4D7E2] bg-[#121217] text-white transition-all duration-200", sidebarWidth)}>
-        <div className="relative">
+      <aside className={cx("fixed inset-y-0 left-0 z-30 flex flex-col border-r border-[#D4D7E2] bg-[#2B425D] text-white transition-all duration-200", sidebarWidth)}>
+        <div className=" relative ">
           <SidebarLogo collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
         </div>
 
-        <div className={cx("flex-1 space-y-5 py-5", collapsed ? "px-2" : "px-2.5")}>
+        <div className={cx(" flex-1  space-y-5 py-5", collapsed ? "px-2" : "px-2.5")}>
           <SidebarSection collapsed={collapsed} pathname={pathname} section="main" />
           <SidebarSection collapsed={collapsed} pathname={pathname} section="core" />
         </div>
@@ -315,7 +309,7 @@ export function SuperadminNotificationButton() {
   return (
     <button
       type="button"
-      className="relative inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[#E2E4ED] bg-white text-[#4D5572]"
+      className="relative inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[#E2E4ED]  text-[#4D5572]"
       aria-label="Notifications"
     >
       <SuperadminIcon name="bell" className="h-4 w-4" />
