@@ -39,6 +39,7 @@ type FileFieldKey = {
 }[keyof ProfileDraft];
 
 type UserDetailTab = "profile" | "kyc" | "pitch" | "viewPitch";
+type ReviewDocument = StoredVerificationFile & { url: string };
 
 const defaultProfileDraft: ProfileDraft = {
   bankStatement: null,
@@ -53,6 +54,65 @@ const defaultProfileDraft: ProfileDraft = {
   salarySlip: null,
   taxReturns: null,
   utilityBill: null,
+};
+
+const reviewFallbackDocuments: Record<FileFieldKey, ReviewDocument> = {
+  bankStatement: {
+    id: "review-bank-statement",
+    name: "bank-statement.png",
+    size: 245 * 1024,
+    type: "image/png",
+    url: "/middlepart2.png",
+  },
+  businessDocument: {
+    id: "review-business-document",
+    name: "business-ownership-document.png",
+    size: 288 * 1024,
+    type: "image/png",
+    url: "/middlepartimg3.png",
+  },
+  facePhoto: {
+    id: "review-face-photo",
+    name: "face-verification-photo.jpg",
+    size: 188 * 1024,
+    type: "image/jpeg",
+    url: "/kycHeroTop2nd.jpg",
+  },
+  faceVideo: {
+    id: "review-face-video",
+    name: "face-verification-video.jpg",
+    size: 577 * 1024,
+    type: "image/jpeg",
+    url: "/kycHeroBottom1st.jpg",
+  },
+  identityDocument: {
+    id: "review-identity-document",
+    name: "passport-copy.jpg",
+    size: 245 * 1024,
+    type: "image/jpeg",
+    url: "/kycHeroTop1st.jpg",
+  },
+  salarySlip: {
+    id: "review-salary-slip",
+    name: "recent-salary-slip.png",
+    size: 226 * 1024,
+    type: "image/png",
+    url: "/middlepartimg4.png",
+  },
+  taxReturns: {
+    id: "review-tax-return",
+    name: "recent-tax-return.png",
+    size: 264 * 1024,
+    type: "image/png",
+    url: "/kycHeroBottom3rd.png",
+  },
+  utilityBill: {
+    id: "review-utility-bill",
+    name: "utility-bill.png",
+    size: 231 * 1024,
+    type: "image/png",
+    url: "/middlepartimg1.png",
+  },
 };
 
 function isStoredVerificationFile(value: unknown): value is StoredVerificationFile {
@@ -179,6 +239,76 @@ function getFileTypeLabel(file: StoredVerificationFile) {
   return "FILE";
 }
 
+function FilePreviewIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path
+        d="M1.167 7s2.121-3.5 5.833-3.5S12.833 7 12.833 7 10.712 10.5 7 10.5 1.167 7 1.167 7Z"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="7" cy="7" r="1.75" stroke="currentColor" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+function FileDownloadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M7 2.333v6.125" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="m4.958 6.417 2.042 2.041 2.042-2.041" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2.917 10.792h8.166" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function FileTypeIcon() {
+  return (
+    <svg width="16" height="18" viewBox="0 0 16 18" fill="none" aria-hidden="true">
+      <path
+        d="M4.75 1.75h4.992L13.25 5.26v9.24a1.5 1.5 0 0 1-1.5 1.5h-7.5a1.5 1.5 0 0 1-1.5-1.5v-11a1.75 1.75 0 0 1 1.75-1.75Z"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+      />
+      <path d="M9.5 1.75V5.5h3.75" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+      <path d="M5.167 10.083h5.666M5.167 12.417h3.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DecisionDeclineIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="M3 3l6 6M9 3 3 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DecisionApproveIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="m2.5 6.25 2.1 2.1 4.9-5.1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function FacePlaceholderIcon() {
+  return (
+    <svg width="66" height="66" viewBox="0 0 66 66" fill="none" aria-hidden="true">
+      <circle cx="33" cy="23.5" r="11.5" stroke="#2E3A59" strokeWidth="2.4" />
+      <path
+        d="M18.5 51.5c0-8.009 6.491-14.5 14.5-14.5s14.5 6.491 14.5 14.5"
+        stroke="#2E3A59"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function KycFileRow({
   approved,
   file,
@@ -234,6 +364,106 @@ function KycFileRow({
   );
 }
 
+function KycReviewFileRow({
+  file,
+  label,
+  onDownload,
+  onPreview,
+}: {
+  file: StoredVerificationFile | null;
+  label: string;
+  onDownload: () => void;
+  onPreview: () => void;
+}) {
+  const hasFile = Boolean(file);
+  const fileName = file?.name || "File name";
+  const fileMeta = file ? `${getFileTypeLabel(file)} / ${formatBytes(file.size)}` : "File type / 245KB";
+
+  return (
+    <div>
+      <p className="mb-3 text-[12px] text-[#27324A]">{label}</p>
+      <div className="rounded-[12px] border border-dashed border-[#D8DEE8] px-4 py-5">
+        <div className="mx-auto flex max-w-[278px] items-center justify-between gap-4 rounded-[10px] bg-[#F2F4F8] px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center text-[#A8B1C4]">
+              <FileTypeIcon />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-medium text-[#27324A]">{fileName}</p>
+              <p className="mt-0.5 text-[10px] text-[#9AA3B7]">{fileMeta}</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={onDownload}
+              disabled={!hasFile}
+              className={cx("transition", hasFile ? "text-[#7E86A3] hover:text-[#324B6B]" : "cursor-not-allowed text-[#C6CDDB]")}
+              aria-label="Download file"
+            >
+              <FileDownloadIcon />
+            </button>
+            <button
+              type="button"
+              onClick={onPreview}
+              disabled={!hasFile}
+              className={cx("transition", hasFile ? "text-[#7E86A3] hover:text-[#324B6B]" : "cursor-not-allowed text-[#C6CDDB]")}
+              aria-label="Preview file"
+            >
+              <FilePreviewIcon />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KycDecisionButtons({
+  onApprove,
+  onDecline,
+}: {
+  onApprove: () => void;
+  onDecline: () => void;
+}) {
+  return (
+    <div className="flex justify-end gap-3 border-t border-[#DCE2EC] px-5 py-4">
+      <button
+        type="button"
+        onClick={onDecline}
+        className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-[#8EA0BB] px-4 text-[12px] font-medium text-[#324B6B]"
+      >
+        <DecisionDeclineIcon />
+        <span>Decline</span>
+      </button>
+      <button
+        type="button"
+        onClick={onApprove}
+        className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-[#324B6B] px-4 text-[12px] font-medium text-white"
+      >
+        <DecisionApproveIcon />
+        <span>Approve</span>
+      </button>
+    </div>
+  );
+}
+
+function KycStatusNote({
+  label,
+  status,
+}: {
+  label: string;
+  status: "approved" | "declined" | "pending";
+}) {
+  if (status === "pending") return null;
+
+  return (
+    <p className={cx("px-2 text-[12px] font-medium", status === "approved" ? "text-[#0F9D58]" : "text-[#D14343]")}>
+      {status === "approved" ? `${label} approved successfully.` : `${label} declined.`}
+    </p>
+  );
+}
+
 export function UserDetailTabsClient({ user }: { user: SuperadminUserRecord }) {
   const [activeTab, setActiveTab] = useState<UserDetailTab>("profile");
   const [profile, setProfile] = useState<ProfileDraft>(defaultProfileDraft);
@@ -263,6 +493,13 @@ export function UserDetailTabsClient({ user }: { user: SuperadminUserRecord }) {
     ["Joining Date", user.joiningDate],
     ["Age", user.age],
   ] as const;
+  const identityDocument = profile.identityDocument ?? reviewFallbackDocuments.identityDocument;
+  const faceVideo = profile.faceVideo ?? reviewFallbackDocuments.faceVideo;
+  const utilityBill = profile.utilityBill ?? reviewFallbackDocuments.utilityBill;
+  const bankStatement = profile.bankStatement ?? reviewFallbackDocuments.bankStatement;
+  const salarySlip = profile.salarySlip ?? reviewFallbackDocuments.salarySlip;
+  const businessDocument = profile.businessDocument ?? reviewFallbackDocuments.businessDocument;
+  const taxReturns = profile.taxReturns ?? reviewFallbackDocuments.taxReturns;
 
   function showKycToast(message: string) {
     setKycToast(message);
@@ -303,35 +540,67 @@ export function UserDetailTabsClient({ user }: { user: SuperadminUserRecord }) {
     showKycToast("File removed.");
   }
 
-  async function previewStoredFile(field: FileFieldKey, title: string) {
-    const file = profile[field];
-    if (!file) return;
-    const blob = await getFileBlob(file.id).catch(() => null);
+  async function previewStoredFile(field: FileFieldKey, title: string, fallback?: ReviewDocument) {
+    const storedFile = profile[field];
+    if (!storedFile && fallback) {
+      window.open(fallback.url, "_blank", "noopener,noreferrer");
+      openPreview(title);
+      return;
+    }
+
+    if (!storedFile) return;
+
+    const blob = await getFileBlob(storedFile.id).catch(() => null);
     if (!blob) {
+      if (fallback) {
+        window.open(fallback.url, "_blank", "noopener,noreferrer");
+        openPreview(title);
+        return;
+      }
       showKycToast("Preview unavailable.");
       return;
     }
+
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank", "noopener,noreferrer");
     window.setTimeout(() => URL.revokeObjectURL(url), 10000);
     openPreview(title);
   }
 
-  async function downloadStoredFile(field: FileFieldKey) {
-    const file = profile[field];
-    if (!file) return;
-    const blob = await getFileBlob(file.id).catch(() => null);
+  async function downloadStoredFile(field: FileFieldKey, fallback?: ReviewDocument) {
+    const storedFile = profile[field];
+    if (!storedFile && fallback) {
+      const anchor = document.createElement("a");
+      anchor.href = fallback.url;
+      anchor.download = fallback.name;
+      anchor.click();
+      showKycToast(`${fallback.name} downloaded.`);
+      return;
+    }
+
+    if (!storedFile) return;
+
+    const blob = await getFileBlob(storedFile.id).catch(() => null);
     if (!blob) {
+      if (fallback) {
+        const anchor = document.createElement("a");
+        anchor.href = fallback.url;
+        anchor.download = fallback.name;
+        anchor.click();
+        showKycToast(`${fallback.name} downloaded.`);
+        return;
+      }
       showKycToast("Download unavailable.");
       return;
     }
+
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = file.name;
+    anchor.download = storedFile.name;
     anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 10000);
-    showKycToast(`${file.name} downloaded.`);
+    showKycToast(`${storedFile.name} downloaded.`);
   }
 
   return (
@@ -383,81 +652,118 @@ export function UserDetailTabsClient({ user }: { user: SuperadminUserRecord }) {
 
         {activeTab === "kyc" ? (
           <div className="mx-auto max-w-[620px] space-y-4">
-            <div className="overflow-hidden rounded-[12px] border border-[#D7DEE8] bg-white">
-              <div className="border-b border-[#DCE2EC] px-5 py-4">
-                <h3 className="text-[14px] font-semibold text-[#223555]">Personal Identity</h3>
-              </div>
-              <div className="space-y-4 px-5 py-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label>
-                    <span className="mb-2 block text-[11px] text-[#27324A]">Full Legal Name</span>
-                    <input value={profile.fullName} onChange={(event) => updateField("fullName", event.target.value)} className="h-11 w-full rounded-[6px] border border-[#DCE2EC] px-3 text-[13px] outline-none" />
-                  </label>
-                  <label>
-                    <span className="mb-2 block text-[11px] text-[#27324A]">Date of Birth</span>
-                    <input value={profile.dateOfBirth} onChange={(event) => updateField("dateOfBirth", event.target.value)} placeholder="mm/dd/yyyy" className="h-11 w-full rounded-[6px] border border-[#DCE2EC] px-3 text-[13px] outline-none" />
-                  </label>
-                  <label>
-                    <span className="mb-2 block text-[11px] text-[#27324A]">Country of Residence</span>
-                    <input value={profile.country} onChange={(event) => updateField("country", event.target.value)} placeholder="Select a country" className="h-11 w-full rounded-[6px] border border-[#DCE2EC] px-3 text-[13px] outline-none" />
-                  </label>
-                  <label>
-                    <span className="mb-2 block text-[11px] text-[#27324A]">Identification Type</span>
-                    <input value={profile.identificationType} onChange={(event) => updateField("identificationType", event.target.value)} className="h-11 w-full rounded-[6px] border border-[#DCE2EC] px-3 text-[13px] outline-none" />
-                  </label>
+            <div className="space-y-2">
+              <div className="overflow-hidden rounded-[12px] border border-[#D7DEE8] bg-white">
+                <div className="border-b border-[#DCE2EC] px-5 py-4">
+                  <h3 className="text-[14px] font-semibold text-[#223555]">Personal Identity</h3>
                 </div>
-                <KycFileRow approved={kycStatus.identity === "approved"} file={profile.identityDocument} label="Identity Document Upload" onClear={() => void clearStoredFile("identityDocument")} onDownload={() => void downloadStoredFile("identityDocument")} onPreview={() => void previewStoredFile("identityDocument", "Identity Document")} onReplace={(file) => void replaceStoredFile("identityDocument", file)} />
-              </div>
-              <div className="flex justify-end gap-3 border-t border-[#DCE2EC] px-5 py-4">
-                <button type="button" onClick={() => setSectionStatus("identity", "declined")} className="rounded-[8px] border border-[#8EA0BB] px-4 py-2 text-[12px] text-[#324B6B]">Decline</button>
-                <button type="button" onClick={() => setSectionStatus("identity", "approved")} className="rounded-[8px] bg-[#324B6B] px-4 py-2 text-[12px] text-white">Approve</button>
-              </div>
-            </div>
-
-            <div className="overflow-hidden rounded-[12px] border border-[#D7DEE8] bg-white">
-              <div className="border-b border-[#DCE2EC] px-5 py-4">
-                <h3 className="text-[14px] font-semibold text-[#223555]">Face Verification</h3>
-              </div>
-              <div className="space-y-4 px-5 py-4">
-                <div>
-                  <p className="mb-3 text-[12px] text-[#27324A]">Upload Photo for verification</p>
-                  <div className="flex h-[92px] w-[92px] items-center justify-center rounded-full bg-[#F4F5F8] text-[40px] text-[#27324A]">◯</div>
+                <div className="space-y-4 px-5 py-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label>
+                      <span className="mb-2 block text-[11px] text-[#27324A]">Full Legal Name</span>
+                      <input value={profile.fullName} readOnly className="h-11 w-full cursor-default rounded-[6px] border border-[#DCE2EC] px-3 text-[13px] text-[#27324A] outline-none" />
+                    </label>
+                    <label>
+                      <span className="mb-2 block text-[11px] text-[#27324A]">Date of Birth</span>
+                      <input value={profile.dateOfBirth} readOnly placeholder="mm/dd/yyyy" className="h-11 w-full cursor-default rounded-[6px] border border-[#DCE2EC] px-3 text-[13px] text-[#27324A] outline-none placeholder:text-[#9AA3B7]" />
+                    </label>
+                    <label>
+                      <span className="mb-2 block text-[11px] text-[#27324A]">Country of Residence</span>
+                      <input value={profile.country} readOnly placeholder="Select a country" className="h-11 w-full cursor-default rounded-[6px] border border-[#DCE2EC] px-3 text-[13px] text-[#27324A] outline-none placeholder:text-[#9AA3B7]" />
+                    </label>
+                    <label>
+                      <span className="mb-2 block text-[11px] text-[#27324A]">Identification Type</span>
+                      <input value={profile.identificationType} readOnly className="h-11 w-full cursor-default rounded-[6px] border border-[#DCE2EC] px-3 text-[13px] text-[#27324A] outline-none" />
+                    </label>
+                  </div>
+                  <KycReviewFileRow
+                    file={identityDocument}
+                    label="Identity Document Upload"
+                    onDownload={() => void downloadStoredFile("identityDocument", reviewFallbackDocuments.identityDocument)}
+                    onPreview={() => void previewStoredFile("identityDocument", "Identity Document", reviewFallbackDocuments.identityDocument)}
+                  />
                 </div>
-                <KycFileRow approved={kycStatus.face === "approved"} file={profile.faceVideo} label="Upload Video for verification" onClear={() => void clearStoredFile("faceVideo")} onDownload={() => void downloadStoredFile("faceVideo")} onPreview={() => void previewStoredFile("faceVideo", "Face Verification Video")} onReplace={(file) => void replaceStoredFile("faceVideo", file)} />
+                <KycDecisionButtons onApprove={() => setSectionStatus("identity", "approved")} onDecline={() => setSectionStatus("identity", "declined")} />
               </div>
-              <div className="flex justify-end gap-3 border-t border-[#DCE2EC] px-5 py-4">
-                <button type="button" onClick={() => setSectionStatus("face", "declined")} className="rounded-[8px] border border-[#8EA0BB] px-4 py-2 text-[12px] text-[#324B6B]">Decline</button>
-                <button type="button" onClick={() => setSectionStatus("face", "approved")} className="rounded-[8px] bg-[#324B6B] px-4 py-2 text-[12px] text-white">Approve</button>
-              </div>
+              <KycStatusNote label="Personal identity" status={kycStatus.identity} />
             </div>
 
-            <div className="overflow-hidden rounded-[12px] border border-[#D7DEE8] bg-white">
-              <div className="border-b border-[#DCE2EC] px-5 py-4">
-                <h3 className="text-[14px] font-semibold text-[#223555]">Address Verification</h3>
+            <div className="space-y-2">
+              <div className="overflow-hidden rounded-[12px] border border-[#D7DEE8] bg-white">
+                <div className="border-b border-[#DCE2EC] px-5 py-4">
+                  <h3 className="text-[14px] font-semibold text-[#223555]">Face Verification</h3>
+                </div>
+                <div className="space-y-4 px-5 py-4">
+                  <div>
+                    <p className="mb-3 text-[12px] text-[#27324A]">Upload Photo for verification</p>
+                    <div className="flex h-[118px] w-[118px] items-center justify-center rounded-full bg-[#F4F5F8]">
+                      <FacePlaceholderIcon />
+                    </div>
+                  </div>
+                  <KycReviewFileRow
+                    file={faceVideo}
+                    label="Upload Video for verification"
+                    onDownload={() => void downloadStoredFile("faceVideo", reviewFallbackDocuments.faceVideo)}
+                    onPreview={() => void previewStoredFile("faceVideo", "Face Verification Video", reviewFallbackDocuments.faceVideo)}
+                  />
+                </div>
+                <KycDecisionButtons onApprove={() => setSectionStatus("face", "approved")} onDecline={() => setSectionStatus("face", "declined")} />
               </div>
-              <div className="space-y-4 px-5 py-4">
-                <KycFileRow approved={kycStatus.address === "approved"} file={profile.utilityBill} label="Utility Bill Upload" onClear={() => void clearStoredFile("utilityBill")} onDownload={() => void downloadStoredFile("utilityBill")} onPreview={() => void previewStoredFile("utilityBill", "Utility Bill")} onReplace={(file) => void replaceStoredFile("utilityBill", file)} />
-                <KycFileRow approved={kycStatus.address === "approved"} file={profile.bankStatement} label="Bank Statement Upload" onClear={() => void clearStoredFile("bankStatement")} onDownload={() => void downloadStoredFile("bankStatement")} onPreview={() => void previewStoredFile("bankStatement", "Bank Statement")} onReplace={(file) => void replaceStoredFile("bankStatement", file)} />
-              </div>
-              <div className="flex justify-end gap-3 border-t border-[#DCE2EC] px-5 py-4">
-                <button type="button" onClick={() => setSectionStatus("address", "declined")} className="rounded-[8px] border border-[#8EA0BB] px-4 py-2 text-[12px] text-[#324B6B]">Decline</button>
-                <button type="button" onClick={() => setSectionStatus("address", "approved")} className="rounded-[8px] bg-[#324B6B] px-4 py-2 text-[12px] text-white">Approve</button>
-              </div>
+              <KycStatusNote label="Face verification" status={kycStatus.face} />
             </div>
 
-            <div className="overflow-hidden rounded-[12px] border border-[#D7DEE8] bg-white">
-              <div className="border-b border-[#DCE2EC] px-5 py-4">
-                <h3 className="text-[14px] font-semibold text-[#223555]">Source of Funds</h3>
+            <div className="space-y-2">
+              <div className="overflow-hidden rounded-[12px] border border-[#D7DEE8] bg-white">
+                <div className="border-b border-[#DCE2EC] px-5 py-4">
+                  <h3 className="text-[14px] font-semibold text-[#223555]">Address Verification</h3>
+                </div>
+                <div className="space-y-4 px-5 py-4">
+                  <KycReviewFileRow
+                    file={utilityBill}
+                    label="Utility Bill Upload"
+                    onDownload={() => void downloadStoredFile("utilityBill", reviewFallbackDocuments.utilityBill)}
+                    onPreview={() => void previewStoredFile("utilityBill", "Utility Bill", reviewFallbackDocuments.utilityBill)}
+                  />
+                  <KycReviewFileRow
+                    file={bankStatement}
+                    label="Bank Statement Upload"
+                    onDownload={() => void downloadStoredFile("bankStatement", reviewFallbackDocuments.bankStatement)}
+                    onPreview={() => void previewStoredFile("bankStatement", "Bank Statement", reviewFallbackDocuments.bankStatement)}
+                  />
+                </div>
+                <KycDecisionButtons onApprove={() => setSectionStatus("address", "approved")} onDecline={() => setSectionStatus("address", "declined")} />
               </div>
-              <div className="space-y-4 px-5 py-4">
-                <KycFileRow approved={kycStatus.funds === "approved"} file={profile.salarySlip} label="Upload Salary Slip" onClear={() => void clearStoredFile("salarySlip")} onDownload={() => void downloadStoredFile("salarySlip")} onPreview={() => void previewStoredFile("salarySlip", "Salary Slip")} onReplace={(file) => void replaceStoredFile("salarySlip", file)} />
-                <KycFileRow approved={kycStatus.funds === "approved"} file={profile.businessDocument} label="Upload Business Document" onClear={() => void clearStoredFile("businessDocument")} onDownload={() => void downloadStoredFile("businessDocument")} onPreview={() => void previewStoredFile("businessDocument", "Business Document")} onReplace={(file) => void replaceStoredFile("businessDocument", file)} />
-                <KycFileRow approved={kycStatus.funds === "approved"} file={profile.taxReturns} label="Upload Tax Returns" onClear={() => void clearStoredFile("taxReturns")} onDownload={() => void downloadStoredFile("taxReturns")} onPreview={() => void previewStoredFile("taxReturns", "Tax Returns")} onReplace={(file) => void replaceStoredFile("taxReturns", file)} />
+              <KycStatusNote label="Address verification" status={kycStatus.address} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="overflow-hidden rounded-[12px] border border-[#D7DEE8] bg-white">
+                <div className="border-b border-[#DCE2EC] px-5 py-4">
+                  <h3 className="text-[14px] font-semibold text-[#223555]">Source of Funds</h3>
+                </div>
+                <div className="space-y-4 px-5 py-4">
+                  <KycReviewFileRow
+                    file={salarySlip}
+                    label="Upload Salary Slip"
+                    onDownload={() => void downloadStoredFile("salarySlip", reviewFallbackDocuments.salarySlip)}
+                    onPreview={() => void previewStoredFile("salarySlip", "Salary Slip", reviewFallbackDocuments.salarySlip)}
+                  />
+                  <KycReviewFileRow
+                    file={businessDocument}
+                    label="Upload Business Document"
+                    onDownload={() => void downloadStoredFile("businessDocument", reviewFallbackDocuments.businessDocument)}
+                    onPreview={() => void previewStoredFile("businessDocument", "Business Document", reviewFallbackDocuments.businessDocument)}
+                  />
+                  <KycReviewFileRow
+                    file={taxReturns}
+                    label="Upload Tax Returns"
+                    onDownload={() => void downloadStoredFile("taxReturns", reviewFallbackDocuments.taxReturns)}
+                    onPreview={() => void previewStoredFile("taxReturns", "Tax Returns", reviewFallbackDocuments.taxReturns)}
+                  />
+                </div>
+                <KycDecisionButtons onApprove={() => setSectionStatus("funds", "approved")} onDecline={() => setSectionStatus("funds", "declined")} />
               </div>
-              <div className="flex justify-end gap-3 border-t border-[#DCE2EC] px-5 py-4">
-                <button type="button" onClick={() => setSectionStatus("funds", "declined")} className="rounded-[8px] border border-[#8EA0BB] px-4 py-2 text-[12px] text-[#324B6B]">Decline</button>
-                <button type="button" onClick={() => setSectionStatus("funds", "approved")} className="rounded-[8px] bg-[#324B6B] px-4 py-2 text-[12px] text-white">Approve</button>
-              </div>
+              <KycStatusNote label="Source of funds" status={kycStatus.funds} />
             </div>
 
             <p className="text-center text-[12px] text-[#66708D]">{kycToast || " "}</p>
