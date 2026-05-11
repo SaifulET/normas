@@ -2,18 +2,27 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
+import type { FormEvent } from "react";
 import { useState } from "react";
-import { submitSuperadminLogin, submitSuperadminSignup } from "./auth-actions";
+import { useFormStatus } from "react-dom";
+import { getApiErrorMessage } from "@/lib/api";
+import { clearStoredUserSession } from "@/lib/auth-storage";
+import { getAuthSessionFromResponse, getAuthUserFromResponse, signinUser, signupUser } from "@/lib/auth-api";
+import { useAuthStore } from "@/store";
+import { setSuperadminLoginSession } from "./auth-actions";
 
 function SubmitButton({
   idleLabel,
+  isPending,
   pendingLabel,
 }: {
   idleLabel: string;
+  isPending?: boolean;
   pendingLabel: string;
 }) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const pending = formPending || Boolean(isPending);
 
   return (
     <button
@@ -97,11 +106,13 @@ function Field({
   label,
   name,
   placeholder,
+  required,
   type = "text",
 }: {
   label: string;
   name: string;
   placeholder: string;
+  required?: boolean;
   type?: string;
 }) {
   return (
@@ -111,13 +122,106 @@ function Field({
         type={type}
         name={name}
         placeholder={placeholder}
+        required={required}
         className="h-11 w-full rounded-[10px] border border-[#DADDEA] bg-white px-3.5 text-sm text-[#20243A] outline-none transition placeholder:text-[#9097AB] focus:border-[#4E4A86]"
       />
     </label>
   );
 }
 
+function EyeIcon({ hidden }: { hidden: boolean }) {
+  return (
+    <svg viewBox="0 0 18 18" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <path d="M1.5 9s2.7-4.5 7.5-4.5S16.5 9 16.5 9s-2.7 4.5-7.5 4.5S1.5 9 1.5 9Z" />
+      <circle cx="9" cy="9" r="2.25" />
+      {hidden ? <path d="M3 15 15 3" /> : null}
+    </svg>
+  );
+}
+
+function PasswordField({
+  label = "Password",
+  name = "password",
+  placeholder,
+  required,
+}: {
+  label?: string;
+  name?: string;
+  placeholder: string;
+  required?: boolean;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <label className="block">
+      <span className="mb-2 block text-[13px] font-medium text-[#20243A]">{label}</span>
+      <span className="relative block">
+        <input
+          type={visible ? "text" : "password"}
+          name={name}
+          placeholder={placeholder}
+          required={required}
+          className="h-11 w-full rounded-[10px] border border-[#DADDEA] bg-white px-3.5 pr-11 text-sm text-[#20243A] outline-none transition placeholder:text-[#9097AB] focus:border-[#4E4A86]"
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((value) => !value)}
+          className="absolute inset-y-0 right-2 inline-flex w-8 items-center justify-center rounded-md text-[#4D5572] transition hover:bg-[#F4F5F9] hover:text-[#20243A]"
+          aria-label={visible ? "Hide password" : "Show password"}
+          aria-pressed={visible}
+        >
+          <EyeIcon hidden={!visible} />
+        </button>
+      </span>
+    </label>
+  );
+}
+
 export function SuperadminLoginPage() {
+  const router = useRouter();
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+
+    try {
+      const response = await signinUser({
+        email: String(formData.get("email") ?? ""),
+        password: String(formData.get("password") ?? ""),
+      });
+      const authSession = getAuthSessionFromResponse(response);
+
+      if (!authSession) {
+        throw new Error("Login succeeded, but the server did not return a session. Please try again.");
+      }
+
+      if (authSession.user.role !== "superadmin") {
+        throw new Error("This account does not have superadmin access.");
+      }
+
+      await clearStoredUserSession();
+      setAuth({
+        refreshToken: authSession.refreshToken,
+        token: authSession.token,
+        user: authSession.user,
+      });
+
+      await setSuperadminLoginSession();
+      router.push("/superadmin/dashboard/user-management");
+      router.refresh();
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to login. Please check your credentials."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <AuthShell>
       <AuthCard>
@@ -125,12 +229,13 @@ export function SuperadminLoginPage() {
         <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.04em] text-[#1F2340]">Login</h2>
         <p className="mt-2 text-sm text-[#6F768B]">Enter your superadmin credentials to access the management console.</p>
 
-        <form action={submitSuperadminLogin} className="mt-8 space-y-4">
-          <Field label="Email Address" name="email" placeholder="admin@mooment.com" type="email" />
-          <Field label="Password" name="password" placeholder="••••••••" type="password" />
+        <form onSubmit={handleLogin} className="mt-8 space-y-4">
+          <Field label="Email Address" name="email" placeholder="admin@mooment.com" required type="email" />
+          <PasswordField placeholder="••••••••" required />
 
           <div className="pt-2">
-            <SubmitButton idleLabel="Login" pendingLabel="Logging in..." />
+            {errorMessage ? <p className="mb-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
+            <SubmitButton idleLabel="Login" isPending={isSubmitting} pendingLabel="Logging in..." />
           </div>
         </form>
 
@@ -146,7 +251,58 @@ export function SuperadminLoginPage() {
 }
 
 export function SuperadminSignupPage() {
-  const [inviteCode, setInviteCode] = useState("");
+  const router = useRouter();
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSignup = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "");
+    const password = String(formData.get("password") ?? "");
+
+    try {
+      const response = await signupUser({
+        email,
+        name: String(formData.get("name") ?? ""),
+        password,
+        role: "superadmin",
+      });
+      let authSession = getAuthSessionFromResponse(response);
+      const signupAuthUser = getAuthUserFromResponse(response);
+
+      await clearStoredUserSession();
+
+      if (!authSession) {
+        const signinResponse = await signinUser({ email, password });
+        authSession = getAuthSessionFromResponse(signinResponse, signupAuthUser);
+      }
+
+      if (!authSession) {
+        clearAuth();
+        throw new Error("Account created, but we could not start your session. Please sign in.");
+      }
+
+      setAuth({
+        refreshToken: authSession.refreshToken,
+        token: authSession.token,
+        user: authSession.user,
+      });
+
+      await setSuperadminLoginSession();
+      router.push("/superadmin/dashboard/user-management");
+      router.refresh();
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to create your account. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <AuthShell>
@@ -155,24 +311,13 @@ export function SuperadminSignupPage() {
         <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.04em] text-[#1F2340]">Signup</h2>
         <p className="mt-2 text-sm text-[#6F768B]">Create a separate superadmin account for platform operations.</p>
 
-        <form action={submitSuperadminSignup} className="mt-8 space-y-4">
-          <Field label="Full Name" name="name" placeholder="Tuval Ramsey" />
-          <Field label="Email Address" name="email" placeholder="admin@mooment.com" type="email" />
-          <Field label="Password" name="password" placeholder="••••••••" type="password" />
-          <label className="block">
-            <span className="mb-2 block text-[13px] font-medium text-[#20243A]">Invite Code</span>
-            <input
-              type="text"
-              name="inviteCode"
-              value={inviteCode}
-              onChange={(event) => setInviteCode(event.target.value)}
-              placeholder="Optional internal code"
-              className="h-11 w-full rounded-[10px] border border-[#DADDEA] bg-white px-3.5 text-sm text-[#20243A] outline-none transition placeholder:text-[#9097AB] focus:border-[#4E4A86]"
-            />
-          </label>
-
+        <form onSubmit={handleSignup} className="mt-8 space-y-4">
+          <Field label="Full Name" name="name" placeholder="Tuval Ramsey" required />
+          <Field label="Email Address" name="email" placeholder="admin@mooment.com" required type="email" />
+          <PasswordField placeholder="••••••••" required />
           <div className="pt-2">
-            <SubmitButton idleLabel="Signup" pendingLabel="Creating..." />
+            {errorMessage ? <p className="mb-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
+            <SubmitButton idleLabel="Signup" isPending={isSubmitting} pendingLabel="Creating..." />
           </div>
         </form>
 

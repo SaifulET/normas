@@ -4,9 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { superadminNavItems, superadminUser, type SuperadminNavIcon } from "./data";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Notification01Icon, Settings01Icon, SidebarRightIcon, User02Icon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Logout03Icon, Notification01Icon, Settings01Icon, SidebarRightIcon, User02Icon } from "@hugeicons/core-free-icons";
 
 function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -16,7 +17,7 @@ function SuperadminIcon({
   name,
   className,
 }: {
-  name: SuperadminNavIcon | "back" | "bell" | "collapse" | "dots" | "logo" | "search" | "chevronDown" | "document";
+  name: SuperadminNavIcon | "back" | "bell" | "collapse" | "dots" | "logo" | "search" | "chevronDown" | "document" | "logout";
   className?: string;
 }) {
   const classes = className ?? "h-4 w-4";
@@ -84,6 +85,10 @@ function SuperadminIcon({
           <path d="M9.5 13h5" />
           <path d="M9.5 16h3.5" />
         </svg>
+      );
+    case "logout":
+      return (
+        <HugeiconsIcon icon={Logout03Icon} className={className ?? "h-4 w-4"} />
       );
     case "dots":
       return (
@@ -264,6 +269,18 @@ export function SuperadminShell({
               </>
             ) : null}
           </button>
+
+          <LogoutButton
+            redirectHref="/superadmin/auth/login"
+            className={cx(
+              "mt-3 flex w-full rounded-[10px] text-[13px] font-medium text-white/70 transition hover:bg-white/8 hover:text-white disabled:cursor-wait disabled:opacity-70",
+              collapsed ? "justify-center px-2 py-3" : "items-center gap-3 px-4 py-3",
+            )}
+            title={collapsed ? "Logout" : undefined}
+          >
+            <SuperadminIcon name="logout" className="h-4 w-4 shrink-0" />
+            {!collapsed ? <span>Logout</span> : null}
+          </LogoutButton>
         </div>
       </aside>
 

@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { LogoutButton } from "@/components/auth/logout-button";
+import { apiRequest } from "@/lib/api";
 import {
   dashboardNavItems,
-  dashboardProfileLinks,
   dashboardUser,
   investeeDashboardNavItems,
-  investeeDashboardProfileLinks,
   investeeDashboardUser,
   type DashboardNavItem,
 } from "./data";
@@ -17,6 +17,57 @@ import { DashboardIcon } from "./icons";
 
 function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
+}
+
+type AuthProfileResponse = {
+  data?: {
+    email?: string;
+    id?: string;
+    mobile?: string;
+    name?: string;
+    profileImage?: string;
+    role?: string;
+  };
+  message?: string;
+  success?: boolean;
+};
+
+type SidebarUser = typeof dashboardUser & {
+  profileImage?: string;
+};
+
+function getInitials(name?: string, fallback = "U") {
+  const initials = name
+    ?.trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+
+  return initials || fallback;
+}
+
+function getRoleDashboardHref(pathname: string, role?: string) {
+  const normalizedRole = role?.toLowerCase();
+
+  if (normalizedRole === "investee" && pathname.startsWith("/dashboard")) {
+    const suffix = pathname.slice("/dashboard".length);
+    const allowedSuffixes = ["", "/messages", "/profile", "/schedule", "/upgrade-plan"];
+    const canUseSuffix = allowedSuffixes.some((item) => suffix === item || suffix.startsWith(`${item}/`));
+
+    return canUseSuffix ? `/investee-dashboard${suffix}` : "/investee-dashboard";
+  }
+
+  if (normalizedRole === "investor" && pathname.startsWith("/investee-dashboard")) {
+    const suffix = pathname.slice("/investee-dashboard".length);
+    const allowedSuffixes = ["", "/messages", "/profile", "/schedule", "/upgrade-plan"];
+    const canUseSuffix = allowedSuffixes.some((item) => suffix === item || suffix.startsWith(`${item}/`));
+
+    return canUseSuffix ? `/dashboard${suffix}` : "/dashboard";
+  }
+
+  return null;
 }
 
 function SidebarLogoMark({ light = false }: { light?: boolean }) {
@@ -67,9 +118,7 @@ function isActivePath(pathname: string, item: DashboardNavItem) {
 function isProfileSection(pathname: string) {
   return (
     pathname.startsWith("/dashboard/profile") ||
-    pathname.startsWith("/dashboard/settings") ||
-    pathname.startsWith("/investee-dashboard/profile") ||
-    pathname.startsWith("/investee-dashboard/settings")
+    pathname.startsWith("/investee-dashboard/profile")
   );
 }
 
@@ -80,9 +129,7 @@ function SidebarContent({
   pathname,
   onCollapseToggle,
   onNavigate,
-  profileLinks,
-  profileOpen,
-  onProfileToggle,
+  profileHref,
   user,
 }: {
   collapsed: boolean;
@@ -91,11 +138,20 @@ function SidebarContent({
   pathname: string;
   onCollapseToggle: () => void;
   onNavigate: () => void;
-  profileLinks: typeof dashboardProfileLinks;
-  profileOpen: boolean;
-  onProfileToggle: () => void;
-  user: typeof dashboardUser;
+  profileHref: string;
+  user: SidebarUser;
 }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const logoutClassName = cx(
+    "mt-2 flex w-full items-center rounded-2xl text-left text-sm font-medium text-white/70 transition hover:bg-white/8 hover:text-white disabled:cursor-wait disabled:opacity-70",
+    collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-3",
+  );
+  const showProfileImage = Boolean(user.profileImage) && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [user.profileImage]);
+
   return (
     <>
       {collapsed ? (
@@ -156,54 +212,44 @@ function SidebarContent({
       </nav>
 
       <div className="border-t border-white/10 p-3">
-        <button
-          type="button"
-          onClick={onProfileToggle}
+        <Link
+          href={profileHref}
+          onClick={onNavigate}
           className={cx(
             "flex w-full items-center rounded-2xl text-left transition hover:bg-white/8",
             collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-3",
             isProfileSection(pathname) ? "bg-white/12 text-white" : "text-white/80",
           )}
+          title={collapsed ? "Profile" : undefined}
         >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-[#243B5A]">
-            {user.initials}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-semibold text-[#243B5A]">
+            {showProfileImage ? (
+              <img
+                src={user.profileImage}
+                alt={`${user.name} profile`}
+                className="h-full w-full object-cover"
+                onError={() => setImageFailed(true)}
+              />
+            ) : (
+              user.initials
+            )}
           </div>
           {!collapsed ? (
-            <>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-                <p className="truncate text-xs text-white/55">{user.email}</p>
-              </div>
-              <DashboardIcon
-                name="chevronDown"
-                className={cx("h-4 w-4 transition", profileOpen ? "rotate-180" : "")}
-              />
-            </>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+              <p className="truncate text-xs text-white/55">{user.email}</p>
+            </div>
           ) : null}
-        </button>
+        </Link>
 
-        {!collapsed && profileOpen ? (
-          <div className="mt-2 space-y-1 pl-[3.5rem]">
-            {profileLinks.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onNavigate}
-                  className={cx(
-                    "flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition",
-                    active ? "bg-white/14 text-white" : "text-white/65 hover:bg-white/8 hover:text-white",
-                  )}
-                >
-                  <DashboardIcon name={item.icon} className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        ) : null}
+        <LogoutButton
+          redirectHref="/login"
+          className={logoutClassName}
+          title={collapsed ? "Logout" : undefined}
+        >
+          <DashboardIcon name="logout" className="h-5 w-5 shrink-0" />
+          {!collapsed ? <span>Logout</span> : null}
+        </LogoutButton>
       </div>
     </>
   );
@@ -211,16 +257,58 @@ function SidebarContent({
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const sidebarProfileOpen = isProfileSection(pathname) || profileOpen;
+  const [authProfile, setAuthProfile] = useState<AuthProfileResponse["data"] | null>(null);
   const desktopSidebarWidth = collapsed ? "lg:pl-[96px]" : "lg:pl-[276px]";
   const investeeDashboard = pathname.startsWith("/investee-dashboard");
-  const sidebarUser = investeeDashboard ? investeeDashboardUser : dashboardUser;
+  const fallbackSidebarUser = investeeDashboard ? investeeDashboardUser : dashboardUser;
+  const sidebarUser: SidebarUser = {
+    ...fallbackSidebarUser,
+    email: authProfile?.email?.trim() || fallbackSidebarUser.email,
+    initials: getInitials(authProfile?.name, fallbackSidebarUser.initials),
+    name: authProfile?.name?.trim() || fallbackSidebarUser.name,
+    profileImage: authProfile?.profileImage?.trim() || undefined,
+  };
   const sidebarNavItems = investeeDashboard ? investeeDashboardNavItems : dashboardNavItems;
-  const sidebarProfileLinks = investeeDashboard ? investeeDashboardProfileLinks : dashboardProfileLinks;
   const dashboardHomeHref = investeeDashboard ? "/investee-dashboard" : "/dashboard";
+  const dashboardProfileHref = investeeDashboard ? "/investee-dashboard/profile" : "/dashboard/profile";
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProfile = async () => {
+      try {
+        const response = await apiRequest<AuthProfileResponse>({
+          method: "GET",
+          url: "auth/profile",
+        });
+
+        if (active) {
+          setAuthProfile(response.data ?? null);
+        }
+      } catch {
+        if (active) {
+          setAuthProfile(null);
+        }
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const redirectHref = getRoleDashboardHref(pathname, authProfile?.role);
+
+    if (redirectHref) {
+      router.replace(redirectHref);
+    }
+  }, [authProfile?.role, pathname, router]);
 
   return (
     <div className="min-h-screen bg-white text-[#1E2746]">
@@ -238,17 +326,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             pathname={pathname}
             onCollapseToggle={() => setCollapsed((value) => !value)}
             onNavigate={() => undefined}
-            profileLinks={sidebarProfileLinks}
-            profileOpen={sidebarProfileOpen}
-            onProfileToggle={() => {
-              if (collapsed) {
-                setCollapsed(false);
-                setProfileOpen(true);
-                return;
-              }
-
-              setProfileOpen((value) => !value);
-            }}
+            profileHref={dashboardProfileHref}
             user={sidebarUser}
           />
         </aside>
@@ -266,9 +344,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 pathname={pathname}
                 onCollapseToggle={() => setMobileOpen(false)}
                 onNavigate={() => setMobileOpen(false)}
-                profileLinks={sidebarProfileLinks}
-                profileOpen={sidebarProfileOpen}
-                onProfileToggle={() => setProfileOpen((value) => !value)}
+                profileHref={dashboardProfileHref}
                 user={sidebarUser}
               />
             </aside>

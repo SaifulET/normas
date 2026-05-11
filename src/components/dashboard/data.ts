@@ -6,12 +6,6 @@ export interface DashboardNavItem {
   icon: "website" | "dashboard" | "plus" | "save" | "messages" | "schedule" | "upgrade";
 }
 
-export interface DashboardProfileLink {
-  label: string;
-  href: string;
-  icon: "profile" | "settings";
-}
-
 export interface DashboardScheduleHighlight {
   day: string;
   time: string;
@@ -79,16 +73,6 @@ export const investeeDashboardNavItems: DashboardNavItem[] = [
   { label: "Messages", href: "/investee-dashboard/messages", icon: "messages" },
   { label: "Schedule", href: "/investee-dashboard/schedule", icon: "schedule" },
   { label: "Upgrade Plan", href: "/investee-dashboard/upgrade-plan", icon: "upgrade" },
-];
-
-export const dashboardProfileLinks: DashboardProfileLink[] = [
-  { label: "Profile", href: "/dashboard/profile", icon: "profile" },
-  { label: "Settings", href: "/dashboard/settings", icon: "settings" },
-];
-
-export const investeeDashboardProfileLinks: DashboardProfileLink[] = [
-  { label: "Profile", href: "/investee-dashboard/profile", icon: "profile" },
-  { label: "Settings", href: "/investee-dashboard/settings", icon: "settings" },
 ];
 
 function requirePitch(slug: string) {
@@ -317,12 +301,5 @@ export const dashboardProfileSections = [
     ],
   },
 ];
-
-export const dashboardSettingsDefaults = {
-  instantNotifications: true,
-  weeklyDigest: true,
-  savedListingAlerts: false,
-  privateMode: true,
-};
 
 export const dashboardPitchFeed = pitchDetails;

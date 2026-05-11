@@ -2,17 +2,57 @@
 
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
+import { getApiErrorMessage } from "@/lib/api";
+import { getLists } from "@/lib/list-api";
 import { CreatedListCard } from "./created-list-card";
 import { type CreatedListItem, loadCreatedLists } from "./created-list-storage";
+import { mapApiListToCreatedListItem } from "./list-mappers";
 import { DashboardPageHeader } from "./page-header";
 
 export function CreatedListPage() {
   const [items, setItems] = useState<CreatedListItem[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    startTransition(() => {
-      setItems(loadCreatedLists());
-    });
+    let active = true;
+
+    const loadItems = async () => {
+      setLoading(true);
+
+      try {
+        const response = await getLists();
+        const nextItems = (response.data ?? []).map(mapApiListToCreatedListItem);
+
+        if (!active) {
+          return;
+        }
+
+        startTransition(() => {
+          setItems(nextItems);
+          setError("");
+        });
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
+
+        startTransition(() => {
+          setItems(loadCreatedLists());
+          setError(getApiErrorMessage(loadError, "Unable to load created lists."));
+        });
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadItems();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -26,7 +66,17 @@ export function CreatedListPage() {
         </Link>
       </DashboardPageHeader>
 
-      {items.length ? (
+      {error ? (
+        <div className="rounded-[18px] border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B42318]">
+          {error}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="rounded-[24px] border border-[#E6EBF3] bg-white px-6 py-12 text-center text-sm text-[#667085] shadow-[0_28px_80px_-60px_rgba(30,39,70,0.45)]">
+          Loading created lists...
+        </div>
+      ) : items.length ? (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => (
             <CreatedListCard key={item.id} item={item} />

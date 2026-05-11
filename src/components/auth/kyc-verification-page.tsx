@@ -4,10 +4,13 @@ import { startTransition, useEffect, useId, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardIcon } from "@/components/dashboard/icons";
+import { getApiErrorMessage } from "@/lib/api";
+import { getKycIdFromResponse, submitKycFormData } from "@/lib/kyc-api";
 
 const PROFILE_STORAGE_KEY = "earlyn.dashboard.profile";
 const PROFILE_FILES_DB_NAME = "earlyn-profile-files";
 const PROFILE_FILES_STORE_NAME = "files";
+const KYC_ID_STORAGE_KEY = "earlyn.auth.kyc.id";
 const KYC_STEP_STORAGE_KEY = "earlyn.auth.kyc.step";
 
 type StoredVerificationFile = {
@@ -143,6 +146,32 @@ function persistStoredStep(step: number) {
   }
 
   window.localStorage.setItem(KYC_STEP_STORAGE_KEY, String(step));
+}
+
+function persistStoredKycId(kycId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(KYC_ID_STORAGE_KEY, kycId);
+}
+
+async function clearKycDraftCache() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+  window.localStorage.removeItem(KYC_ID_STORAGE_KEY);
+  window.localStorage.removeItem(KYC_STEP_STORAGE_KEY);
+
+  await new Promise<void>((resolve) => {
+    const deleteRequest = window.indexedDB.deleteDatabase(PROFILE_FILES_DB_NAME);
+
+    deleteRequest.onsuccess = () => resolve();
+    deleteRequest.onerror = () => resolve();
+    deleteRequest.onblocked = () => resolve();
+  });
 }
 
 function createFileId() {
@@ -292,6 +321,23 @@ function TextInput({
     <input
       type="text"
       placeholder={placeholder}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="h-[42px] w-full rounded-[6px] border border-[#D7DEE8] bg-white px-3 text-sm text-[#344054] outline-none transition placeholder:text-[#98A2B3] focus:border-[#B9C6D8]"
+    />
+  );
+}
+
+function DateInput({
+  onChange,
+  value,
+}: {
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  return (
+    <input
+      type="date"
       value={value}
       onChange={(event) => onChange(event.target.value)}
       className="h-[42px] w-full rounded-[6px] border border-[#D7DEE8] bg-white px-3 text-sm text-[#344054] outline-none transition placeholder:text-[#98A2B3] focus:border-[#B9C6D8]"
@@ -682,11 +728,13 @@ function KycCard({
 
 function NavButtons({
   isLastStep,
+  isSubmitting,
   onBack,
   onContinue,
   showBack,
 }: {
   isLastStep: boolean;
+  isSubmitting?: boolean;
   onBack: () => void;
   onContinue: () => void;
   showBack: boolean;
@@ -696,46 +744,116 @@ function NavButtons({
       {showBack ? (
         <button
           type="button"
+          disabled={isSubmitting}
           onClick={onBack}
-          className="inline-flex h-10 items-center justify-center rounded-[6px] border border-[#314B6B] px-4 text-xs font-semibold text-[#314B6B] transition hover:bg-[#F8FAFC]"
+          className="inline-flex h-10 items-center justify-center rounded-[6px] border border-[#314B6B] px-4 text-xs font-semibold text-[#314B6B] transition hover:bg-[#F8FAFC] disabled:cursor-wait disabled:opacity-70"
         >
           Back
         </button>
       ) : null}
       <button
         type="button"
+        disabled={isSubmitting}
         onClick={onContinue}
-        className="inline-flex h-10 items-center justify-center rounded-[6px] bg-[#F97316] px-4 text-xs font-semibold text-white transition hover:bg-[#EA6A0A]"
+        className="inline-flex h-10 items-center justify-center rounded-[6px] bg-[#F97316] px-4 text-xs font-semibold text-white transition hover:bg-[#EA6A0A] disabled:cursor-wait disabled:opacity-80"
       >
-        {isLastStep ? "Continue" : "Continue"}
+        {isSubmitting ? (isLastStep ? "Submitting..." : "Saving...") : "Continue"}
       </button>
     </div>
   );
 }
 
+const kycFileFields: Array<{ apiKey: string; profileKey: FileFieldKey }> = [
+  { apiKey: "identityDocument", profileKey: "identityDocument" },
+  { apiKey: "utilityBill", profileKey: "utilityBill" },
+  { apiKey: "bankStatement", profileKey: "bankStatement" },
+  { apiKey: "facePhoto", profileKey: "facePhoto" },
+  { apiKey: "verificationVideo", profileKey: "faceVideo" },
+  { apiKey: "salarySlip", profileKey: "salarySlip" },
+  { apiKey: "businessDocument", profileKey: "businessDocument" },
+  { apiKey: "taxReturns", profileKey: "taxReturns" },
+];
+
+async function buildKycFormData(profile: ProfileDraft, currentStep: number) {
+  const formData = new FormData();
+
+  formData.append("currentStep", String(currentStep));
+  formData.append("personalIdentity.fullLegalName", profile.fullName.trim());
+  formData.append("personalIdentity.dateOfBirth", profile.dateOfBirth.trim());
+  formData.append("personalIdentity.countryOfResidence", profile.country.trim());
+  formData.append("personalIdentity.identificationType", profile.identificationType.trim().toLowerCase());
+
+  for (const field of kycFileFields) {
+    const file = profile[field.profileKey];
+
+    if (!file) {
+      continue;
+    }
+
+    const blob = await getFileBlob(file.id);
+
+    if (blob) {
+      formData.append(field.apiKey, blob, file.name);
+    }
+  }
+
+  return formData;
+}
+
 export function KycVerificationPage({
+  initialKycId,
   role,
 }: {
+  initialKycId?: string;
   role: "investee" | "investor";
 }) {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileDraft>(defaultProfileDraft);
   const [loaded, setLoaded] = useState(false);
   const [step, setStep] = useState(1);
+  const [kycId, setKycId] = useState<string | null>(initialKycId ?? null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [facePhotoPreviewUrl, setFacePhotoPreviewUrl] = useState<string | null>(null);
   const [previewState, setPreviewState] = useState<{ file: StoredVerificationFile; objectUrl: string } | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const nextProfile = loadProfileDraft();
-    persistProfileDraft(nextProfile);
+    let active = true;
 
-    startTransition(() => {
-      setProfile(nextProfile);
-      setStep(loadStoredStep());
-      setLoaded(true);
-    });
-  }, []);
+    const initializeKycDraft = async () => {
+      const isEditMode = Boolean(initialKycId);
+      const nextProfile = isEditMode ? loadProfileDraft() : defaultProfileDraft;
+      const nextKycId = initialKycId ?? null;
+      const nextStep = isEditMode ? loadStoredStep() : 1;
+
+      if (!isEditMode) {
+        await clearKycDraftCache();
+      }
+
+      if (!active) {
+        return;
+      }
+
+      persistProfileDraft(nextProfile);
+
+      if (nextKycId) {
+        persistStoredKycId(nextKycId);
+      }
+
+      startTransition(() => {
+        setProfile(nextProfile);
+        setKycId(nextKycId);
+        setStep(nextStep);
+        setLoaded(true);
+      });
+    };
+
+    void initializeKycDraft();
+
+    return () => {
+      active = false;
+    };
+  }, [initialKycId]);
 
   useEffect(() => {
     if (!loaded) {
@@ -897,6 +1015,11 @@ export function KycVerificationPage({
         setError("Please complete all personal identity fields and upload your identity document.");
         return false;
       }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(profile.dateOfBirth)) {
+        setError("Please choose your date of birth in YYYY-MM-DD format.");
+        return false;
+      }
     }
 
     if (step === 2) {
@@ -924,19 +1047,37 @@ export function KycVerificationPage({
     return true;
   };
 
-  const continueFlow = () => {
+  const continueFlow = async () => {
     if (!validateStep()) {
       return;
     }
 
-    if (step === 4) {
-      persistProfileDraft(profile);
-      persistStoredStep(1);
-      router.push(role === "investee" ? "/investee-dashboard" : "/dashboard");
-      return;
-    }
+    setIsSubmitting(true);
 
-    setStep((current) => current + 1);
+    try {
+      const formData = await buildKycFormData(profile, step);
+      const response = await submitKycFormData(formData, kycId);
+      const nextKycId = getKycIdFromResponse(response);
+
+      if (nextKycId) {
+        setKycId(nextKycId);
+        persistStoredKycId(nextKycId);
+      }
+
+      persistProfileDraft(profile);
+
+      if (step === 4) {
+        await clearKycDraftCache();
+        router.push(role === "investee" ? "/investee-dashboard" : "/dashboard");
+        return;
+      }
+
+      setStep((current) => current + 1);
+    } catch (submitError) {
+      setError(getApiErrorMessage(submitError, "Unable to submit KYC details. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const goBack = () => {
@@ -972,8 +1113,7 @@ export function KycVerificationPage({
                 </div>
                 <div>
                   <FieldLabel>Date of Birth</FieldLabel>
-                  <TextInput
-                    placeholder="mm/dd/yyyy"
+                  <DateInput
                     value={profile.dateOfBirth}
                     onChange={(value) => updateField("dateOfBirth", value)}
                   />
@@ -1008,7 +1148,7 @@ export function KycVerificationPage({
                 />
               </div>
 
-              <NavButtons showBack={false} isLastStep={false} onBack={goBack} onContinue={continueFlow} />
+              <NavButtons showBack={false} isLastStep={false} isSubmitting={isSubmitting} onBack={goBack} onContinue={continueFlow} />
             </KycCard>
           ) : null}
 
@@ -1043,7 +1183,7 @@ export function KycVerificationPage({
                 </div>
               </div>
 
-              <NavButtons showBack isLastStep={false} onBack={goBack} onContinue={continueFlow} />
+              <NavButtons showBack isLastStep={false} isSubmitting={isSubmitting} onBack={goBack} onContinue={continueFlow} />
             </KycCard>
           ) : null}
 
@@ -1069,7 +1209,7 @@ export function KycVerificationPage({
                 />
               </div>
 
-              <NavButtons showBack isLastStep={false} onBack={goBack} onContinue={continueFlow} />
+              <NavButtons showBack isLastStep={false} isSubmitting={isSubmitting} onBack={goBack} onContinue={continueFlow} />
             </KycCard>
           ) : null}
 
@@ -1116,7 +1256,7 @@ export function KycVerificationPage({
                 </div>
               </div>
 
-              <NavButtons showBack isLastStep onBack={goBack} onContinue={continueFlow} />
+              <NavButtons showBack isLastStep isSubmitting={isSubmitting} onBack={goBack} onContinue={continueFlow} />
             </KycCard>
           ) : null}
 

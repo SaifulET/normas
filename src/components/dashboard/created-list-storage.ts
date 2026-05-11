@@ -29,6 +29,7 @@ export type CreatedListItem = {
   sector: string;
   stage: string;
   title: string;
+  viewCount?: number;
 };
 
 const CREATED_LISTS_STORAGE_KEY = "earlyn.dashboard.createdLists";

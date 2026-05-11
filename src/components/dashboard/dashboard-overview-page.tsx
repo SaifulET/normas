@@ -2,18 +2,41 @@
 
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
+import { getLists } from "@/lib/list-api";
 import { CreatedListCard } from "./created-list-card";
 import { type CreatedListItem, loadCreatedLists } from "./created-list-storage";
 import { dashboardScheduleHighlights } from "./data";
+import { mapApiListToCreatedListItem } from "./list-mappers";
 import { DashboardPageHeader } from "./page-header";
 
 export function DashboardOverviewPage() {
   const [createdLists, setCreatedLists] = useState<CreatedListItem[]>([]);
 
   useEffect(() => {
-    startTransition(() => {
-      setCreatedLists(loadCreatedLists().slice(0, 4));
-    });
+    let active = true;
+
+    const loadItems = async () => {
+      try {
+        const response = await getLists();
+        const nextItems = (response.data ?? []).map(mapApiListToCreatedListItem).slice(0, 4);
+
+        if (active) {
+          startTransition(() => setCreatedLists(nextItems));
+        }
+      } catch {
+        if (active) {
+          startTransition(() => {
+            setCreatedLists(loadCreatedLists().slice(0, 4));
+          });
+        }
+      }
+    };
+
+    void loadItems();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (

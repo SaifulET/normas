@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getApiErrorMessage } from "@/lib/api";
+import { createList, getList, updateList, type ListStatus } from "@/lib/list-api";
 import { DashboardPageHeader } from "./page-header";
 import {
   createCreatedListId,
   deleteCreatedListBanner,
+  getCreatedListBannerBlob,
   getMaxActiveCreatedLists,
   getMaxCreatedLists,
   type CreatedListAdditionalDetail,
@@ -15,8 +18,10 @@ import {
   persistCreatedLists,
   saveCreatedListBanner,
 } from "./created-list-storage";
+import { mapApiListToCreatedListItem } from "./list-mappers";
 
 type CreateListForm = {
+  active: boolean;
   additionalDetails: CreatedListAdditionalDetail[];
   banner: CreatedListBanner | null;
   country: string;
@@ -29,6 +34,7 @@ type CreateListForm = {
 };
 
 const defaultForm: CreateListForm = {
+  active: false,
   additionalDetails: [
     { label: "Asking Price", value: "$45,000" },
     { label: "Revenue Model", value: "Subscription" },
@@ -499,11 +505,40 @@ function AdditionalDetailsRow({
   );
 }
 
-export function CreateListPage() {
+function buildFormFromItem(item: CreatedListItem): CreateListForm {
+  return {
+    active: item.active,
+    additionalDetails: item.additionalDetails,
+    banner: item.banner,
+    country: item.country,
+    description: item.description,
+    fundingTarget: item.fundingTarget.replace(/[^\d.]/g, "") || "0.00",
+    keyword: item.keyword,
+    sector: item.sector,
+    stage: item.stage,
+    title: item.title,
+  };
+}
+
+function updateStoredList(item: CreatedListItem) {
+  const existing = loadCreatedLists();
+  const nextItems = existing.some((current) => current.id === item.id)
+    ? existing.map((current) => (current.id === item.id ? item : current))
+    : [item, ...existing];
+
+  persistCreatedLists(nextItems);
+}
+
+export function CreateListPage({ listId }: { listId?: string }) {
   const router = useRouter();
+  const isEditMode = Boolean(listId);
   const [form, setForm] = useState<CreateListForm>(defaultForm);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
+  const [initialItem, setInitialItem] = useState<CreatedListItem | null>(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(Boolean(listId));
+  const [isSaving, setIsSaving] = useState(false);
 
   const updateField = <K extends keyof CreateListForm>(key: K, value: CreateListForm[K]) => {
     setForm((current) => ({
@@ -512,16 +547,107 @@ export function CreateListPage() {
     }));
   };
 
+  useEffect(() => {
+    if (!listId) {
+      return;
+    }
+
+    let active = true;
+
+    const loadEditableList = async () => {
+      setLoading(true);
+
+      try {
+        const response = await getList(listId);
+
+        if (!response.data) {
+          throw new Error(response.message ?? "List not found.");
+        }
+
+        const nextItem = mapApiListToCreatedListItem(response.data);
+
+        if (!active) {
+          return;
+        }
+
+        setInitialItem(nextItem);
+        setForm(buildFormFromItem(nextItem));
+        setError("");
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
+
+        const fallbackItem = loadCreatedLists().find((item) => item.id === listId) ?? null;
+
+        if (fallbackItem) {
+          setInitialItem(fallbackItem);
+          setForm(buildFormFromItem(fallbackItem));
+          setError("");
+        } else {
+          setError(getApiErrorMessage(loadError, "Unable to load list for editing."));
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadEditableList();
+
+    return () => {
+      active = false;
+    };
+  }, [listId]);
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | null = null;
+
+    if (bannerFile || !form.banner || form.banner.kind !== "asset") {
+      return () => undefined;
+    }
+
+    const loadBannerAsset = async () => {
+      try {
+        const blob = await getCreatedListBannerBlob(form.banner?.kind === "asset" ? form.banner.id : "");
+
+        if (!active || !blob) {
+          return;
+        }
+
+        objectUrl = URL.createObjectURL(blob);
+        setBannerPreviewUrl(objectUrl);
+      } catch {
+        if (active) {
+          setBannerPreviewUrl(null);
+        }
+      }
+    };
+
+    void loadBannerAsset();
+
+    return () => {
+      active = false;
+
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [bannerFile, form.banner]);
+
   const handleBannerSelect = async (file: File) => {
     setError("");
 
-    if (form.banner?.kind === "asset") {
+    if (!isEditMode && form.banner?.kind === "asset") {
       await deleteCreatedListBanner(form.banner);
     }
 
     const nextBanner = await saveCreatedListBanner(file);
     const objectUrl = URL.createObjectURL(file);
 
+    setBannerFile(file);
     setBannerPreviewUrl((current) => {
       if (current) {
         URL.revokeObjectURL(current);
@@ -534,6 +660,11 @@ export function CreateListPage() {
   };
 
   const resetForm = async () => {
+    if (isEditMode && listId) {
+      router.push(`/investee-dashboard/created-list/${listId}`);
+      return;
+    }
+
     if (form.banner?.kind === "asset") {
       await deleteCreatedListBanner(form.banner);
     }
@@ -547,10 +678,15 @@ export function CreateListPage() {
     });
 
     setForm(defaultForm);
+    setBannerFile(null);
     setError("");
   };
 
   const handleSave = async () => {
+    if (isSaving) {
+      return;
+    }
+
     const trimmedTitle = form.title.trim();
     const trimmedKeyword = form.keyword.trim();
     const trimmedDescription = form.description.trim();
@@ -560,19 +696,66 @@ export function CreateListPage() {
     const trimmedFundingTarget = form.fundingTarget.trim();
     const cleanedDetails = form.additionalDetails.filter((detail) => detail.label.trim() || detail.value.trim());
     const existing = loadCreatedLists();
+    const fundingTarget = Number(trimmedFundingTarget.replace(/[^\d.]/g, "") || 0);
 
     if (!trimmedTitle || !trimmedCountry || !trimmedStage || !trimmedSector) {
       setError("Title, country, stage, and sector are required.");
       return;
     }
 
-    if (existing.length >= getMaxCreatedLists()) {
+    if (!Number.isFinite(fundingTarget)) {
+      setError("Funding target must be a valid number.");
+      return;
+    }
+
+    if (!isEditMode && existing.length >= getMaxCreatedLists()) {
       setError(`You can create up to ${getMaxCreatedLists()} lists only.`);
       return;
     }
 
+    const active = isEditMode ? form.active : existing.filter((item) => item.active).length < getMaxActiveCreatedLists();
+    const status: ListStatus = active ? "activated" : "deactivated";
+    const formData = new FormData();
+
+    if (bannerFile) {
+      formData.append("bannerImage", bannerFile);
+    }
+
+    formData.append("title", trimmedTitle);
+    formData.append("country", trimmedCountry);
+    formData.append("stage", trimmedStage);
+    formData.append("sector", trimmedSector);
+    formData.append("fundingTarget", String(fundingTarget));
+    formData.append("keyword", trimmedKeyword);
+    formData.append("description", trimmedDescription);
+    formData.append(
+      "additionalDetails",
+      JSON.stringify(
+        cleanedDetails.map((detail) => ({
+          key: detail.label.trim(),
+          value: detail.value.trim(),
+        })),
+      ),
+    );
+    formData.append("status", status);
+
+    setError("");
+    setIsSaving(true);
+
+    try {
+      const response = isEditMode && listId ? await updateList(listId, formData, status) : await createList(formData);
+
+      if (response.success === false) {
+        throw new Error(response.message ?? `Unable to ${isEditMode ? "update" : "create"} list. Please try again.`);
+      }
+    } catch (saveError) {
+      setError(getApiErrorMessage(saveError, `Unable to ${isEditMode ? "update" : "create"} list. Please try again.`));
+      setIsSaving(false);
+      return;
+    }
+
     const nextItem: CreatedListItem = {
-      id: createCreatedListId(),
+      id: initialItem?.id ?? createCreatedListId(),
       title: trimmedTitle,
       country: trimmedCountry,
       stage: trimmedStage,
@@ -580,19 +763,56 @@ export function CreateListPage() {
       fundingTarget: trimmedFundingTarget ? `£${trimmedFundingTarget}` : "£0.00",
       keyword: trimmedKeyword || "project listing",
       description: trimmedDescription || "Project description will appear here once added.",
-      createdAt: new Date().toISOString(),
-      active: existing.filter((item) => item.active).length < getMaxActiveCreatedLists(),
+      createdAt: initialItem?.createdAt ?? new Date().toISOString(),
+      active,
       banner: form.banner,
       additionalDetails: cleanedDetails,
+      viewCount: initialItem?.viewCount,
     };
+
+    if (isEditMode) {
+      updateStoredList(nextItem);
+      router.push(`/investee-dashboard/created-list/${nextItem.id}`);
+      return;
+    }
 
     persistCreatedLists([nextItem, ...existing]);
     router.push("/investee-dashboard/created-list");
   };
 
+  if (loading) {
+    return (
+      <section className="rounded-[24px] border border-[#E6EBF3] bg-white px-6 py-12 text-center text-sm text-[#667085] shadow-[0_28px_80px_-60px_rgba(30,39,70,0.45)]">
+        Loading list editor...
+      </section>
+    );
+  }
+
+  if (isEditMode && !initialItem) {
+    return (
+      <section className="space-y-6">
+        <button
+          type="button"
+          onClick={() => router.push("/investee-dashboard/created-list")}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[#314B6B]"
+        >
+          Back to created list
+        </button>
+        <div className="rounded-[18px] border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B42318]">
+          {error || "Unable to load list for editing."}
+        </div>
+      </section>
+    );
+  }
+
+  const bannerDisplayUrl = bannerPreviewUrl ?? (form.banner?.kind === "path" ? form.banner.src : null);
+
   return (
     <section className="space-y-6">
-      <DashboardPageHeader title="Create List" subtitle="You can create up to 5 lists, only 3 can be active at a time">
+      <DashboardPageHeader
+        title={isEditMode ? "Edit List" : "Create List"}
+        subtitle={isEditMode ? "Update your pitch details and banner image" : "You can create up to 5 lists, only 3 can be active at a time"}
+      >
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -608,9 +828,10 @@ export function CreateListPage() {
             onClick={() => {
               void handleSave();
             }}
-            className="inline-flex h-10 items-center justify-center rounded-xl bg-[#314B6B] px-4 text-sm font-semibold text-white transition hover:bg-[#243B5A]"
+            disabled={isSaving}
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-[#314B6B] px-4 text-sm font-semibold text-white transition hover:bg-[#243B5A] disabled:cursor-wait disabled:opacity-70"
           >
-            Save
+            {isSaving ? "Saving..." : isEditMode ? "Update" : "Save"}
           </button>
         </div>
       </DashboardPageHeader>
@@ -633,10 +854,10 @@ export function CreateListPage() {
               }}
             />
 
-            {bannerPreviewUrl ? (
+            {bannerDisplayUrl ? (
               <div className="space-y-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={bannerPreviewUrl} alt="Project banner preview" className="h-[260px] w-full rounded-[22px] object-cover" />
+                <img src={bannerDisplayUrl} alt="Project banner preview" className="h-[260px] w-full rounded-[22px] object-cover" />
                 <div className="flex justify-center">
                   <span className="inline-flex items-center rounded-full bg-[#F8FAFC] px-4 py-2 text-sm font-medium text-[#344054]">
                     Change banner image

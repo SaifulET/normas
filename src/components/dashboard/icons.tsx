@@ -1,4 +1,4 @@
-import { Bookmark02FreeIcons, Bookmark02Icon, Calendar03Icon, ChatIcon, CrownIcon } from "@hugeicons/core-free-icons";
+import { Bookmark02FreeIcons, Bookmark02Icon, Calendar03Icon, ChatIcon, CrownIcon, Logout03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { SVGProps } from "react";
 
@@ -11,6 +11,7 @@ type DashboardIconName =
   | "dashboard"
   | "expand"
   | "external"
+  | "logout"
   | "messages"
   | "plus"
   | "profile"
@@ -107,6 +108,10 @@ export function DashboardIcon({
           <path d="m18.5 5.5-7 7" />
           <path d="M10.5 7.5h-2a3 3 0 0 0-3 3v5a3 3 0 0 0 3 3h5a3 3 0 0 0 3-3v-2" />
         </svg>
+      );
+    case "logout":
+      return (
+        <HugeiconsIcon icon={Logout03Icon} className={className ?? "h-5 w-5"} />
       );
     case "messages":
       return (

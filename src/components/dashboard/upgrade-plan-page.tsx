@@ -388,7 +388,7 @@ export function UpgradeCheckoutPage() {
             </button>
 
             <p className="mt-4 text-xs leading-6 text-[#7B8496]">
-              Renews monthly until cancelled. Cancel anytime in settings. By subscribing, you agree to the Terms of Use and authorize Early-N to store and charge your payment method.
+              Renews monthly until cancelled. Cancel anytime from your account. By subscribing, you agree to the Terms of Use and authorize Early-N to store and charge your payment method.
             </p>
           </aside>
         </div>

@@ -2,14 +2,18 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import type { FormEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { getApiErrorMessage } from "@/lib/api";
+import { clearStoredUserSession } from "@/lib/auth-storage";
+import { getAuthSessionFromResponse, getAuthUserFromResponse, signinUser, signupUser } from "@/lib/auth-api";
+import { useAuthStore } from "@/store";
 import {
+  setLoginSession,
   submitForgotPassword,
-  submitLogin,
   submitResetPassword,
-  submitSignup,
   submitVerifyOtp,
 } from "./actions";
 
@@ -29,13 +33,16 @@ function SecurityBadge() {
 function SubmitButton({
   className,
   idleLabel,
+  isPending,
   pendingLabel,
 }: {
   className?: string;
   idleLabel: string;
+  isPending?: boolean;
   pendingLabel: string;
 }) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const pending = formPending || Boolean(isPending);
 
   return (
     <button
@@ -48,16 +55,28 @@ function SubmitButton({
   );
 }
 
+function EyeIcon({ hidden }: { hidden: boolean }) {
+  return (
+    <svg viewBox="0 0 18 18" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <path d="M1.5 9s2.7-4.5 7.5-4.5S16.5 9 16.5 9s-2.7 4.5-7.5 4.5S1.5 9 1.5 9Z" />
+      <circle cx="9" cy="9" r="2.25" />
+      {hidden ? <path d="M3 15 15 3" /> : null}
+    </svg>
+  );
+}
+
 function Field({
   label,
   name,
   placeholder,
+  required,
   type = "text",
   trailing,
 }: {
   label: string;
   name: string;
   placeholder: string;
+  required?: boolean;
   type?: string;
   trailing?: ReactNode;
 }) {
@@ -69,9 +88,48 @@ function Field({
           type={type}
           name={name}
           placeholder={placeholder}
+          required={required}
           className="h-[40px] w-full rounded-[8px] border border-[#D3D8E0] bg-white px-3.5 text-[14px] text-[#111827] outline-none transition placeholder:text-[#8D97A5] focus:border-[#314864]"
         />
         {trailing ? <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">{trailing}</span> : null}
+      </span>
+    </label>
+  );
+}
+
+function PasswordField({
+  label = "Password",
+  name = "password",
+  placeholder,
+  required,
+}: {
+  label?: string;
+  name?: string;
+  placeholder: string;
+  required?: boolean;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <label className="block">
+      <span className="mb-2 block text-[13px] font-medium text-[#1F2937]">{label}</span>
+      <span className="relative block">
+        <input
+          type={visible ? "text" : "password"}
+          name={name}
+          placeholder={placeholder}
+          required={required}
+          className="h-[40px] w-full rounded-[8px] border border-[#D3D8E0] bg-white px-3.5 pr-11 text-[14px] text-[#111827] outline-none transition placeholder:text-[#8D97A5] focus:border-[#314864]"
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((value) => !value)}
+          className="absolute inset-y-0 right-2 inline-flex w-8 items-center justify-center rounded-md text-[#344054] transition hover:bg-[#F3F4F6] hover:text-[#111827]"
+          aria-label={visible ? "Hide password" : "Show password"}
+          aria-pressed={visible}
+        >
+          <EyeIcon hidden={!visible} />
+        </button>
       </span>
     </label>
   );
@@ -180,34 +238,73 @@ function AuthCard({
   );
 }
 
-function PasswordAdornment() {
-  return (
-    <svg viewBox="0 0 18 18" className="h-4 w-4 text-[#344054]" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-      <path d="M1.5 9s2.7-4.5 7.5-4.5S16.5 9 16.5 9s-2.7 4.5-7.5 4.5S1.5 9 1.5 9Z" />
-      <circle cx="9" cy="9" r="2.25" />
-    </svg>
-  );
-}
-
 export function LoginPageView() {
+  const router = useRouter();
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+
+    try {
+      const response = await signinUser({
+        email: String(formData.get("email") ?? ""),
+        password: String(formData.get("password") ?? ""),
+      });
+      const authSession = getAuthSessionFromResponse(response);
+
+      if (!authSession) {
+        throw new Error("Login succeeded, but the server did not return a session. Please try again.");
+      }
+
+      await clearStoredUserSession();
+      setAuth({
+        refreshToken: authSession.refreshToken,
+        token: authSession.token,
+        user: authSession.user,
+      });
+
+      await setLoginSession();
+      router.push(authSession.user.role === "investee" ? "/investee-dashboard" : "/dashboard");
+      router.refresh();
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to login. Please check your credentials."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <AuthShell>
       <AuthCard className="mx-auto">
         <h2 className="text-[24px] font-semibold tracking-[-0.03em] text-[#20232D]">Login</h2>
         <p className="mt-1 text-[14px] text-[#707A88]">Enter your credentials to access the secure portal.</p>
 
-        <form action={submitLogin} className="mt-6 space-y-4">
-          <Field label="Email Address" name="email" placeholder="name@institution.edu" type="email" />
+        <form onSubmit={handleLogin} className="mt-6 space-y-4">
+          <Field label="Email Address" name="email" placeholder="name@institution.edu" required type="email" />
           <div>
-            <Field label="Password" name="password" placeholder="••••••••" type="password" />
+            <PasswordField placeholder="••••••••" required />
             <div className="mt-2 text-right">
               <Link href="/forgot-password" className="text-[11px] font-medium text-[#2563EB] hover:text-[#1D4ED8]">
                 Forgot Password?
               </Link>
             </div>
           </div>
-          <SubmitButton idleLabel="Login" pendingLabel="Logging in..." className="mt-3" />
+          {errorMessage ? <p className="text-sm font-medium text-red-600">{errorMessage}</p> : null}
+          <SubmitButton idleLabel="Login" isPending={isSubmitting} pendingLabel="Logging in..." className="mt-3" />
         </form>
+
+        <p className="mt-6 text-center text-sm text-[#6F768B]">
+          Need an account?{" "}
+          <Link href="/signup" className="font-semibold text-[#314864]">
+            Signup
+          </Link>
+        </p>
 
         <SecurityBadge />
       </AuthCard>
@@ -216,7 +313,60 @@ export function LoginPageView() {
 }
 
 export function SignupPageView() {
+  const router = useRouter();
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const [role, setRole] = useState<"investor" | "investee">("investee");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSignup = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const nextRole = formData.get("role") === "investor" ? "investor" : "investee";
+    const email = String(formData.get("email") ?? "");
+    const password = String(formData.get("password") ?? "");
+
+    try {
+      const response = await signupUser({
+        email,
+        name: String(formData.get("name") ?? ""),
+        password,
+        role: nextRole,
+      });
+      let authSession = getAuthSessionFromResponse(response);
+      const signupAuthUser = getAuthUserFromResponse(response);
+
+      await clearStoredUserSession();
+
+      if (!authSession) {
+        const signinResponse = await signinUser({ email, password });
+        authSession = getAuthSessionFromResponse(signinResponse, signupAuthUser);
+      }
+
+      if (!authSession) {
+        clearAuth();
+        throw new Error("Account created, but we could not start your session. Please sign in to continue KYC.");
+      }
+
+      setAuth({
+        refreshToken: authSession.refreshToken,
+        token: authSession.token,
+        user: authSession.user,
+      });
+
+      await setLoginSession();
+      router.push(`/kyc-verification?role=${nextRole}`);
+      router.refresh();
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to create your account. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <AuthShell>
@@ -228,7 +378,7 @@ export function SignupPageView() {
           <p className="mt-1 text-[13px] text-[#707A88]">Once you choose your role, you cannot change it.</p>
         </div>
 
-        <form action={submitSignup} className="mt-4 space-y-4">
+        <form onSubmit={handleSignup} className="mt-4 space-y-4">
           <fieldset>
             <legend className="sr-only">Choose role</legend>
             <div className="grid grid-cols-2 gap-3">
@@ -305,9 +455,9 @@ export function SignupPageView() {
             </div>
           </fieldset>
 
-          <Field label="Name" name="name" placeholder="John Doe" />
-          <Field label="Email Address" name="email" placeholder="name@institution.edu" type="email" />
-          <Field label="Password" name="password" placeholder="••••••••" type="password" />
+          <Field label="Name" name="name" placeholder="John Doe" required />
+          <Field label="Email Address" name="email" placeholder="name@institution.edu" required type="email" />
+          <PasswordField placeholder="••••••••" required />
 
           <label className="flex items-start gap-2.5 pt-0.5 text-[10px] leading-4 text-[#4B5563]">
             <input type="checkbox" required className="mt-0.5 h-3.5 w-3.5 rounded border border-[#B8C0CC]" />
@@ -324,7 +474,8 @@ export function SignupPageView() {
             </span>
           </label>
 
-          <SubmitButton idleLabel="Signup" pendingLabel="Creating..." />
+          {errorMessage ? <p className="text-sm font-medium text-red-600">{errorMessage}</p> : null}
+          <SubmitButton idleLabel="Signup" isPending={isSubmitting} pendingLabel="Creating..." />
         </form>
 
         <SecurityBadge />
@@ -440,20 +591,8 @@ export function ResetPasswordPageView() {
         </p>
 
         <form action={submitResetPassword} className="mt-6 space-y-4 text-left">
-          <Field
-            label="New Password"
-            name="password"
-            placeholder="••••••••"
-            type="password"
-            trailing={<PasswordAdornment />}
-          />
-          <Field
-            label="Confirm Password"
-            name="confirmPassword"
-            placeholder="••••••••"
-            type="password"
-            trailing={<PasswordAdornment />}
-          />
+          <PasswordField label="New Password" name="password" placeholder="••••••••" />
+          <PasswordField label="Confirm Password" name="confirmPassword" placeholder="••••••••" />
           <SubmitButton idleLabel="Done" pendingLabel="Saving..." className="mt-2" />
         </form>
       </AuthCard>
