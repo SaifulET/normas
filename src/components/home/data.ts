@@ -8,23 +8,24 @@ import {
 
 const sectorOptions = [
   "All Sectors",
-  "Clean Energy & Renewables",
-  "Sustainable Agriculture & Food",
-  "Climate Tech & Environment",
-  "Healthcare & Wellbeing",
-  "Education & Skills",
-  "Financial Inclusion & Fintech",
-  "Affordable Housing & Community",
-  "Gender Equality & Social Impact",
-  "Ethical Supply Chain & Trade",
-  "Sustainable Transport & Mobility",
-  "Impact Tech & AI for Good",
-  "Poverty Alleviation & Economic Empowerment",
-  "Responsible Manufacturing",
-  "Other / Cross-Sector Impact",
+  "Clean Energy",
+  "Sustainable Agriculture",
+  "Climate Tech",
+  "Healthcare",
+  "Ed Tech",
+  "FinTech",
+  "Affordable Housing",
+  "Social",
+  "Supply Chain",
+  "Mobility",
+  "Impact Tech & AI",
+  "Eco Empowerment",
+  "Manufacturing",
+  "Cross-Sector",
 ];
 
 const fundingOptions = [
+  "All Funding",
   "\u00A3100K - \u00A3500K",
   "\u00A3500K - \u00A31M",
   "\u00A31M - \u00A35M",
@@ -32,7 +33,7 @@ const fundingOptions = [
   "\u00A310M+",
 ];
 
-const stageOptions = ["Pre-seed", "Seed", "Series A", "Growth"];
+const stageOptions = ["All Stage", "Pre-seed", "Seed", "Series A", "Growth"];
 
 export const homePageContent: HomePageContent = {
   hero: {
@@ -46,7 +47,7 @@ export const homePageContent: HomePageContent = {
     searchFields: [
       {
         type: "text",
-        name: "keyword",
+        name: "search",
         label: "Keyword",
         placeholder: "Company or niche...",
       },
@@ -61,14 +62,14 @@ export const homePageContent: HomePageContent = {
         type: "select",
         name: "range",
         label: "Range",
-        defaultValue: "\u00A350k - \u00A3500k",
+        defaultValue: "All Funding",
         options: fundingOptions,
       },
       {
         type: "select",
         name: "stage",
         label: "Stage",
-        defaultValue: "Seed",
+        defaultValue: "All Stage",
         options: stageOptions,
       },
     ],
@@ -209,20 +210,20 @@ export const homePageContent: HomePageContent = {
     { label: "Commission Handling" },
   ],
   sectors: [
-    { title: "Clean Energy", icon: "flash", listingCount: 12, href: "#" },
-    { title: "Sustainable Agriculture", icon: "tractor", listingCount: 12, href: "#" },
-    { title: "Climate Tech", icon: "leaf", listingCount: 12, href: "#" },
-    { title: "Healthcare", icon: "heartCheck", listingCount: 12, href: "#" },
-    { title: "Ed Tech", icon: "school", listingCount: 12, href: "#" },
-    { title: "FinTech", icon: "bank", listingCount: 12, href: "#" },
-    { title: "Affordable Housing", icon: "home", listingCount: 12, href: "#" },
-    { title: "Social", icon: "userGroup", listingCount: 12, href: "#" },
-    { title: "Supply Chain", icon: "package", listingCount: 12, href: "#" },
-    { title: "Mobility", icon: "car", listingCount: 12, href: "#" },
-    { title: "Impact Tech & AI", icon: "aiChip", listingCount: 12, href: "#" },
-    { title: "Eco Empowerment", icon: "coinsPound", listingCount: 12, href: "#" },
-    { title: "Manufacturing", icon: "factory", listingCount: 12, href: "#" },
-    { title: "Cross-Sector", icon: "globe", listingCount: 12, href: "#" },
+    { title: "Clean Energy", icon: "flash", listingCount: 0, href: "#" },
+    { title: "Sustainable Agriculture", icon: "tractor", listingCount: 0, href: "#" },
+    { title: "Climate Tech", icon: "leaf", listingCount: 0, href: "#" },
+    { title: "Healthcare", icon: "heartCheck", listingCount: 0, href: "#" },
+    { title: "Ed Tech", icon: "school", listingCount: 0, href: "#" },
+    { title: "FinTech", icon: "bank", listingCount: 0, href: "#" },
+    { title: "Affordable Housing", icon: "home", listingCount: 0, href: "#" },
+    { title: "Social", icon: "userGroup", listingCount: 0, href: "#" },
+    { title: "Supply Chain", icon: "package", listingCount: 0, href: "#" },
+    { title: "Mobility", icon: "car", listingCount: 0, href: "#" },
+    { title: "Impact Tech & AI", icon: "aiChip", listingCount: 0, href: "#" },
+    { title: "Eco Empowerment", icon: "coinsPound", listingCount: 0, href: "#" },
+    { title: "Manufacturing", icon: "factory", listingCount: 0, href: "#" },
+    { title: "Cross-Sector", icon: "globe", listingCount: 0, href: "#" },
   ],
   testimonials: Array.from({ length: 6 }, (_, index) => ({
     id: index,

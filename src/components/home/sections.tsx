@@ -2,10 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Poppins } from "next/font/google";
 import { AppIcon } from "./icons";
+import { HeroSearchFormClient } from "./hero-search-form-client";
 import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
 import {
   FaqList,
-  HeroField,
   RatingStars,
   SectionHeading,
   SectionShell,
@@ -61,21 +61,7 @@ export function HeroSection({ content }: { content: HeroContent }) {
           {content.description}
         </p>
 
-        <form
-          action="/search"
-          className="mt-12 grid w-full max-w-5xl grid-cols-1 overflow-hidden rounded-md bg-white shadow-xl ring-1 ring-[#2B425D]/10 md:grid-cols-[1.25fr_1fr_1fr_1fr_auto]"
-        >
-          {content.searchFields.map((field) => (
-            <HeroField key={field.name} field={field} />
-          ))}
-          <button
-            type="submit"
-            className="flex min-h-16 items-center justify-center gap-3 bg-[#2B425D] px-8 text-base font-bold text-white transition hover:bg-[#21344b]"
-          >
-            <AppIcon name="search" className="h-5 w-5" />
-            {content.searchActionLabel}
-          </button>
-        </form>
+        <HeroSearchFormClient fields={content.searchFields} actionLabel={content.searchActionLabel} />
 
         <div className="mt-12 flex w-full max-w-2xl flex-col gap-4 sm:flex-row">
           {content.actions.map((action) => (

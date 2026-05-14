@@ -1,9 +1,4 @@
-import type { Listing } from "@/components/home/types";
-
-export interface SearchListing extends Listing {
-  country: string;
-  fundingValue: number;
-}
+import type { SearchListing } from "./types";
 
 const listingTemplates: Omit<SearchListing, "id">[] = [
   {
@@ -167,7 +162,17 @@ export const searchSectors = [
   "Sustainable Agriculture",
   "Climate Tech",
   "Healthcare",
+  "Ed Tech",
   "EdTech",
+  "FinTech",
+  "Affordable Housing",
+  "Social",
+  "Supply Chain",
+  "Mobility",
+  "Impact Tech & AI",
+  "Eco Empowerment",
+  "Manufacturing",
+  "Cross-Sector",
 ];
 
 export const searchStages = ["Pre-seed", "Seed", "Series A", "Growth"];

@@ -1,4 +1,6 @@
 import { homePageContent } from "./data";
+import { HomeOpportunitiesSection } from "./opportunities-section-client";
+import { SectorCategoriesSectionClient } from "./sector-categories-section-client";
 import {
   AdminCompletionSection,
   FaqSection,
@@ -6,9 +8,7 @@ import {
   FounderFundingSection,
   HeroSection,
   HowItWorksSection,
-  OpportunitiesSection,
   PricingSection,
-  SectorCategoriesSection,
   StatsBandSection,
   TestimonialsSection,
   ValuesSection,
@@ -24,7 +24,7 @@ export function HomePage({ content = homePageContent }: HomePageProps) {
     <main className="min-h-screen bg-[#FFF] text-[#182231]">
       <HeroSection content={content.hero} />
       <StatsBandSection stats={content.stats} />
-      <OpportunitiesSection listings={content.listings} />
+      <HomeOpportunitiesSection fallbackListings={content.listings} />
       <ValuesSection images={content.valueImages} values={content.values} />
       <HowItWorksSection
         steps={content.investorSteps}
@@ -37,7 +37,7 @@ export function HomePage({ content = homePageContent }: HomePageProps) {
       />
       <FounderFundingSection image={content.founderImage} steps={content.founderSteps} />
       <AdminCompletionSection tasks={content.adminTasks} />
-      <SectorCategoriesSection sectors={content.sectors} />
+      <SectorCategoriesSectionClient sectors={content.sectors} />
       <TestimonialsSection testimonials={content.testimonials} />
       <PricingSection pricingPlans={content.pricingPlans} />
       <FaqSection faqs={content.faqs} />

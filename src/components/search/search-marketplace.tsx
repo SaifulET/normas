@@ -2,14 +2,77 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppIcon } from "@/components/home/icons";
-import { searchCountries, searchListings, searchSectors, searchStages } from "./data";
+import { mapApiListsToSearchListings } from "@/components/listings/public-listing-mappers";
+import { getApiErrorMessage } from "@/lib/api";
+import { getFilteredLists, type FilteredListsResponse, type ListItemResponse } from "@/lib/list-api";
+import { searchCountries, searchSectors, searchStages } from "./data";
+import type { SearchFilters, SearchListing } from "./types";
 
 type ViewMode = "grid" | "list";
 
-const RESULTS_PER_PAGE = 6;
-const MAX_RANGE = 2500000;
+const RESULTS_PER_PAGE = 12;
+const DEFAULT_MAX_RANGE = 32500000;
+
+function getFundingRangeMax(listings: SearchListing[]) {
+  const largestFundingValue = Math.max(0, ...listings.map((listing) => listing.fundingValue));
+  return Math.max(DEFAULT_MAX_RANGE, Math.ceil(largestFundingValue / 50000) * 50000);
+}
+
+function isListItemArray(value: unknown): value is ListItemResponse[] {
+  return Array.isArray(value);
+}
+
+function getRecordValue(source: unknown, key: string) {
+  if (!source || typeof source !== "object") {
+    return undefined;
+  }
+
+  return (source as Record<string, unknown>)[key];
+}
+
+function parseFilteredListItems(response: FilteredListsResponse) {
+  if (isListItemArray(response.data)) {
+    return response.data;
+  }
+
+  const candidates = [
+    getRecordValue(response.data, "lists"),
+    getRecordValue(response.data, "data"),
+    getRecordValue(response.data, "items"),
+    getRecordValue(response, "lists"),
+  ];
+
+  return candidates.find(isListItemArray) ?? [];
+}
+
+function parsePositiveNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function parseFilteredMeta(response: FilteredListsResponse, itemCount: number) {
+  const total =
+    parsePositiveNumber(getRecordValue(response.data, "totalLists")) ??
+    parsePositiveNumber(getRecordValue(response.data, "total")) ??
+    parsePositiveNumber(getRecordValue(response, "totalLists")) ??
+    parsePositiveNumber(getRecordValue(response, "total")) ??
+    itemCount;
+  const totalPages =
+    parsePositiveNumber(getRecordValue(response.data, "totalPages")) ??
+    parsePositiveNumber(getRecordValue(response, "totalPages")) ??
+    Math.max(1, Math.ceil(total / RESULTS_PER_PAGE));
+
+  return {
+    total,
+    totalPages,
+  };
+}
+
+function mergeOptions(...optionGroups: Array<Array<string | undefined>>) {
+  const options = optionGroups.flat().filter((option): option is string => Boolean(option?.trim()));
+  return Array.from(new Set(options)).sort((a, b) => a.localeCompare(b));
+}
 
 function GridGlyph({ active }: { active: boolean }) {
   return (
@@ -33,7 +96,7 @@ function ListGlyph({ active }: { active: boolean }) {
 
 interface ResultCardProps {
   viewMode: ViewMode;
-  listing: (typeof searchListings)[number];
+  listing: SearchListing;
 }
 
 function ResultCard({ viewMode, listing }: ResultCardProps) {
@@ -154,45 +217,101 @@ function ResultCard({ viewMode, listing }: ResultCardProps) {
   );
 }
 
-export function SearchMarketplace({ initialKeyword = "" }: { initialKeyword?: string }) {
-  const [query, setQuery] = useState(initialKeyword);
-  const [selectedSectors, setSelectedSectors] = useState<string[]>(["Climate Tech"]);
-  const [selectedStage, setSelectedStage] = useState("Seed");
-  const [maxFunding, setMaxFunding] = useState(MAX_RANGE);
-  const [country, setCountry] = useState("United Kingdom");
+export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFilters }) {
+  const [listings, setListings] = useState<SearchListing[]>([]);
+  const [query, setQuery] = useState(initialFilters.search);
+  const [selectedSector, setSelectedSector] = useState(initialFilters.sector);
+  const [selectedStage, setSelectedStage] = useState(initialFilters.stage);
+  const [minFunding, setMinFunding] = useState(initialFilters.minFundingTarget);
+  const [maxFunding, setMaxFunding] = useState(initialFilters.maxFundingTarget);
+  const [fundingFilterActive, setFundingFilterActive] = useState(initialFilters.fundingFilterActive);
+  const [country, setCountry] = useState(initialFilters.country);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialFilters.page);
+  const [totalResults, setTotalResults] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
-  const filteredListings = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
-    return searchListings.filter((listing) => {
-      const matchesQuery =
-        normalizedQuery.length === 0 ||
-        `${listing.title} ${listing.description} ${listing.sector}`.toLowerCase().includes(normalizedQuery);
-      const matchesSector = selectedSectors.length === 0 || selectedSectors.includes(listing.sector);
-      const matchesStage = selectedStage.length === 0 || listing.stage === selectedStage;
-      const matchesFunding = listing.fundingValue <= maxFunding;
-      const matchesCountry = country.length === 0 || listing.country === country;
-
-      return matchesQuery && matchesSector && matchesStage && matchesFunding && matchesCountry;
-    });
-  }, [country, maxFunding, query, selectedSectors, selectedStage]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredListings.length / RESULTS_PER_PAGE));
-  const currentPage = Math.min(page, totalPages);
-  const paginatedListings = filteredListings.slice(
-    (currentPage - 1) * RESULTS_PER_PAGE,
-    currentPage * RESULTS_PER_PAGE,
+  const requestParams = useMemo(
+    () => ({
+      country: country || undefined,
+      limit: RESULTS_PER_PAGE,
+      maxFundingTarget: fundingFilterActive ? maxFunding : undefined,
+      minFundingTarget: fundingFilterActive ? minFunding : undefined,
+      page,
+      search: query.trim() || undefined,
+      sector: selectedSector || undefined,
+      stage: selectedStage || undefined,
+    }),
+    [country, fundingFilterActive, maxFunding, minFunding, page, query, selectedSector, selectedStage],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadListings() {
+      try {
+        await Promise.resolve();
+
+        if (cancelled) {
+          return;
+        }
+
+        setLoading(true);
+
+        const response = await getFilteredLists(requestParams);
+        const items = parseFilteredListItems(response);
+        const mappedListings = mapApiListsToSearchListings(items);
+        const meta = parseFilteredMeta(response, mappedListings.length);
+
+        if (!cancelled) {
+          setListings(mappedListings);
+          setTotalResults(meta.total);
+          setTotalPages(meta.totalPages);
+          setLoadError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(getApiErrorMessage(error, "Unable to load investment opportunities."));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadListings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestParams]);
+
+  const availableSectors = useMemo(() => {
+    return mergeOptions(searchSectors, [selectedSector], listings.map((listing) => listing.sector));
+  }, [listings, selectedSector]);
+
+  const availableStages = useMemo(() => {
+    return mergeOptions(searchStages, [selectedStage], listings.map((listing) => listing.stage));
+  }, [listings, selectedStage]);
+
+  const availableCountries = useMemo(() => {
+    return mergeOptions(searchCountries, [country], listings.map((listing) => listing.country));
+  }, [country, listings]);
+
+  const fundingRangeMax = useMemo(() => {
+    return Math.max(maxFunding, getFundingRangeMax(listings));
+  }, [listings, maxFunding]);
+
+  const currentPage = Math.min(page, totalPages);
   const paginationStart = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
   const pageNumbers = Array.from({ length: Math.min(totalPages, 3) }, (_, index) => paginationStart + index);
 
   function toggleSector(sector: string) {
     setPage(1);
-    setSelectedSectors((current) =>
-      current.includes(sector) ? current.filter((item) => item !== sector) : [...current, sector],
-    );
+    setSelectedSector((current) => (current === sector ? "" : sector));
   }
 
   return (
@@ -226,8 +345,8 @@ export function SearchMarketplace({ initialKeyword = "" }: { initialKeyword?: st
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-[#1F2937]">Sector</h3>
             <div className="mt-4 space-y-2.5">
-              {searchSectors.map((sector) => {
-                const checked = selectedSectors.includes(sector);
+              {availableSectors.map((sector) => {
+                const checked = selectedSector === sector;
 
                 return (
                   <label key={sector} className="flex cursor-pointer items-center gap-3 text-sm text-[#667085]">
@@ -243,15 +362,26 @@ export function SearchMarketplace({ initialKeyword = "" }: { initialKeyword?: st
               })}
             </div>
 
-            <button type="button" className="mt-3 text-sm font-medium text-[#243B5A]">
-              See More -{">"}
-            </button>
           </div>
 
           <div className="mt-8">
             <h3 className="text-sm font-semibold text-[#1F2937]">Business Stage</h3>
             <div className="mt-4 overflow-hidden rounded-xl border border-[#D7DFEA]">
-              {searchStages.map((stage) => (
+              <button
+                type="button"
+                onClick={() => {
+                  setPage(1);
+                  setSelectedStage("");
+                }}
+                className={`flex h-11 w-full items-center px-4 text-left text-sm transition ${
+                  selectedStage === ""
+                    ? "bg-[#637792] text-white"
+                    : "bg-white text-[#667085] hover:bg-[#F8FAFC]"
+                }`}
+              >
+                All Stage
+              </button>
+              {availableStages.map((stage) => (
                 <button
                   key={stage}
                   type="button"
@@ -277,18 +407,23 @@ export function SearchMarketplace({ initialKeyword = "" }: { initialKeyword?: st
               <input
                 type="range"
                 min={0}
-                max={MAX_RANGE}
+                max={fundingRangeMax}
                 step={50000}
                 value={maxFunding}
                 onChange={(event) => {
                   setPage(1);
+                  setFundingFilterActive(true);
+                  setMinFunding(0);
                   setMaxFunding(Number(event.target.value));
                 }}
                 className="w-full accent-[#243B5A]"
               />
               <div className="mt-2 flex justify-between text-xs text-[#98A2B3]">
-                <span>\u00A30</span>
-                <span>\u00A32.5M+</span>
+                <span>{"\u00A30"}</span>
+                <span>
+                  {"\u00A3"}
+                  {(fundingRangeMax / 1000000).toLocaleString("en-US", { maximumFractionDigits: 1 })}M+
+                </span>
               </div>
             </div>
           </div>
@@ -304,7 +439,8 @@ export function SearchMarketplace({ initialKeyword = "" }: { initialKeyword?: st
                 }}
                 className="h-12 w-full appearance-none rounded-xl border border-[#D7DFEA] bg-white px-4 pr-10 text-sm text-[#667085] outline-none transition focus:border-[#243B5A]"
               >
-                {searchCountries.map((option) => (
+                <option value="">All Countries</option>
+                {availableCountries.map((option) => (
                   <option key={option}>{option}</option>
                 ))}
               </select>
@@ -326,7 +462,9 @@ export function SearchMarketplace({ initialKeyword = "" }: { initialKeyword?: st
 
         <div className="min-w-0">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-[#344054]">Showing {filteredListings.length} Investment Opportunities</p>
+            <p className="text-sm text-[#344054]">
+              {loading ? "Loading investment opportunities..." : `Showing ${totalResults} Investment Opportunities`}
+            </p>
 
             <div className="flex items-center gap-2 self-end sm:self-auto">
               <button
@@ -362,13 +500,26 @@ export function SearchMarketplace({ initialKeyword = "" }: { initialKeyword?: st
             </div>
           </div>
 
+          {loadError ? (
+            <div className="mt-5 rounded-xl border border-[#F4C7C3] bg-[#FFF5F4] px-4 py-3 text-sm text-[#9A3412]">
+              {loadError}
+            </div>
+          ) : null}
+
           <div className={`mt-5 ${viewMode === "grid" ? "grid gap-5 xl:grid-cols-2" : "space-y-4"}`}>
-            {paginatedListings.map((listing) => (
+            {listings.map((listing) => (
               <ResultCard key={listing.id} viewMode={viewMode} listing={listing} />
             ))}
           </div>
 
-          <div className="mt-8 flex items-center justify-end gap-2">
+          {!loading && listings.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-[#D7DFEA] bg-white px-6 py-12 text-center text-sm text-[#667085]">
+              No investment opportunities match these filters.
+            </div>
+          ) : null}
+
+          {totalPages > 1 ? (
+            <div className="mt-8 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={() => setPage((current) => Math.max(1, current - 1))}
@@ -401,7 +552,8 @@ export function SearchMarketplace({ initialKeyword = "" }: { initialKeyword?: st
             >
               {">"}
             </button>
-          </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

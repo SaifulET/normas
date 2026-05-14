@@ -91,7 +91,7 @@ export interface StatItem {
 }
 
 export interface Listing {
-  id: number;
+  id: number | string;
   title: string;
   location: string;
   description: string;

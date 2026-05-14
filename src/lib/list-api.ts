@@ -60,6 +60,52 @@ export type ListResponse = {
   success?: boolean;
 };
 
+export type ListSectorCount = {
+  listAmount?: number;
+  sector?: string;
+};
+
+export type ListSectorsResponse = {
+  data?: {
+    sectors?: ListSectorCount[];
+    totalLists?: number;
+    totalSectors?: number;
+  };
+  message?: string;
+  success?: boolean;
+};
+
+export type ListFilterParams = {
+  country?: string;
+  limit?: number;
+  maxFundingTarget?: number;
+  minFundingTarget?: number;
+  page?: number;
+  search?: string;
+  sector?: string;
+  stage?: string;
+};
+
+export type FilteredListsData =
+  | ListItemResponse[]
+  | {
+      lists?: ListItemResponse[];
+      page?: number;
+      total?: number;
+      totalLists?: number;
+      totalPages?: number;
+    };
+
+export type FilteredListsResponse = {
+  data?: FilteredListsData;
+  message?: string;
+  page?: number;
+  success?: boolean;
+  total?: number;
+  totalLists?: number;
+  totalPages?: number;
+};
+
 export function createList(formData: FormData) {
   return apiRequest<ListMutationResponse>({
     data: formData,
@@ -91,10 +137,25 @@ export function getLists() {
   });
 }
 
+export function getFilteredLists(params: ListFilterParams = {}) {
+  return apiRequest<FilteredListsResponse>({
+    method: "GET",
+    params,
+    url: "lists/filter",
+  });
+}
+
 export function getList(listId: string) {
   return apiRequest<ListResponse>({
     method: "GET",
     url: `lists/${listId}`,
+  });
+}
+
+export function getListSectors() {
+  return apiRequest<ListSectorsResponse>({
+    method: "GET",
+    url: "lists/sectors",
   });
 }
 
