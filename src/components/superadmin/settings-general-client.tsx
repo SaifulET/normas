@@ -1,6 +1,6 @@
 "use client";
 
-import { File01Icon, MoneyBag02Icon, SecurityCheckIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { ChatQuestion01Icon, File01Icon, MoneyBag02Icon, SecurityCheckIcon, UserIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -36,6 +36,7 @@ type PricingPlanForm = {
 const tabs: SettingsTab[] = [
   { href: "/superadmin/dashboard/settings", label: "General" },
   { href: "/superadmin/dashboard/settings/pricing", label: "Pricing" },
+  { href: "/superadmin/dashboard/settings/faq", label: "FAQ" },
   { href: "/superadmin/dashboard/settings/terms-conditions", label: "Terms & Conditions" },
   { href: "/superadmin/dashboard/settings/privacy-policy", label: "Privacy & Policy" },
 ];
@@ -96,6 +97,12 @@ function TabIcon({ label }: { label: string }) {
   if (label === "Terms & Conditions") {
     return (
       <HugeiconsIcon icon={File01Icon} className={baseClasses} />
+    );
+  }
+
+  if (label === "FAQ") {
+    return (
+      <HugeiconsIcon icon={ChatQuestion01Icon} className={baseClasses} />
     );
   }
 

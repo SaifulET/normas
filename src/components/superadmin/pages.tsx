@@ -31,6 +31,7 @@ import { UserDetailTabsClient } from "./user-detail-tabs-client";
 import { SuperadminPaymentActionMenu, SuperadminUserActionMenu } from "./user-action-menu";
 import { SuperadminSettingsGeneralClient, SuperadminSettingsPricingClient, SuperadminSettingsShell } from "./settings-general-client";
 import { LegalSettingsClient } from "./legal-settings-client";
+import { FaqSettingsClient } from "./faq-settings-client";
 import { SuperadminAnalyticsClient, SuperadminDashboardOverviewClient } from "./overview-analytics-client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { UserGroup03Icon } from "@hugeicons/core-free-icons";
@@ -844,6 +845,10 @@ export function SuperadminSettingsMoomentCreditPage() {
 
 export function SuperadminSettingsPricingPage() {
   return <SuperadminSettingsPricingClient />;
+}
+
+export function SuperadminSettingsFaqPage() {
+  return <FaqSettingsClient />;
 }
 
 export function SuperadminSettingsTermsPage() {

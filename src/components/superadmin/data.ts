@@ -313,6 +313,7 @@ export const superadminSettingsTabs = [
   { label: "General", href: "/superadmin/dashboard/settings" },
   { label: "Mooment Credit", href: "/superadmin/dashboard/settings/mooment-credit" },
   { label: "Pricing", href: "/superadmin/dashboard/settings/pricing" },
+  { label: "FAQ", href: "/superadmin/dashboard/settings/faq" },
   { label: "Terms & Conditions", href: "/superadmin/dashboard/settings/terms-conditions" },
   { label: "Privacy & Policy", href: "/superadmin/dashboard/settings/privacy-policy" },
 ];
