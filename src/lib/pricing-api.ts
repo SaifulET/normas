@@ -21,7 +21,11 @@ export type SubscriptionPlan = {
 };
 
 type PricingPlansResponse = {
-  data?: SubscriptionPlan[];
+  data?:
+    | SubscriptionPlan[]
+    | {
+        plans?: SubscriptionPlan[];
+      };
   message?: string;
   success?: boolean;
 };
@@ -44,10 +48,11 @@ export async function getPricingPlans() {
   }
 
   const payload = (await response.json()) as PricingPlansResponse;
+  const plans = Array.isArray(payload.data) ? payload.data : payload.data?.plans;
 
-  if (payload.success === false || !Array.isArray(payload.data)) {
+  if (payload.success === false || !Array.isArray(plans)) {
     throw new Error(payload.message ?? "Pricing plans response was invalid");
   }
 
-  return payload.data.filter((plan) => plan.isActive !== false);
+  return plans.filter((plan) => plan.isActive !== false);
 }

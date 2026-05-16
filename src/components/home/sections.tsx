@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Poppins } from "next/font/google";
 import { AppIcon } from "./icons";
 import { HeroSearchFormClient } from "./hero-search-form-client";
+import { PricingCardsClient } from "./pricing-section-client";
 import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
 import {
   FaqList,
@@ -448,78 +449,11 @@ export function PricingSection({
           description="For serious investors and founders ready to make an impact"
           titleClassName="text-center font-semibold text-[36px] leading-[48px] tracking-normal text-[#1F2937] sm:text-[36px]"
         />
-        <div className="mt-5 text-center ">
-          <div className="inline-flex rounded-md bg-white p-1 ring-1 ring-[#2B425D]/10">
-            <span className="rounded bg-[#182231] px-8 py-2 text-sm font-semibold text-white">Monthly</span>
-            <span className="px-8 py-2 text-sm font-medium text-[#182231]/70">
-              Annual
-              {annualDiscount > 0 ? (
-                <span className="text-[#E65E02]"> Save {annualDiscount}%</span>
-              ) : null}
-            </span>
-          </div>
-        </div>
-
-        {pricingPlans.length === 0 ? (
-          <div className="mx-auto mt-9 max-w-xl rounded-lg border border-[#EDF1F6] bg-[#F8FAFC] px-6 py-8 text-center text-sm leading-6 text-[#182231]/65">
-            {emptyMessage}
-          </div>
-        ) : null}
-
-        <div className="mx-auto mt-9 grid max-w-7xl items-stretch gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          {pricingPlans.map((plan) => (
-            <article
-              key={plan.id ?? plan.title}
-              className={`relative flex flex-col rounded-lg bg-white p-7 ring-1 ${
-                plan.featured
-                  ? "ring-[#2B425D] shadow-2xl shadow-[#182231]/15"
-                  : "ring-[#2B425D]/15 shadow-sm"
-              }`}
-            >
-              {plan.featured ? (
-                <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#E65E02] px-5 py-2 text-xs font-black text-white">
-                  {plan.featuredLabel ?? "Most Popular"}
-                </span>
-              ) : null}
-              {plan.audienceRole ? (
-                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-[#E65E02]">
-                  {plan.audienceRole}
-                </p>
-              ) : null}
-              <h3 className="text-base font-black text-[#182231]">{plan.title}</h3>
-              {plan.description ? (
-                <p className="mt-2 min-h-10 text-sm leading-5 text-[#182231]/55">{plan.description}</p>
-              ) : null}
-              <div className="mt-4 flex items-end gap-1">
-                <span className="text-4xl font-black text-[#2B425D]">{plan.price}</span>
-                <span className="pb-1 text-sm text-[#182231]/55">{plan.suffix}</span>
-              </div>
-              {plan.annualPrice ? (
-                <p className="mt-2 text-xs font-medium text-[#182231]/45">
-                  {plan.annualPrice} billed annually
-                </p>
-              ) : null}
-              <ul className="mt-6 flex-1 space-y-3">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex gap-2 text-sm text-[#182231]/70">
-                    <AppIcon name="checkmarkCircle" className="mt-0.5 h-4 w-4 shrink-0 text-[#159953]" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              <a
-                href={plan.href}
-                className={`mt-7 flex h-12 items-center justify-center rounded-md px-5 text-sm font-black transition ${
-                  plan.featured
-                    ? "bg-[#2B425D] text-white hover:bg-[#21344b]"
-                    : "border-2 border-[#2B425D] text-[#2B425D] hover:bg-[#2B425D] hover:text-white"
-                }`}
-              >
-                {plan.action}
-              </a>
-            </article>
-          ))}
-        </div>
+        <PricingCardsClient
+          annualDiscount={annualDiscount}
+          emptyMessage={emptyMessage}
+          pricingPlans={pricingPlans}
+        />
       </div>
     </SectionShell>
   );
