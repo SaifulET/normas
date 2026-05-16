@@ -6,7 +6,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SuperadminSettingsShell } from "./settings-general-client";
 import { Delete02Icon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { createLegalContent, type LegalContentType } from "@/lib/legal-api";
+import {
+  createLegalContent,
+  deleteLegalContent,
+  getLegalContentByType,
+  type LegalContentType,
+  updateLegalContent,
+} from "@/lib/legal-api";
 
 type LegalSettingsClientProps = {
   contentTitle: string;
@@ -25,19 +31,7 @@ type LegalSettingsClientProps = {
 type QuillConstructor = (typeof import("quill"))["default"];
 type QuillInstance = InstanceType<QuillConstructor>;
 
-function buildHtmlFromSections(
-  sections: Array<{
-    body: string;
-    title: string;
-  }>,
-) {
-  return sections
-    .map(
-      (section) =>
-        `<h2>${section.title}</h2><p>${section.body}</p>`,
-    )
-    .join("");
-}
+const EMPTY_EDITOR_HTML = "<p><br></p>";
 
 function normalizeHtml(html: string) {
   return html.replace(/\s+/g, " ").trim();
@@ -101,22 +95,34 @@ export function LegalSettingsClient({
   contentTitle,
   contentType,
   displayTitle,
-  initialSections,
   lastModified,
   pageSubtitle,
   pageTitle,
   routeHref,
 }: LegalSettingsClientProps) {
-  const initialHtml = useMemo(() => buildHtmlFromSections(initialSections), [initialSections]);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const quillRef = useRef<QuillInstance | null>(null);
-  const [draftHtml, setDraftHtml] = useState(initialHtml);
-  const [publishedHtml, setPublishedHtml] = useState(initialHtml);
+  const [draftHtml, setDraftHtml] = useState(EMPTY_EDITOR_HTML);
+  const [publishedHtml, setPublishedHtml] = useState(EMPTY_EDITOR_HTML);
   const [isReady, setIsReady] = useState(false);
+  const [isLoadingContent, setIsLoadingContent] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [contentId, setContentId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const initialHtmlRef = useRef(initialHtml);
+  const initialHtmlRef = useRef(EMPTY_EDITOR_HTML);
+
+  function applyPublishedHtml(html: string) {
+    initialHtmlRef.current = html;
+    setPublishedHtml(html);
+    setDraftHtml(html);
+
+    if (quillRef.current) {
+      quillRef.current.root.innerHTML = html;
+    }
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -162,6 +168,44 @@ export function LegalSettingsClient({
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadLegalContent() {
+      setIsLoadingContent(true);
+      setLoadError(null);
+
+      try {
+        const response = await getLegalContentByType(contentType);
+        const legalContent = Array.isArray(response.data) ? response.data[0] : response.data;
+        const savedHtml = legalContent?.content?.trim();
+
+        if (mounted) {
+          setContentId(legalContent?._id ?? null);
+
+          if (savedHtml) {
+            applyPublishedHtml(savedHtml);
+          }
+        }
+      } catch (error) {
+        if (mounted) {
+          const message = error instanceof Error ? error.message : "Unable to load saved legal content.";
+          setLoadError(message);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoadingContent(false);
+        }
+      }
+    }
+
+    loadLegalContent();
+
+    return () => {
+      mounted = false;
+    };
+  }, [contentType]);
+
   function syncEditor(html: string) {
     setDraftHtml(html);
 
@@ -177,11 +221,18 @@ export function LegalSettingsClient({
     setSaveMessage(null);
 
     try {
-      await createLegalContent({
-        content: currentHtml,
-        title: contentTitle,
-        type: contentType,
-      });
+      const response = contentId
+        ? await updateLegalContent(contentId, {
+            content: currentHtml,
+            title: contentTitle,
+          })
+        : await createLegalContent({
+            content: currentHtml,
+            title: contentTitle,
+            type: contentType,
+          });
+
+      setContentId(response.data._id ?? contentId);
 
       setPublishedHtml(currentHtml);
       setDraftHtml(currentHtml);
@@ -204,10 +255,27 @@ export function LegalSettingsClient({
     syncEditor(publishedHtml);
   }
 
-  function handleDeletePublished() {
+  async function handleDeletePublished() {
     const emptyHtml = "<p><br></p>";
-    setPublishedHtml(emptyHtml);
-    syncEditor(emptyHtml);
+    setIsDeleting(true);
+    setSaveError(null);
+    setSaveMessage(null);
+
+    try {
+      if (contentId) {
+        await deleteLegalContent(contentId);
+      }
+
+      setContentId(null);
+      setPublishedHtml(emptyHtml);
+      syncEditor(emptyHtml);
+      setSaveMessage("Content deleted successfully.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete legal content.";
+      setSaveError(message);
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   const displaySections = useMemo(() => parseHtmlToSections(publishedHtml), [publishedHtml]);
@@ -219,6 +287,17 @@ export function LegalSettingsClient({
         <div className="-mt-12 flex justify-end">
           <p className="text-[10px] text-[#8A91AB]">{lastModified}</p>
         </div>
+
+        {isLoadingContent ? (
+          <div className="rounded-[12px] border border-[#E2E6F0] bg-[#F8FAFC] px-4 py-3 text-[12px] text-[#7E84A3]">
+            Loading saved legal content...
+          </div>
+        ) : null}
+        {loadError ? (
+          <div className="rounded-[12px] border border-[#F7D5D5] bg-[#FFF5F5] px-4 py-3 text-[12px] font-medium text-[#D92D20]">
+            {loadError}
+          </div>
+        ) : null}
 
         <section className="overflow-hidden rounded-[16px] border border-[#E2E6F0] bg-white shadow-[0_10px_40px_rgba(31,35,61,0.06)]">
           <div id="superadmin-legal-toolbar" className="flex flex-wrap items-center gap-2 border-b border-[#EEF1F6] bg-[#F8FAFC] px-3 py-2 text-[#7E84A3] ">
@@ -258,7 +337,7 @@ export function LegalSettingsClient({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!isReady || !hasChanges || isSaving}
+                disabled={!isReady || isLoadingContent || !hasChanges || isSaving}
                 className="rounded-[8px] bg-[#161616] px-4 py-2 text-[12px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSaving ? "Saving..." : "Save"}
@@ -293,7 +372,8 @@ export function LegalSettingsClient({
             <button
               type="button"
               onClick={handleDeletePublished}
-              className="inline-flex items-center justify-center  text-[#E25A5A] transition hover:bg-[#FFF5F5]"
+              disabled={isDeleting || isLoadingContent}
+              className="inline-flex items-center justify-center text-[#E25A5A] transition hover:bg-[#FFF5F5] disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Delete published content"
             >
              <HugeiconsIcon icon={Delete02Icon} className="w-[24px] h-[24px]" />
