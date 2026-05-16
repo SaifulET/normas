@@ -852,6 +852,8 @@ export function SuperadminSettingsTermsPage() {
       routeHref="/superadmin/dashboard/settings/terms-conditions"
       pageTitle="Terms & Conditions"
       pageSubtitle="Set terms & conditions of your Mooment app"
+      contentTitle="Terms and Conditions"
+      contentType="terms-and-conditions"
       lastModified="Last modified by Admin on Oct 24, 2023"
       displayTitle="Display on landing page"
       initialSections={[
@@ -881,6 +883,8 @@ export function SuperadminSettingsPrivacyPage() {
       routeHref="/superadmin/dashboard/settings/privacy-policy"
       pageTitle="Privacy & Policy"
       pageSubtitle="Set privacy & policies of your Mooment app"
+      contentTitle="Privacy Policy"
+      contentType="privacy-policy"
       lastModified="Last modified by Admin on Oct 24, 2023"
       displayTitle="Display on landing page"
       initialSections={[

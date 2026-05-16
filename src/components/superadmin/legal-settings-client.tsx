@@ -6,8 +6,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SuperadminSettingsShell } from "./settings-general-client";
 import { Delete02Icon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { createLegalContent, type LegalContentType } from "@/lib/legal-api";
 
 type LegalSettingsClientProps = {
+  contentTitle: string;
+  contentType: LegalContentType;
   displayTitle: string;
   initialSections: Array<{
     body: string;
@@ -95,6 +98,8 @@ function parseHtmlToSections(html: string) {
 }
 
 export function LegalSettingsClient({
+  contentTitle,
+  contentType,
   displayTitle,
   initialSections,
   lastModified,
@@ -108,6 +113,9 @@ export function LegalSettingsClient({
   const [draftHtml, setDraftHtml] = useState(initialHtml);
   const [publishedHtml, setPublishedHtml] = useState(initialHtml);
   const [isReady, setIsReady] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const initialHtmlRef = useRef(initialHtml);
 
   useEffect(() => {
@@ -162,14 +170,34 @@ export function LegalSettingsClient({
     }
   }
 
-  function handleSave() {
+  async function handleSave() {
     const currentHtml = quillRef.current?.root.innerHTML ?? draftHtml;
-    setPublishedHtml(currentHtml);
-    setDraftHtml(currentHtml);
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveMessage(null);
+
+    try {
+      await createLegalContent({
+        content: currentHtml,
+        title: contentTitle,
+        type: contentType,
+      });
+
+      setPublishedHtml(currentHtml);
+      setDraftHtml(currentHtml);
+      setSaveMessage("Content saved successfully.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to save legal content.";
+      setSaveError(message);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function handleCancel() {
     syncEditor(publishedHtml);
+    setSaveError(null);
+    setSaveMessage(null);
   }
 
   function handleEditPublished() {
@@ -230,13 +258,19 @@ export function LegalSettingsClient({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!isReady || !hasChanges}
+                disabled={!isReady || !hasChanges || isSaving}
                 className="rounded-[8px] bg-[#161616] px-4 py-2 text-[12px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Save
+                {isSaving ? "Saving..." : "Save"}
               </button>
             </div>
           </div> 
+          {saveError ? (
+            <p className="text-right text-[12px] font-medium text-[#D92D20]">{saveError}</p>
+          ) : null}
+          {saveMessage ? (
+            <p className="text-right text-[12px] font-medium text-[#159953]">{saveMessage}</p>
+          ) : null}
           
            <div className="mb-[24px] flex items-center gap-3">
             <div className="h-px flex-1 bg-[#E4E9F2]" />
