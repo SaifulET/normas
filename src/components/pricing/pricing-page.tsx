@@ -9,61 +9,65 @@ import { getPricingPlans, type SubscriptionPlan } from "@/lib/pricing-api";
 const comparisonRows = [
   {
     feature: "Browse Pitch Listings",
-    basic: "20",
-    pro: "Unlimited",
+    investorBasic: "20",
+    investorPro: "Unlimited",
     investee: "-",
   },
   {
     feature: "Active Pitch Deck",
-    basic: "-",
-    pro: "-",
+    investorBasic: "-",
+    investorPro: "-",
     investee: "3",
   },
   {
     feature: "AI Queries",
-    basic: "50",
-    pro: "Unlimited",
+    investorBasic: "50",
+    investorPro: "Unlimited",
     investee: "-",
   },
   {
     feature: "Watchlist Pitches",
-    basic: "5",
-    pro: "Unlimited",
+    investorBasic: "5",
+    investorPro: "Unlimited",
     investee: "-",
   },
   {
     feature: "AI Guardrail Protection",
-    basic: true,
-    pro: true,
+    investorBasic: true,
+    investorPro: true,
     investee: true,
   },
   {
     feature: "Draft Unlimited Pitch",
-    basic: "-",
-    pro: "-",
+    investorBasic: "-",
+    investorPro: "-",
     investee: "Unlimited",
   },
   {
     feature: "KYC Verification",
-    basic: "Detailed",
-    pro: "Detailed",
+    investorBasic: "Detailed",
+    investorPro: "Detailed",
     investee: "Detailed",
   },
   {
     feature: "Priority Support",
-    basic: false,
-    pro: true,
+    investorBasic: false,
+    investorPro: true,
     investee: true,
   },
 ];
 
-function ComparisonCell({ value }: { value: string | boolean }) {
-  if (typeof value === "boolean") {
-    return value ? (
+function ComparisonCell({ value }: { value: boolean | string }) {
+  if (value === true) {
+    return (
       <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#F97316] text-white">
         <AppIcon name="checkmarkCircle" className="h-4 w-4" />
       </span>
-    ) : (
+    );
+  }
+
+  if (value === false) {
+    return (
       <span className="inline-flex h-6 w-6 items-center justify-center text-[#C6CDD8]">
         <AppIcon name="cancel01" className="h-4 w-4" />
       </span>
@@ -75,15 +79,15 @@ function ComparisonCell({ value }: { value: string | boolean }) {
 
 function ComparisonSection() {
   return (
-    <section className="bg-white px-4 py-10 sm:px-6 lg:px-[147px] lg:py-16">
+    <section className="bg-white px-4 py-10 sm:px-6 lg:px-[52px] lg:py-16">
       <div className="text-center">
         <h2 className="text-center text-[36px] font-semibold leading-[48px] text-[#1F2937]">
           Comprehensive Feature Comparison
         </h2>
       </div>
 
-      <div className="mt-12 overflow-hidden rounded-[24px] border border-[#EDF1F6] bg-white shadow-[0_30px_80px_-70px_rgba(15,23,42,0.25)]">
-        <div className="grid grid-cols-[1.55fr_0.8fr_0.8fr_0.8fr] bg-[#F8FAFC] px-8 py-6 text-left text-[11px] font-semibold uppercase tracking-[0.24em] text-[#4B5563]">
+      <div className="mt-12 overflow-x-auto rounded-[24px] border border-[#EDF1F6] bg-white shadow-[0_30px_80px_-70px_rgba(15,23,42,0.25)]">
+        <div className="grid min-w-[880px] grid-cols-[1.55fr_0.8fr_0.8fr_0.8fr] border-b border-[#EDF1F6] bg-[#F8FAFC] px-8 py-6 text-left text-[11px] font-semibold uppercase tracking-[0.42em] text-[#2B425D]">
           <div>Features</div>
           <div>Investor Basic</div>
           <div>Investor Pro</div>
@@ -93,14 +97,14 @@ function ComparisonSection() {
         {comparisonRows.map((row) => (
           <div
             key={row.feature}
-            className="grid grid-cols-[1.55fr_0.8fr_0.8fr_0.8fr] items-center px-8 py-7 text-[17px] text-[#243041]"
+            className="grid min-w-[880px] grid-cols-[1.55fr_0.8fr_0.8fr_0.8fr] items-center px-8 py-8 text-[17px] leading-7 text-[#06162D]"
           >
-            <div className="font-medium">{row.feature}</div>
+            <div className="font-semibold">{row.feature}</div>
             <div className="flex items-center">
-              <ComparisonCell value={row.basic} />
+              <ComparisonCell value={row.investorBasic} />
             </div>
             <div className="flex items-center">
-              <ComparisonCell value={row.pro} />
+              <ComparisonCell value={row.investorPro} />
             </div>
             <div className="flex items-center">
               <ComparisonCell value={row.investee} />
