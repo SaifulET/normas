@@ -168,44 +168,36 @@ export function FaqSettingsClient() {
     <SuperadminSettingsShell
       activeHref="/superadmin/dashboard/settings/faq"
       title="FAQ"
-      subtitle="Manage frequently asked questions"
+      subtitle="Set privacy & policies of your website"
     >
-      <div className="space-y-6">
-        <form
-          onSubmit={handleSubmit}
-          className="overflow-hidden rounded-[18px] bg-white shadow-[0_10px_40px_rgba(31,35,61,0.06)]"
-        >
-          <div className="bg-[#F4F4F4] px-5 py-5 sm:px-6">
-            <h3 className="text-[22px] font-semibold tracking-[-0.03em] text-[#23275A]">
-              {editingId ? "Edit FAQ" : "Create FAQ"}
-            </h3>
-            <p className="mt-1 text-[13px] text-[#7E84A3]">
-              Add helpful questions and answers for users.
-            </p>
-          </div>
+      <div className="space-y-8">
+        <div className="-mt-12 flex justify-end">
+          <p className="text-[10px] text-[#8A91AB]">Last modified by Admin on Oct 24, 2023</p>
+        </div>
 
-          <div className="space-y-4 px-5 py-5 sm:px-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-5">
             <label className="block">
-              <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-[#4F5676]">
+              <span className="mb-3 block text-[13px] font-semibold text-[#16123E]">
                 Question
               </span>
               <input
                 value={form.question}
                 onChange={(event) => setForm((current) => ({ ...current, question: event.target.value }))}
-                placeholder="What is Norman?"
-                className="h-12 w-full rounded-[12px] border border-[#E1E6F0] px-4 text-[14px] text-[#23275A] outline-none transition focus:border-[#5E568E]"
+                placeholder="Type here..."
+                className="h-[68px] w-full rounded-[12px] border border-[#E1E6F0] bg-white px-5 text-[14px] text-[#23275A] outline-none transition placeholder:text-[#B8C0D2] focus:border-[#5E568E]"
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-[#4F5676]">
+              <span className="mb-3 block text-[13px] font-semibold text-[#16123E]">
                 Answer
               </span>
               <textarea
                 value={form.answer}
                 onChange={(event) => setForm((current) => ({ ...current, answer: event.target.value }))}
-                placeholder="Norman is a platform for managing projects and related information."
-                className="min-h-[120px] w-full resize-y rounded-[12px] border border-[#E1E6F0] px-4 py-3 text-[14px] leading-6 text-[#23275A] outline-none transition focus:border-[#5E568E]"
+                placeholder="Type here..."
+                className="min-h-[150px] w-full resize-y rounded-[12px] border border-[#E1E6F0] bg-white px-5 py-4 text-[14px] leading-6 text-[#23275A] outline-none transition placeholder:text-[#B8C0D2] focus:border-[#5E568E]"
               />
             </label>
 
@@ -213,74 +205,82 @@ export function FaqSettingsClient() {
             {message ? <p className="text-[13px] font-medium text-[#159953]">{message}</p> : null}
           </div>
 
-          <div className="flex justify-end gap-3 border-t border-[#EEF1F6] px-5 py-4 sm:px-6">
+          <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={handleCancel}
-              className="rounded-[10px] border border-[#D8DEEA] bg-white px-4 py-2 text-[13px] font-medium text-[#5F6786] transition hover:border-[#BFC8D9]"
+              className="rounded-[6px] border border-[#C9D0DE] bg-white px-4 py-2 text-[12px] font-medium text-[#5F6786] transition hover:border-[#AEB8CA]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!hasFormContent || isSaving}
-              className="rounded-[10px] bg-[#161616] px-4 py-2 text-[13px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-[6px] bg-[#161616] px-4 py-2 text-[12px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSaving ? "Saving..." : editingId ? "Update FAQ" : "Create FAQ"}
+              {isSaving ? "Saving..." : "Save"}
             </button>
           </div>
         </form>
 
-        <section className="overflow-hidden rounded-[18px] bg-white shadow-[0_10px_40px_rgba(31,35,61,0.06)]">
-          <div className="bg-[#F4F4F4] px-5 py-5 sm:px-6">
-            <h3 className="text-[22px] font-semibold tracking-[-0.03em] text-[#23275A]">FAQ List</h3>
-            <p className="mt-1 text-[13px] text-[#7E84A3]">Review, edit, or delete existing FAQ entries.</p>
+        <section className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="h-px flex-1 bg-[#E4E9F2]" />
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8A91AB]">
+              Display on landing page
+            </p>
+            <div className="h-px flex-1 bg-[#E4E9F2]" />
           </div>
 
-          <div className="divide-y divide-[#EEF1F6]">
-            {isLoading ? (
-              <div className="px-5 py-6 text-[14px] text-[#7E84A3] sm:px-6">Loading FAQs...</div>
-            ) : null}
+          {isLoading ? (
+            <div className="rounded-[12px] bg-white px-5 py-6 text-[14px] text-[#7E84A3] shadow-[0_10px_40px_rgba(31,35,61,0.06)]">
+              Loading FAQs...
+            </div>
+          ) : null}
 
-            {!isLoading && faqs.length === 0 ? (
-              <div className="px-5 py-6 text-[14px] text-[#7E84A3] sm:px-6">No FAQs created yet.</div>
-            ) : null}
+          {!isLoading && faqs.length === 0 ? (
+            <div className="rounded-[12px] bg-white px-5 py-6 text-[14px] text-[#7E84A3] shadow-[0_10px_40px_rgba(31,35,61,0.06)]">
+              No FAQs created yet.
+            </div>
+          ) : null}
 
-            {faqs.map((faq) => {
-              const faqId = getFaqId(faq);
+          {faqs.map((faq) => {
+            const faqId = getFaqId(faq);
 
-              return (
-                <article key={faqId || faq.question} className="px-5 py-5 sm:px-6">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <h4 className="text-[16px] font-semibold text-[#16123E]">{faq.question}</h4>
-                      <p className="mt-2 text-[14px] leading-7 text-[#4E5574]">{faq.answer}</p>
-                    </div>
-
-                    <div className="flex shrink-0 gap-3 text-[#7E84A3]">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(faq)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] transition hover:bg-[#F4F6FB] hover:text-[#5E568E]"
-                        aria-label="Edit FAQ"
-                      >
-                        <HugeiconsIcon icon={PencilEdit02Icon} className="h-5 w-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(faq)}
-                        disabled={deletingId === faqId}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] text-[#E25A5A] transition hover:bg-[#FFF5F5] disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label="Delete FAQ"
-                      >
-                        <HugeiconsIcon icon={Delete02Icon} className="h-5 w-5" />
-                      </button>
-                    </div>
+            return (
+              <article
+                key={faqId || faq.question}
+                className="rounded-[12px] bg-white px-5 py-5 shadow-[0_10px_40px_rgba(31,35,61,0.06)]"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h4 className="text-[18px] font-semibold text-[#16123E]">{faq.question}</h4>
+                    <p className="mt-4 text-[13px] font-medium leading-6 text-[#4E5574]">{faq.answer}</p>
                   </div>
-                </article>
-              );
-            })}
-          </div>
+
+                  <div className="flex shrink-0 gap-3 text-[#7E84A3]">
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(faq)}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] transition hover:bg-[#F4F6FB] hover:text-[#5E568E]"
+                      aria-label="Edit FAQ"
+                    >
+                      <HugeiconsIcon icon={PencilEdit02Icon} className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(faq)}
+                      disabled={deletingId === faqId}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[#E25A5A] transition hover:bg-[#FFF5F5] disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label="Delete FAQ"
+                    >
+                      <HugeiconsIcon icon={Delete02Icon} className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </section>
       </div>
     </SuperadminSettingsShell>
