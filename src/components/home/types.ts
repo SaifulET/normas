@@ -136,6 +136,12 @@ export interface Testimonial {
 }
 
 export interface PricingPlan {
+  annualPrice?: string;
+  audienceRole?: string;
+  description?: string;
+  discountAnnually?: number;
+  featuredLabel?: string;
+  id?: string;
   title: string;
   price: string;
   suffix: string;

@@ -1,8 +1,10 @@
 import { AppIcon } from "@/components/home/icons";
 import { homePageContent } from "@/components/home/data";
 import { FaqSection, FooterSection, PricingSection } from "@/components/home/sections";
+import type { PricingPlan } from "@/components/home/types";
 import { SiteHeader } from "@/components/site/site-chrome";
 import { createSiteNav, sitePrimaryCta } from "@/components/site/site-data";
+import { getPricingPlans, type SubscriptionPlan } from "@/lib/pricing-api";
 
 const comparisonRows = [
   {
@@ -110,14 +112,77 @@ function ComparisonSection() {
   );
 }
 
-export function PricingPage() {
+function formatPlanPrice(amount?: number, currency = "gbp") {
+  if (typeof amount !== "number") {
+    return "";
+  }
+
+  return new Intl.NumberFormat("en-GB", {
+    currency: currency.toUpperCase(),
+    maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    style: "currency",
+  }).format(amount);
+}
+
+function getPlanAction(plan: SubscriptionPlan) {
+  if (plan.audienceRole === "investee") {
+    return plan.tier === "pro" ? "Start Investee Pro" : "Apply to List";
+  }
+
+  return plan.tier === "pro" ? "Go Pro" : "Start as Investor";
+}
+
+function mapSubscriptionPlan(plan: SubscriptionPlan): PricingPlan {
+  const currency = plan.currency ?? "gbp";
+  const monthlyPrice = plan.monthlyPrice ?? plan.pricePerMonth;
+
+  return {
+    annualPrice: formatPlanPrice(plan.annualPrice, currency),
+    audienceRole: plan.audienceRole,
+    description: plan.description,
+    discountAnnually: plan.discountAnnually,
+    featured: plan.planType === "investor-pro",
+    featuredLabel: "Most Popular",
+    features: plan.features ?? [],
+    href: `/signup?role=${plan.audienceRole ?? "investor"}&plan=${plan.planType}`,
+    id: plan.planType,
+    price: formatPlanPrice(monthlyPrice, currency),
+    suffix: "/mo",
+    title: plan.title,
+    action: getPlanAction(plan),
+  };
+}
+
+async function getSubscriptionCards() {
+  try {
+    const plans = await getPricingPlans();
+    return {
+      error: null,
+      pricingPlans: plans.map(mapSubscriptionPlan),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to fetch pricing plans";
+
+    return {
+      error: message,
+      pricingPlans: [],
+    };
+  }
+}
+
+export async function PricingPage() {
+  const { error, pricingPlans } = await getSubscriptionCards();
+
   return (
     <main className="min-h-screen bg-white text-[#243041]">
       <section className="bg-white px-4 py-6 sm:px-6 lg:px-[32px]">
         <SiteHeader navItems={createSiteNav("Pricing")} primaryCta={sitePrimaryCta} />
       </section>
 
-      <PricingSection pricingPlans={homePageContent.pricingPlans} />
+      <PricingSection
+        emptyMessage={error ? "We could not load subscription plans right now." : undefined}
+        pricingPlans={pricingPlans}
+      />
       <ComparisonSection />
       <FaqSection faqs={homePageContent.faqs} />
       <FooterSection
