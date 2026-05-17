@@ -229,7 +229,7 @@ export async function PitchPage({
                 </span>
               </div>
 
-              <PitchActions authenticated={authenticated} />
+              <PitchActions authenticated={authenticated} listId={pitch.slug} />
             </div>
             <h1 className="mt-4 text-[38px] font-semibold leading-[50px] text-[#1F2937]">
               {pitch.title}

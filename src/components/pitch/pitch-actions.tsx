@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getApiErrorMessage } from "@/lib/api";
+import { getSavedListStatus, removeSavedList, saveList } from "@/lib/list-api";
+import { useAuthStore } from "@/store";
 
 function QueryIcon() {
   return (
@@ -37,12 +40,60 @@ function FlagIcon() {
   );
 }
 
-export function PitchActions({ authenticated }: { authenticated: boolean }) {
+export function PitchActions({
+  authenticated,
+  listId,
+}: {
+  authenticated: boolean;
+  listId: string;
+}) {
+  const userRole = useAuthStore((state) => state.user?.role);
   const [saved, setSaved] = useState(false);
+  const [isCheckingSavedStatus, setIsCheckingSavedStatus] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportText, setReportText] = useState("");
 
   const queryHref = authenticated ? "/dashboard/messages" : "/signup";
+  const canSaveList = authenticated && userRole === "investor";
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSavedStatus() {
+      if (!canSaveList) {
+        setSaved(false);
+        setIsCheckingSavedStatus(false);
+        return;
+      }
+
+      setIsCheckingSavedStatus(true);
+      setSaveMessage("");
+
+      try {
+        const response = await getSavedListStatus(listId);
+
+        if (mounted) {
+          setSaved(Boolean(response.data?.isSaved));
+        }
+      } catch {
+        if (mounted) {
+          setSaved(false);
+        }
+      } finally {
+        if (mounted) {
+          setIsCheckingSavedStatus(false);
+        }
+      }
+    }
+
+    loadSavedStatus();
+
+    return () => {
+      mounted = false;
+    };
+  }, [canSaveList, listId]);
 
   function closeReportModal() {
     setReportModalOpen(false);
@@ -53,38 +104,75 @@ export function PitchActions({ authenticated }: { authenticated: boolean }) {
     setReportText("");
   }
 
+  async function handleSaveClick() {
+    if (!canSaveList) {
+      setSaved(false);
+      setSaveMessage("Please login as an investor first.");
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage("");
+
+    try {
+      if (saved) {
+        await removeSavedList(listId);
+        setSaved(false);
+        setSaveMessage("Removed from saved lists.");
+      } else {
+        await saveList(listId);
+        setSaved(true);
+        setSaveMessage("Added to saved lists.");
+      }
+    } catch (error) {
+      setSaveMessage(getApiErrorMessage(error, "Unable to update saved list. Please try again."));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href={queryHref}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-[8px] bg-[#314B6B] px-5 text-sm font-medium text-white transition hover:bg-[#243B5A]"
-        >
-          <QueryIcon />
-          <span>Query</span>
-        </Link>
+      <div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href={queryHref}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-[8px] bg-[#314B6B] px-5 text-sm font-medium text-white transition hover:bg-[#243B5A]"
+          >
+            <QueryIcon />
+            <span>Query</span>
+          </Link>
 
-        <button
-          type="button"
-          onClick={() => setSaved((current) => !current)}
-          className={`inline-flex h-11 w-11 items-center justify-center rounded-[8px] border transition ${
-            saved
-              ? "border-[#314B6B] bg-[#314B6B] text-white"
-              : "border-[#D7DFEA] bg-white text-[#344054] hover:bg-[#F8FAFC]"
-          }`}
-          aria-label={saved ? "Remove from saved pitches" : "Save pitch"}
-        >
-          <BookmarkIcon filled={saved} />
-        </button>
+          <button
+            type="button"
+            onClick={handleSaveClick}
+            disabled={isSaving || isCheckingSavedStatus}
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-[8px] border transition disabled:cursor-wait disabled:opacity-75 ${
+              saved
+                ? "border-[#314B6B] bg-[#314B6B] text-white"
+                : "border-[#D7DFEA] bg-white text-[#344054] hover:bg-[#F8FAFC]"
+            }`}
+            aria-label={saved ? "Remove from saved pitches" : "Save pitch"}
+            aria-pressed={saved}
+          >
+            <BookmarkIcon filled={saved} />
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setReportModalOpen(true)}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-[8px] border border-[#D7DFEA] bg-white text-[#344054] transition hover:bg-[#F8FAFC]"
-          aria-label="Report pitch"
-        >
-          <FlagIcon />
-        </button>
+          <button
+            type="button"
+            onClick={() => setReportModalOpen(true)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-[8px] border border-[#D7DFEA] bg-white text-[#344054] transition hover:bg-[#F8FAFC]"
+            aria-label="Report pitch"
+          >
+            <FlagIcon />
+          </button>
+        </div>
+
+        {saveMessage ? (
+          <p className="mt-2 max-w-[250px] text-right text-xs font-medium text-[#5F6B7A] lg:ml-auto">
+            {saveMessage}
+          </p>
+        ) : null}
       </div>
 
       {reportModalOpen ? (

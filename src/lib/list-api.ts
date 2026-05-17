@@ -17,6 +17,16 @@ export type ListStatusResponse = {
   success?: boolean;
 };
 
+export type SavedListStatusResponse = {
+  data?: {
+    isSaved?: boolean;
+    list?: string;
+    savedListId?: string | null;
+  };
+  message?: string;
+  success?: boolean;
+};
+
 export type ListUser = {
   _id?: string;
   email?: string;
@@ -164,6 +174,28 @@ export function updateListStatus(listId: string, status: ListStatus) {
     data: { status },
     method: "PATCH",
     url: `lists/${listId}/status`,
+  });
+}
+
+export function getSavedListStatus(listId: string) {
+  return apiRequest<SavedListStatusResponse>({
+    method: "GET",
+    url: `lists/saved/${listId}/status`,
+  });
+}
+
+export function saveList(listId: string) {
+  return apiRequest<ListMutationResponse>({
+    data: { listId },
+    method: "POST",
+    url: "lists/save",
+  });
+}
+
+export function removeSavedList(listId: string) {
+  return apiRequest<ListMutationResponse>({
+    method: "DELETE",
+    url: `lists/saved/${listId}`,
   });
 }
 
