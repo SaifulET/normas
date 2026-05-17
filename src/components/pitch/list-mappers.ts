@@ -33,6 +33,7 @@ export function mapApiListToPitchDetail(item: ListItemResponse, relatedSlugs: st
     sector: item.sector?.trim() || "Other",
     target: formatFundingTarget(item.fundingTarget),
     description: summary,
+    detailHtml: item.description?.trim() || undefined,
     image: item.bannerImage || "/howitwork.png",
     equipmentTitle: "Equipment Details",
     overview: descriptionText || summary,

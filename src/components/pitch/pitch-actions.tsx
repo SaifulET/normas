@@ -43,9 +43,11 @@ function FlagIcon() {
 export function PitchActions({
   authenticated,
   listId,
+  variant = "public",
 }: {
   authenticated: boolean;
   listId: string;
+  variant?: "dashboard" | "public";
 }) {
   const userRole = useAuthStore((state) => state.user?.role);
   const [saved, setSaved] = useState(false);
@@ -57,6 +59,7 @@ export function PitchActions({
 
   const queryHref = authenticated ? "/dashboard/messages" : "/signup";
   const canSaveList = authenticated && userRole === "investor";
+  const compact = variant === "dashboard";
 
   useEffect(() => {
     let mounted = true;
@@ -137,7 +140,11 @@ export function PitchActions({
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href={queryHref}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-[8px] bg-[#314B6B] px-5 text-sm font-medium text-white transition hover:bg-[#243B5A]"
+            className={
+              compact
+                ? "inline-flex h-8 min-w-[99px] items-center justify-center gap-2 rounded-[8px] bg-[#2B425D] px-4 text-sm font-medium text-[#F9FAFB] transition hover:bg-[#243B5A]"
+                : "inline-flex h-11 items-center justify-center gap-2 rounded-[8px] bg-[#314B6B] px-5 text-sm font-medium text-white transition hover:bg-[#243B5A]"
+            }
           >
             <QueryIcon />
             <span>Query</span>
@@ -147,11 +154,17 @@ export function PitchActions({
             type="button"
             onClick={handleSaveClick}
             disabled={isSaving || isCheckingSavedStatus}
-            className={`inline-flex h-11 w-11 items-center justify-center rounded-[8px] border transition disabled:cursor-wait disabled:opacity-75 ${
-              saved
-                ? "border-[#314B6B] bg-[#314B6B] text-white"
-                : "border-[#D7DFEA] bg-white text-[#344054] hover:bg-[#F8FAFC]"
-            }`}
+            className={
+              compact
+                ? `inline-flex h-8 w-8 items-center justify-center rounded-[6px] transition disabled:cursor-wait disabled:opacity-75 ${
+                    saved ? "text-[#E65E02]" : "text-[#141B34] hover:bg-[#F3F4F6]"
+                  }`
+                : `inline-flex h-11 w-11 items-center justify-center rounded-[8px] border transition disabled:cursor-wait disabled:opacity-75 ${
+                    saved
+                      ? "border-[#314B6B] bg-[#314B6B] text-white"
+                      : "border-[#D7DFEA] bg-white text-[#344054] hover:bg-[#F8FAFC]"
+                  }`
+            }
             aria-label={saved ? "Remove from saved pitches" : "Save pitch"}
             aria-pressed={saved}
           >
@@ -161,7 +174,11 @@ export function PitchActions({
           <button
             type="button"
             onClick={() => setReportModalOpen(true)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-[8px] border border-[#D7DFEA] bg-white text-[#344054] transition hover:bg-[#F8FAFC]"
+            className={
+              compact
+                ? "inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-[#141B34] transition hover:bg-[#F3F4F6]"
+                : "inline-flex h-11 w-11 items-center justify-center rounded-[8px] border border-[#D7DFEA] bg-white text-[#344054] transition hover:bg-[#F8FAFC]"
+            }
             aria-label="Report pitch"
           >
             <FlagIcon />

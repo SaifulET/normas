@@ -14,6 +14,7 @@ export interface PitchSummary {
 export interface PitchDetail extends PitchSummary {
   equipmentTitle: string;
   overview: string;
+  detailHtml?: string;
   keyComponents: string[];
   benefits: string[];
   closing: string;

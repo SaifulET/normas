@@ -3,67 +3,46 @@ import Link from "next/link";
 import { AppIcon } from "@/components/home/icons";
 import { PitchActions } from "@/components/pitch/pitch-actions";
 import type { PitchDetail } from "@/components/pitch/data";
+import { CollapsibleDetailHtml } from "./collapsible-detail-html";
+
+function getFallbackDetailHtml(pitch: PitchDetail) {
+  const parts = [
+    `<p>${pitch.overview}</p>`,
+    pitch.closing ? `<p>${pitch.closing}</p>` : "",
+    pitch.keyComponents.length
+      ? `<p>Key Components:</p><ol>${pitch.keyComponents.map((item) => `<li>${item}</li>`).join("")}</ol>`
+      : "",
+    pitch.benefits.length ? `<p>Benefits:</p><ul>${pitch.benefits.map((item) => `<li>${item}</li>`).join("")}</ul>` : "",
+  ];
+
+  return parts.filter(Boolean).join("");
+}
 
 function UnlockedPitchDetails({ pitch }: { pitch: PitchDetail }) {
+  const detailHtml = pitch.detailHtml || getFallbackDetailHtml(pitch);
+
   return (
-    <div className="mt-10">
-      <h2 className="text-[24px] font-semibold text-[#1F2937]">{pitch.equipmentTitle}</h2>
+    <div className="mt-[51px] space-y-[51px]">
+      <CollapsibleDetailHtml html={detailHtml} />
 
-      <div className="mt-6 max-w-[860px] space-y-8 text-[17px] leading-8 text-[#5F6B7A]">
-        <div>
-          <p className="font-medium text-[#243041]">AI Project Overview for Windmill Optimization</p>
-          <p className="mt-3">{pitch.overview}</p>
+      {pitch.additionalDetails.length ? (
+        <div className="overflow-hidden rounded-[12px] border border-[#E5E7EB] pb-4">
+          <div className="bg-[#F3F4F6] px-4 py-2.5 text-[12px] font-normal leading-[18px] tracking-[0.008em] text-[#1F2937]">
+            Additional Details
+          </div>
+          <div className="space-y-4 px-4 pt-4">
+            {pitch.additionalDetails.map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between gap-6 text-[14px] leading-5 text-[#1F2937]"
+              >
+                <span>{row.label}</span>
+                <span className="text-right">{row.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
-
-        {pitch.keyComponents.length ? (
-          <div>
-            <p className="font-medium text-[#243041]">Key Components:</p>
-            <ol className="mt-3 list-decimal space-y-1 pl-5">
-              {pitch.keyComponents.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ol>
-          </div>
-        ) : null}
-
-        {pitch.benefits.length ? (
-          <div>
-            <p className="font-medium text-[#243041]">Benefits:</p>
-            <ul className="mt-3 space-y-1">
-              {pitch.benefits.map((item) => (
-                <li key={item}>- {item}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {pitch.closing ? (
-          <div>
-            <p>
-              {pitch.closing}{" "}
-              <button type="button" className="rounded bg-[#F3F5F8] px-2 py-0.5 text-xs text-[#667085]">
-                Read more
-              </button>
-            </p>
-          </div>
-        ) : null}
-
-        {pitch.additionalDetails.length ? (
-          <div className="overflow-hidden rounded-[14px] border border-[#E7ECF3]">
-            <div className="bg-[#F8FAFC] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6B7280]">
-              Additional Details
-            </div>
-            <div className="divide-y divide-[#EEF2F7]">
-              {pitch.additionalDetails.map((row) => (
-                <div key={row.label} className="flex items-center justify-between gap-6 px-4 py-3 text-sm">
-                  <span className="text-[#475467]">{row.label}</span>
-                  <span className="font-medium text-[#243041]">{row.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -75,56 +54,61 @@ export function DashboardPitchDetailPage({
   relatedPitches: PitchDetail[];
 }) {
   return (
-    <section className="bg-white pb-12 text-[#243041]">
-      <div className="flex items-center gap-3 text-sm text-[#667085]">
-        <Link
-          href="/dashboard/save-list"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#F4F6FA] text-[#475467] transition hover:bg-[#EAEFF6]"
-          aria-label="Back to saved lists"
-        >
-          <AppIcon name="arrowLeft" className="h-4 w-4" />
-        </Link>
-        <Link href="/dashboard" className="hover:text-[#243B5A]">
-          Dashboard
-        </Link>
-        <span>{">"}</span>
-        <span>View Pitch Deck</span>
-      </div>
+    <section className="min-h-screen rounded-[16px] bg-[#FCFCFD] px-4 pb-14 pt-8 text-[#243041] sm:px-6 lg:px-6 lg:pt-10">
+      <header className="flex items-start gap-5">
+        <div className="flex items-start gap-5">
+          <Link
+            href="/dashboard/save-list"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[4px] bg-white text-[#141B34] transition hover:bg-[#F3F4F6]"
+            aria-label="Back to saved lists"
+          >
+            <AppIcon name="arrowLeft" className="h-6 w-6" />
+          </Link>
+          <div>
+            <h1 className="text-[32px] font-semibold leading-10 text-[#16123E]">View Pitch</h1>
+            <p className="mt-1 text-[16px] font-medium leading-7 text-[#6B7280]">Details of the business</p>
+          </div>
+        </div>
+      </header>
 
-      <div className="relative mt-8 h-[340px] overflow-hidden rounded-[18px] lg:h-[390px]">
+      <div className="relative mt-10 h-[260px] overflow-hidden rounded-[12px] sm:h-[320px] lg:h-[364px]">
         <Image src={pitch.image} alt={pitch.title} fill className="object-cover" priority sizes="100vw" />
       </div>
 
-      <div className="px-0 py-8 2xl:px-[172px]">
-        <div>
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex flex-wrap items-center gap-4 text-sm text-[#667085]">
-              <span className="inline-flex items-center gap-1.5">
-                <AppIcon name="mapPin" className="h-4 w-4" />
+      <div className="mx-auto mt-10 max-w-[1306px]">
+        <div className="space-y-4">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2.5 text-[#6B7280]">
+              <span className="inline-flex items-center gap-1 text-[12px] font-normal leading-5 tracking-[0.01em]">
+                <AppIcon name="mapPin" className="h-5 w-5" />
                 {pitch.location}
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <AppIcon name="view" className="h-4 w-4" />
+              <span className="h-1 w-1 rounded-full bg-[#BFC7D0]" />
+              <span className="inline-flex items-center gap-1 text-[14px] font-medium leading-[19px]">
+                <AppIcon name="view" className="h-5 w-5" />
                 {pitch.views} views
               </span>
             </div>
 
-            <PitchActions authenticated listId={pitch.slug} />
+            <PitchActions authenticated listId={pitch.slug} variant="dashboard" />
           </div>
-          <h1 className="mt-4 text-[38px] font-semibold leading-[50px] text-[#1F2937]">
-            {pitch.title}
-          </h1>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-[#BCC7D3] px-4 py-1.5 text-sm font-medium text-[#3D4E63]">
-              {pitch.stage}
-            </span>
-            <span className="rounded-full bg-[#BCC7D3] px-4 py-1.5 text-sm font-medium text-[#3D4E63]">
-              {pitch.sector}
-            </span>
-          </div>
-          <div className="mt-4 flex items-center gap-3">
-            <span className="text-[14px] text-[#6B7280]">Funding target</span>
-            <span className="text-[30px] font-semibold text-[#243B5A]">{pitch.target}</span>
+
+          <div className="space-y-4">
+            <h2 className="text-[32px] font-semibold leading-[42px] text-[#1F2937]">
+              {pitch.title}
+            </h2>
+            <div className="flex flex-wrap items-center gap-[13px]">
+              <span className="rounded-full bg-[#BFC7D0] px-5 py-0.5 text-[14px] font-normal leading-[22px] text-[#1F2937]">
+                {pitch.stage}
+              </span>
+              <span className="rounded-full bg-[#BFC7D0] px-5 py-0.5 text-[14px] font-normal leading-[22px] text-[#1F2937]">
+                {pitch.sector}
+              </span>
+              <span className="ml-0 flex items-center gap-3 sm:ml-1">
+                <span className="text-[12px] font-normal leading-[10px] text-[#6B7280]">Funding target</span>
+                <span className="text-[18px] font-medium leading-6 text-[#2B425D]">{pitch.target}</span>
+              </span>
+            </div>
           </div>
         </div>
 
