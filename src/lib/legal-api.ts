@@ -14,8 +14,11 @@ export type LegalContentCreatePayload = LegalContentUpdatePayload & {
 export type LegalContent = {
   _id?: string;
   content?: string;
+  createdAt?: string;
+  lastModifiedAt?: string;
   title?: string;
   type?: LegalContentType;
+  updatedAt?: string;
 };
 
 export type LegalContentResponse = ApiSuccessResponse<LegalContent>;

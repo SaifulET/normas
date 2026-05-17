@@ -1,4 +1,4 @@
-import { LegalPage } from "@/components/legal/legal-page";
+import { getLegalPageContent, LegalPage } from "@/components/legal/legal-page";
 
 const sections = [
   {
@@ -51,12 +51,13 @@ const sections = [
   },
 ] as const;
 
-export default function Page() {
-  return (
-    <LegalPage
-      title="Terms and Conditions"
-      description="Please read these enterprise service terms carefully before using the EARLY-N platform. These terms govern your access to and use of our enterprise infrastructure and services."
-      sections={[...sections]}
-    />
-  );
+export default async function Page() {
+  const content = await getLegalPageContent("terms-and-conditions", {
+    title: "Terms and Conditions",
+    description:
+      "Please read these enterprise service terms carefully before using the EARLY-N platform. These terms govern your access to and use of our enterprise infrastructure and services.",
+    sections,
+  });
+
+  return <LegalPage content={content} />;
 }
