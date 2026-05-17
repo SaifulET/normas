@@ -27,6 +27,24 @@ export type SavedListStatusResponse = {
   success?: boolean;
 };
 
+export type SavedListItemResponse =
+  | ListItemResponse
+  | {
+      _id?: string;
+      createdAt?: string;
+      list?: ListItemResponse | string;
+      listId?: ListItemResponse | string;
+      updatedAt?: string;
+    };
+
+export type SavedListsResponse =
+  | SavedListItemResponse[]
+  | {
+      data?: SavedListItemResponse[];
+      message?: string;
+      success?: boolean;
+    };
+
 export type ListUser = {
   _id?: string;
   email?: string;
@@ -181,6 +199,13 @@ export function getSavedListStatus(listId: string) {
   return apiRequest<SavedListStatusResponse>({
     method: "GET",
     url: `lists/saved/${listId}/status`,
+  });
+}
+
+export function getMySavedLists() {
+  return apiRequest<SavedListsResponse>({
+    method: "GET",
+    url: "lists/saved/me",
   });
 }
 

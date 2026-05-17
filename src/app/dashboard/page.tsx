@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { dashboardOverviewPitches, dashboardScheduleHighlights } from "@/components/dashboard/data";
-import { ListingCard } from "@/components/dashboard/listing-card";
+import { dashboardScheduleHighlights } from "@/components/dashboard/data";
 import { DashboardPageHeader } from "@/components/dashboard/page-header";
+import { SavedListsGrid } from "@/components/dashboard/saved-lists-grid";
 
 export default function Page() {
   return (
@@ -19,11 +19,7 @@ export default function Page() {
           </Link>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {dashboardOverviewPitches.map((pitch) => (
-            <ListingCard key={pitch.slug} pitch={pitch} />
-          ))}
-        </div>
+        <SavedListsGrid emptyTitle="No saved lists yet" limit={3} />
       </section>
 
       <section className="rounded-[30px] border border-[#E6EBF3] bg-white p-5 shadow-[0_28px_80px_-60px_rgba(30,39,70,0.45)] lg:p-6">
