@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { AppIcon } from "@/components/home/icons";
+import { ContactForm } from "@/components/contact/contact-form";
 import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
 import {
   createSiteNav,
@@ -29,31 +29,7 @@ export function ContactPage() {
               </p>
             </div>
 
-            <form className="mt-10 space-y-4">
-              <input
-                type="email"
-                placeholder="Email"
-                className="h-14 w-full rounded-none border-0 bg-[#F6F7FA] px-5 text-[15px] text-[#1F2937] outline-none placeholder:text-[#7A8190]"
-              />
-              <input
-                type="text"
-                placeholder="Subject"
-                className="h-14 w-full rounded-none border-0 bg-[#F6F7FA] px-5 text-[15px] text-[#1F2937] outline-none placeholder:text-[#7A8190]"
-              />
-              <textarea
-                placeholder="Message"
-                rows={8}
-                className="w-full resize-none rounded-none border-0 bg-[#F6F7FA] px-5 py-4 text-[15px] text-[#1F2937] outline-none placeholder:text-[#7A8190]"
-              />
-
-              <button
-                type="submit"
-                className="inline-flex h-14 items-center justify-center gap-3 rounded-[10px] bg-[#314B6B] px-7 text-[15px] font-semibold text-white transition hover:bg-[#243B5A]"
-              >
-                Send
-                <AppIcon name="mailSend" className="h-5 w-5" />
-              </button>
-            </form>
+            <ContactForm />
           </div>
         </div>
       </section>
