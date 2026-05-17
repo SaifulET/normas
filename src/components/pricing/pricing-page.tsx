@@ -1,9 +1,10 @@
 import { AppIcon } from "@/components/home/icons";
 import { homePageContent } from "@/components/home/data";
 import { FaqSection, FooterSection, PricingSection } from "@/components/home/sections";
-import type { PricingPlan } from "@/components/home/types";
+import type { FaqItem, PricingPlan } from "@/components/home/types";
 import { SiteHeader } from "@/components/site/site-chrome";
 import { createSiteNav, sitePrimaryCta } from "@/components/site/site-data";
+import { getPublicFaqs } from "@/lib/faq-api";
 import { getPricingPlans, type SubscriptionPlan } from "@/lib/pricing-api";
 
 const comparisonRows = [
@@ -174,8 +175,23 @@ async function getSubscriptionCards() {
   }
 }
 
+async function getFaqItems(): Promise<FaqItem[]> {
+  try {
+    const faqs = await getPublicFaqs();
+    return faqs.map((faq) => ({
+      answer: faq.answer,
+      question: faq.question,
+    }));
+  } catch {
+    return homePageContent.faqs;
+  }
+}
+
 export async function PricingPage() {
-  const { error, pricingPlans } = await getSubscriptionCards();
+  const [{ error, pricingPlans }, faqs] = await Promise.all([
+    getSubscriptionCards(),
+    getFaqItems(),
+  ]);
 
   return (
     <main className="min-h-screen bg-white text-[#243041]">
@@ -188,7 +204,7 @@ export async function PricingPage() {
         pricingPlans={pricingPlans}
       />
       <ComparisonSection />
-      <FaqSection faqs={homePageContent.faqs} />
+      <FaqSection faqs={faqs} />
       <FooterSection
         linkGroups={homePageContent.footerLinkGroups}
         socialLinks={homePageContent.socialLinks}

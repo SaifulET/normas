@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Delete02Icon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SuperadminSettingsShell } from "./settings-general-client";
-import { createFaq, deleteFaq, getFaqs, updateFaq, type Faq } from "@/lib/faq-api";
+import { createFaq, deleteFaq, getFaqs, updateFaq, type Faq, type FaqsResponse } from "@/lib/faq-api";
 
 type FaqForm = {
   answer: string;
@@ -16,7 +16,7 @@ const emptyForm: FaqForm = {
   question: "",
 };
 
-function normalizeFaqs(data: Awaited<ReturnType<typeof getFaqs>>["data"]) {
+function normalizeFaqs(data: FaqsResponse["data"]) {
   if (Array.isArray(data)) {
     return data;
   }

@@ -13,13 +13,16 @@ import {
   TestimonialsSection,
   ValuesSection,
 } from "./sections";
-import type { HomePageContent } from "./types";
+import type { FaqItem, HomePageContent } from "./types";
 
 interface HomePageProps {
   content?: HomePageContent;
+  faqs?: FaqItem[];
 }
 
-export function HomePage({ content = homePageContent }: HomePageProps) {
+export function HomePage({ content = homePageContent, faqs }: HomePageProps) {
+  const faqItems = faqs && faqs.length > 0 ? faqs : content.faqs;
+
   return (
     <main className="min-h-screen bg-[#FFF] text-[#182231]">
       <HeroSection content={content.hero} />
@@ -40,7 +43,7 @@ export function HomePage({ content = homePageContent }: HomePageProps) {
       <SectorCategoriesSectionClient sectors={content.sectors} />
       <TestimonialsSection testimonials={content.testimonials} />
       <PricingSection pricingPlans={content.pricingPlans} />
-      <FaqSection faqs={content.faqs} />
+      <FaqSection faqs={faqItems} />
       <FooterSection linkGroups={content.footerLinkGroups} socialLinks={content.socialLinks} />
     </main>
   );
