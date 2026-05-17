@@ -1,7 +1,8 @@
 import { HomePage } from "@/components/home/home-page";
 import { homePageContent } from "@/components/home/data";
-import type { FaqItem } from "@/components/home/types";
+import type { FaqItem, PricingPlan } from "@/components/home/types";
 import { getPublicFaqs } from "@/lib/faq-api";
+import { getPublicPricingPlans } from "@/lib/pricing-api";
 
 async function getFaqItems(): Promise<FaqItem[]> {
   try {
@@ -15,8 +16,19 @@ async function getFaqItems(): Promise<FaqItem[]> {
   }
 }
 
-export default async function Page() {
-  const faqs = await getFaqItems();
+async function getPricingItems(): Promise<PricingPlan[]> {
+  try {
+    return await getPublicPricingPlans();
+  } catch {
+    return homePageContent.pricingPlans;
+  }
+}
 
-  return <HomePage faqs={faqs} />;
+export default async function Page() {
+  const [faqs, pricingPlans] = await Promise.all([
+    getFaqItems(),
+    getPricingItems(),
+  ]);
+
+  return <HomePage faqs={faqs} pricingPlans={pricingPlans} />;
 }

@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./api";
+import type { PricingPlan } from "@/components/home/types";
 
 export type SubscriptionPlan = {
   annualPrice?: number;
@@ -55,4 +56,50 @@ export async function getPricingPlans() {
   }
 
   return plans.filter((plan) => plan.isActive !== false);
+}
+
+function formatPlanPrice(amount?: number, currency = "gbp") {
+  if (typeof amount !== "number") {
+    return "";
+  }
+
+  return new Intl.NumberFormat("en-GB", {
+    currency: currency.toUpperCase(),
+    maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    style: "currency",
+  }).format(amount);
+}
+
+function getPlanAction(plan: SubscriptionPlan) {
+  if (plan.audienceRole === "investee") {
+    return plan.tier === "pro" ? "Start Investee Pro" : "Apply to List";
+  }
+
+  return plan.tier === "pro" ? "Go Pro" : "Start as Investor";
+}
+
+export function mapSubscriptionPlan(plan: SubscriptionPlan): PricingPlan {
+  const currency = plan.currency ?? "gbp";
+  const monthlyPrice = plan.monthlyPrice ?? plan.pricePerMonth;
+
+  return {
+    annualPrice: formatPlanPrice(plan.annualPrice, currency),
+    audienceRole: plan.audienceRole,
+    description: plan.description,
+    discountAnnually: plan.discountAnnually,
+    featured: plan.planType === "investor-pro",
+    featuredLabel: "Most Popular",
+    features: plan.features ?? [],
+    href: `/signup?role=${plan.audienceRole ?? "investor"}&plan=${plan.planType}`,
+    id: plan.planType,
+    price: formatPlanPrice(monthlyPrice, currency),
+    suffix: "/mo",
+    title: plan.title,
+    action: getPlanAction(plan),
+  };
+}
+
+export async function getPublicPricingPlans() {
+  const plans = await getPricingPlans();
+  return plans.map(mapSubscriptionPlan);
 }
