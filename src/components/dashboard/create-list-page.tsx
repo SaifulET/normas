@@ -708,10 +708,10 @@ export function CreateListPage({ listId }: { listId?: string }) {
       return;
     }
 
-    if (!isEditMode && existing.length >= getMaxCreatedLists()) {
-      setError(`You can create up to ${getMaxCreatedLists()} lists only.`);
-      return;
-    }
+    // if (!isEditMode && existing.length >= getMaxCreatedLists()) {
+    //   setError(`You can create up to ${getMaxCreatedLists()} lists only.`);
+    //   return;
+    // }
 
     const active = isEditMode ? form.active : existing.filter((item) => item.active).length < getMaxActiveCreatedLists();
     const status: ListStatus = active ? "activated" : "deactivated";
@@ -746,6 +746,7 @@ export function CreateListPage({ listId }: { listId?: string }) {
       const response = isEditMode && listId ? await updateList(listId, formData, status) : await createList(formData);
 
       if (response.success === false) {
+
         throw new Error(response.message ?? `Unable to ${isEditMode ? "update" : "create"} list. Please try again.`);
       }
     } catch (saveError) {

@@ -135,7 +135,7 @@ export type FilteredListsResponse = {
 };
 
 export function createList(formData: FormData) {
-  return apiRequest<ListMutationResponse>({
+  const temp= apiRequest<ListMutationResponse>({
     data: formData,
     headers: {
       "Content-Type": "multipart/form-data",
@@ -143,6 +143,8 @@ export function createList(formData: FormData) {
     method: "POST",
     url: "lists",
   });
+  console.log(temp);
+  return temp;
 }
 
 export function updateList(listId: string, formData: FormData, status: ListStatus) {
