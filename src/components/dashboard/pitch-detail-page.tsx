@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AppIcon } from "@/components/home/icons";
+import { CollapsibleDetailHtml } from "@/components/pitch/collapsible-detail-html";
 import { PitchActions } from "@/components/pitch/pitch-actions";
 import type { PitchDetail } from "@/components/pitch/data";
-import { CollapsibleDetailHtml } from "./collapsible-detail-html";
 
 function getFallbackDetailHtml(pitch: PitchDetail) {
   const parts = [
@@ -90,7 +90,7 @@ export function DashboardPitchDetailPage({
               </span>
             </div>
 
-            <PitchActions authenticated listId={pitch.slug} variant="dashboard" />
+            <PitchActions authenticated listId={pitch.slug} />
           </div>
 
           <div className="space-y-4">

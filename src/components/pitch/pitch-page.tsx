@@ -9,6 +9,7 @@ import {
   siteSocialLinks,
 } from "@/components/site/site-data";
 import { isAuthenticated } from "@/lib/auth";
+import { CollapsibleDetailHtml } from "./collapsible-detail-html";
 import type { PitchDetail } from "./data";
 import { PitchActions } from "./pitch-actions";
 
@@ -58,43 +59,28 @@ function RelatedPitchCard({ pitch }: { pitch: PitchDetail }) {
   );
 }
 
+function getFallbackDetailHtml(pitch: PitchDetail) {
+  const parts = [
+    `<p>${pitch.overview}</p>`,
+    pitch.closing ? `<p>${pitch.closing}</p>` : "",
+    pitch.keyComponents.length
+      ? `<p>Key Components:</p><ol>${pitch.keyComponents.map((item) => `<li>${item}</li>`).join("")}</ol>`
+      : "",
+    pitch.benefits.length ? `<p>Benefits:</p><ul>${pitch.benefits.map((item) => `<li>${item}</li>`).join("")}</ul>` : "",
+  ];
+
+  return parts.filter(Boolean).join("");
+}
+
 function UnlockedPitchDetails({ pitch }: { pitch: PitchDetail }) {
+  const detailHtml = pitch.detailHtml || getFallbackDetailHtml(pitch);
+
   return (
     <div className="mt-10">
       <h2 className="text-[24px] font-semibold text-[#1F2937]">{pitch.equipmentTitle}</h2>
 
-      <div className="mt-6 max-w-[860px] space-y-8 text-[17px] leading-8 text-[#5F6B7A]">
-        <div>
-          <p className="font-medium text-[#243041]">AI Project Overview for Windmill Optimization</p>
-          <p className="mt-3">{pitch.overview}</p>
-        </div>
-
-        <div>
-          <p className="font-medium text-[#243041]">Key Components:</p>
-          <ol className="mt-3 list-decimal space-y-1 pl-5">
-            {pitch.keyComponents.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ol>
-        </div>
-
-        <div>
-          <p className="font-medium text-[#243041]">Benefits:</p>
-          <ul className="mt-3 space-y-1">
-            {pitch.benefits.map((item) => (
-              <li key={item}>- {item}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <p>
-            {pitch.closing}{" "}
-            <button type="button" className="rounded bg-[#F3F5F8] px-2 py-0.5 text-xs text-[#667085]">
-              Read more
-            </button>
-          </p>
-        </div>
+      <div className="mt-6 max-w-[860px] space-y-8">
+        <CollapsibleDetailHtml html={detailHtml} />
 
         <div className="overflow-hidden rounded-[14px] border border-[#E7ECF3]">
           <div className="bg-[#F8FAFC] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6B7280]">

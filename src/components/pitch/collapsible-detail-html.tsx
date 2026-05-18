@@ -13,6 +13,7 @@ function sanitizeDetailHtml(html: string) {
 
 export function CollapsibleDetailHtml({ html }: { html: string }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const [collapsedMaxHeight, setCollapsedMaxHeight] = useState<string>();
   const [expanded, setExpanded] = useState(false);
   const [hasOverflow, setHasOverflow] = useState(false);
   const safeHtml = useMemo(() => sanitizeDetailHtml(html), [html]);
@@ -25,7 +26,16 @@ export function CollapsibleDetailHtml({ html }: { html: string }) {
     }
 
     const updateOverflow = () => {
-      const collapsedHeight = 5 * 32;
+      const firstContentElement = content.firstElementChild instanceof HTMLElement ? content.firstElementChild : content;
+      const computedStyle = window.getComputedStyle(firstContentElement);
+      const fontSize = Number.parseFloat(computedStyle.fontSize);
+      const lineHeightValue = Number.parseFloat(computedStyle.lineHeight);
+      const lineHeight = Number.isFinite(lineHeightValue)
+        ? lineHeightValue
+        : (Number.isFinite(fontSize) ? fontSize * 1.2 : 32);
+      const collapsedHeight = lineHeight * 10;
+
+      setCollapsedMaxHeight(`${collapsedHeight}px`);
       setHasOverflow(content.scrollHeight > collapsedHeight + 1);
     };
 
@@ -41,9 +51,14 @@ export function CollapsibleDetailHtml({ html }: { html: string }) {
     <div>
       <div
         ref={contentRef}
-        className={`dashboard-pitch-detail-html text-[20px] font-medium leading-8 text-[#1F2937] ${
-          expanded || !hasOverflow ? "" : "max-h-[160px] overflow-hidden"
-        }`}
+        style={
+          expanded || !hasOverflow
+            ? undefined
+            : {
+                maxHeight: collapsedMaxHeight,
+                overflow: "hidden",
+              }
+        }
         dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
 
@@ -57,24 +72,6 @@ export function CollapsibleDetailHtml({ html }: { html: string }) {
         </button>
       ) : null}
 
-      <style jsx global>{`
-        .dashboard-pitch-detail-html > * + * {
-          margin-top: 1rem;
-        }
-
-        .dashboard-pitch-detail-html ul,
-        .dashboard-pitch-detail-html ol {
-          padding-left: 1.5rem;
-        }
-
-        .dashboard-pitch-detail-html ul {
-          list-style: disc;
-        }
-
-        .dashboard-pitch-detail-html ol {
-          list-style: decimal;
-        }
-      `}</style>
     </div>
   );
 }
