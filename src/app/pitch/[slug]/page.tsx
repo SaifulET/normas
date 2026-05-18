@@ -3,7 +3,7 @@ import { PitchPage } from "@/components/pitch/pitch-page";
 import { getPitchBySlug, getPitchSlugs, getRelatedPitches } from "@/components/pitch/data";
 import { mapApiListToPitchDetail } from "@/components/pitch/list-mappers";
 import { isPublicList } from "@/components/listings/public-listing-mappers";
-import { getList, getLists } from "@/lib/list-api";
+import { getList, getRelatedLists } from "@/lib/list-api";
 
 export function generateStaticParams() {
   return getPitchSlugs().map((slug) => ({ slug }));
@@ -32,7 +32,7 @@ export default async function Page({
       notFound();
     }
 
-    const relatedListsResponse = await getLists().catch(() => ({ data: [] }));
+    const relatedListsResponse = await getRelatedLists(list._id).catch(() => ({ data: [] }));
     const relatedLists = (relatedListsResponse.data ?? [])
       .filter((item) => item._id !== list._id && isPublicList(item))
       .slice(0, 4);

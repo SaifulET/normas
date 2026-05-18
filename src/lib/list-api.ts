@@ -180,6 +180,13 @@ export function getList(listId: string) {
   });
 }
 
+export function getRelatedLists(listId: string) {
+  return apiRequest<ListsResponse>({
+    method: "GET",
+    url: `lists/related/${listId}`,
+  });
+}
+
 export function getListSectors() {
   return apiRequest<ListSectorsResponse>({
     method: "GET",
