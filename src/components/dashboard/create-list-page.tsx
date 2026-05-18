@@ -858,7 +858,7 @@ export function CreateListPage({ listId }: { listId?: string }) {
             {bannerDisplayUrl ? (
               <div className="space-y-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={bannerDisplayUrl} alt="Project banner preview" className="h-[260px] w-full rounded-[22px] object-cover" />
+                <img src={bannerDisplayUrl} alt="Project banner preview" className="h-[260px] w-full rounded-[22px] bg-[#F8FAFC] object-contain" />
                 <div className="flex justify-center">
                   <span className="inline-flex items-center rounded-full bg-[#F8FAFC] px-4 py-2 text-sm font-medium text-[#344054]">
                     Change banner image
