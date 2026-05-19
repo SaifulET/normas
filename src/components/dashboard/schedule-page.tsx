@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { dashboardCalendarEvent, dashboardCalendarSlots } from "./data";
 import { DashboardIcon } from "./icons";
 import { DashboardPageHeader } from "./page-header";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Location05Icon } from "@hugeicons/core-free-icons";
+import { getApiErrorMessage } from "@/lib/api";
+import { getSchedules, type MeetingRequest } from "@/lib/investment-conversations-api";
 
 function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -44,6 +46,33 @@ function formatModalDate(date: Date) {
   }).format(date);
 }
 
+function formatSlotTime(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function isScheduleOnSlot(schedule: MeetingRequest, date: Date, slot: string) {
+  if (!schedule.startsAt) {
+    return false;
+  }
+
+  const startsAt = new Date(schedule.startsAt);
+
+  return !Number.isNaN(startsAt.getTime()) && isSameDay(startsAt, date) && formatSlotTime(schedule.startsAt) === slot;
+}
+
 function getDaysInMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 }
@@ -55,12 +84,60 @@ export function SchedulePage() {
   );
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
   const [modalOpen, setModalOpen] = useState(false);
+  const [schedules, setSchedules] = useState<MeetingRequest[]>([]);
+  const [scheduleError, setScheduleError] = useState("");
+  const [loadingSchedules, setLoadingSchedules] = useState(true);
+  const [activeSchedule, setActiveSchedule] = useState<MeetingRequest | null>(null);
   const [startTime, setStartTime] = useState("1:00 AM");
   const [endTime, setEndTime] = useState("1:00 AM");
   const [location] = useState("123, Main Street");
   const [locationLine, setLocationLine] = useState("123, main street, london");
   const [timeZone, setTimeZone] = useState("Time zone");
-  const [selectedSlot, setSelectedSlot] = useState(dashboardCalendarEvent.time);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSchedules() {
+      setLoadingSchedules(true);
+      setScheduleError("");
+
+      try {
+        const response = await getSchedules({ status: "accepted" });
+        const items = Array.isArray(response.data) ? response.data : [];
+
+        if (!active) {
+          return;
+        }
+
+        setSchedules(items);
+
+        const firstSchedule = items.find((item) => item.startsAt);
+
+        if (firstSchedule?.startsAt) {
+          const startsAt = new Date(firstSchedule.startsAt);
+
+          if (!Number.isNaN(startsAt.getTime())) {
+            setSelectedDate(startsAt);
+            setDisplayedMonth(new Date(startsAt.getFullYear(), startsAt.getMonth(), 1));
+          }
+        }
+      } catch (error) {
+        if (active) {
+          setScheduleError(getApiErrorMessage(error, "Unable to load schedules."));
+        }
+      } finally {
+        if (active) {
+          setLoadingSchedules(false);
+        }
+      }
+    }
+
+    void loadSchedules();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const calendarDates = useMemo(() => {
     const year = displayedMonth.getFullYear();
@@ -84,14 +161,6 @@ export function SchedulePage() {
     [selectedDate],
   );
 
-  const eventPosition = useMemo(
-    () => ({
-      column: 4,
-      row: Math.max(0, dashboardCalendarSlots.indexOf(selectedSlot)),
-    }),
-    [selectedSlot],
-  );
-
   const changeMonth = (offset: number) => {
     const nextMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + offset, 1);
     const day = Math.min(selectedDate.getDate(), getDaysInMonth(nextMonth));
@@ -100,12 +169,13 @@ export function SchedulePage() {
     setSelectedDate(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), day));
   };
 
-  const openScheduleModal = (date: Date, slot = dashboardCalendarEvent.time) => {
+  const openScheduleModal = (date: Date, slot = dashboardCalendarEvent.time, schedule: MeetingRequest | null = null) => {
     setSelectedDate(date);
     setDisplayedMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-    setSelectedSlot(slot);
-    setStartTime(slot);
-    setEndTime(slot);
+    setActiveSchedule(schedule);
+    setStartTime(schedule?.startsAt ? formatSlotTime(schedule.startsAt) || slot : slot);
+    setEndTime(schedule?.endsAt ? formatSlotTime(schedule.endsAt) || slot : slot);
+    setLocationLine(schedule?.locationDetails ?? schedule?.location ?? locationLine);
     setModalOpen(true);
   };
 
@@ -114,6 +184,12 @@ export function SchedulePage() {
       <DashboardPageHeader title="Schedule" subtitle="Set your availability in the calendar" />
 
       <div className="rounded-[30px] border border-[#E6EBF3] bg-white p-5 shadow-[0_28px_80px_-60px_rgba(30,39,70,0.45)] xl:p-7">
+        {scheduleError ? (
+          <div className="mb-5 rounded-[14px] border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B42318]">
+            {scheduleError}
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-5 text-sm text-[#475467]">
           <span className="inline-flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-[#ED6A06]" />
@@ -175,10 +251,14 @@ export function SchedulePage() {
                   }
 
                   const highlighted = isSameDay(date, selectedDate);
-                  const outlined =
-                    date.getFullYear() === 2026 &&
-                    date.getMonth() === 7 &&
-                    (date.getDate() === 4 || date.getDate() === 5);
+                  const hasSchedule = schedules.some((schedule) => {
+                    if (!schedule.startsAt) {
+                      return false;
+                    }
+
+                    const startsAt = new Date(schedule.startsAt);
+                    return !Number.isNaN(startsAt.getTime()) && isSameDay(startsAt, date);
+                  });
 
                   return (
                     <button
@@ -188,7 +268,7 @@ export function SchedulePage() {
                       className={cx(
                         "mx-auto flex h-8 w-8 items-center justify-center rounded-full",
                         highlighted && "bg-[#6B7280] font-semibold text-white",
-                        outlined && "border border-[#ED6A06] text-[#314B6B]",
+                        hasSchedule && "border border-[#ED6A06] text-[#314B6B]",
                       )}
                     >
                       {date.getDate()}
@@ -202,12 +282,12 @@ export function SchedulePage() {
           <div className="min-w-0 overflow-x-auto">
             <div className="grid min-w-[720px] grid-cols-[90px_repeat(7,minmax(84px,1fr))] gap-3">
               <div />
-              {weekDates.map((date, index) => (
+              {weekDates.map((date) => (
                 <div key={date.toISOString()} className="text-center">
                   <div
                     className={cx(
                       "mx-auto flex h-12 w-12 items-center justify-center rounded-full text-xl font-semibold text-[#1E2746]",
-                      index === eventPosition.column && "bg-[#314B6B] text-white",
+                      isSameDay(date, selectedDate) && "bg-[#314B6B] text-white",
                     )}
                   >
                     {date.getDate()}
@@ -219,19 +299,19 @@ export function SchedulePage() {
                 <div key={slot} className="contents">
                   <div className="flex items-center text-xs font-medium text-[#475467]">{slot}</div>
                   {weekDates.map((date, columnIndex) => {
-                    const hasEvent = columnIndex === eventPosition.column && rowIndex === eventPosition.row;
+                    const schedule = schedules.find((item) => isScheduleOnSlot(item, date, slot)) ?? null;
 
                     return (
                       <button
                         key={`${slot}-${date.toISOString()}`}
                         type="button"
-                        onClick={() => openScheduleModal(date, slot)}
+                        onClick={() => openScheduleModal(date, slot, schedule)}
                         className={cx(
                           "flex h-16 items-center justify-center rounded-2xl bg-[#E5E7EB] px-3 text-center text-[11px] text-[#475467] transition hover:bg-[#DDE3EC]",
-                          hasEvent && "border border-[#ED6A06] bg-white",
+                          schedule && "border border-[#ED6A06] bg-white",
                         )}
                       >
-                        {hasEvent ? dashboardCalendarEvent.label : ""}
+                        {schedule ? schedule.title || schedule.location || "Meeting" : loadingSchedules && rowIndex === 0 && columnIndex === 0 ? "Loading..." : ""}
                       </button>
                     );
                   })}
@@ -257,6 +337,10 @@ export function SchedulePage() {
             </div>
 
             <div className="mt-1 space-y-4">
+              {activeSchedule?.title ? (
+                <h2 className="text-lg font-semibold text-[#1E2746]">{activeSchedule.title}</h2>
+              ) : null}
+
               <div className="inline-flex items-center gap-2 text-sm text-[#1F2937]">
                 <DashboardIcon name="schedule"  className="h-[24px] w-[24px]" />
                 {formatModalDate(selectedDate)}
@@ -289,7 +373,7 @@ export function SchedulePage() {
 
               <div className="inline-flex items-center gap-2 text-sm text-[#1F2937]">
                 <HugeiconsIcon icon={Location05Icon} className="h-[24px] w-[24px]" />
-                {location}
+                {activeSchedule?.location || location}
               </div>
 
               <input

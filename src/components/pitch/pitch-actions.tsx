@@ -57,7 +57,7 @@ export function PitchActions({
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportText, setReportText] = useState("");
 
-  const queryHref = authenticated ? "/dashboard/messages" : "/signup";
+  const queryHref = authenticated ? `/dashboard/messages?listId=${encodeURIComponent(listId)}` : "/signup";
   const canSaveList = authenticated && userRole === "investor";
   const compact = variant === "dashboard";
 

@@ -14,6 +14,7 @@ type ViewMode = "grid" | "list";
 
 const RESULTS_PER_PAGE = 12;
 const DEFAULT_MAX_RANGE = 32500000;
+const INITIAL_VISIBLE_SECTOR_COUNT = 5;
 
 function getFundingRangeMax(listings: SearchListing[]) {
   const largestFundingValue = Math.max(0, ...listings.map((listing) => listing.fundingValue));
@@ -71,7 +72,26 @@ function parseFilteredMeta(response: FilteredListsResponse, itemCount: number) {
 
 function mergeOptions(...optionGroups: Array<Array<string | undefined>>) {
   const options = optionGroups.flat().filter((option): option is string => Boolean(option?.trim()));
-  return Array.from(new Set(options)).sort((a, b) => a.localeCompare(b));
+  const seen = new Set<string>();
+
+  return options.filter((option) => {
+    const key = normalizeOptionKey(option);
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function normalizeOptionKey(value: string) {
+  return value.toLowerCase().replace(/[\s_-]+/g, "");
+}
+
+function isSameOption(first: string, second: string) {
+  return normalizeOptionKey(first) === normalizeOptionKey(second);
 }
 
 function GridGlyph({ active }: { active: boolean }) {
@@ -232,6 +252,7 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [showAllSectors, setShowAllSectors] = useState(false);
 
   const requestParams = useMemo(
     () => ({
@@ -293,6 +314,10 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
     return mergeOptions(searchSectors, [selectedSector], listings.map((listing) => listing.sector));
   }, [listings, selectedSector]);
 
+  const visibleSectors = useMemo(() => {
+    return showAllSectors ? availableSectors : availableSectors.slice(0, INITIAL_VISIBLE_SECTOR_COUNT);
+  }, [availableSectors, showAllSectors]);
+
   const availableStages = useMemo(() => {
     return mergeOptions(searchStages, [selectedStage], listings.map((listing) => listing.stage));
   }, [listings, selectedStage]);
@@ -311,7 +336,7 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
 
   function toggleSector(sector: string) {
     setPage(1);
-    setSelectedSector((current) => (current === sector ? "" : sector));
+    setSelectedSector((current) => (isSameOption(current, sector) ? "" : sector));
   }
 
   return (
@@ -345,8 +370,8 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-[#1F2937]">Sector</h3>
             <div className="mt-4 space-y-2.5">
-              {availableSectors.map((sector) => {
-                const checked = selectedSector === sector;
+              {visibleSectors.map((sector) => {
+                const checked = isSameOption(selectedSector, sector);
 
                 return (
                   <label key={sector} className="flex cursor-pointer items-center gap-3 text-sm text-[#667085]">
@@ -360,6 +385,16 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
                   </label>
                 );
               })}
+              {availableSectors.length > INITIAL_VISIBLE_SECTOR_COUNT ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllSectors((current) => !current)}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#667085] transition hover:text-[#243B5A]"
+                >
+                  {showAllSectors ? "See Less" : "See More"}
+                  <span aria-hidden="true">{showAllSectors ? "↑" : "→"}</span>
+                </button>
+              ) : null}
             </div>
 
           </div>
@@ -390,7 +425,7 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
                     setSelectedStage(stage);
                   }}
                   className={`flex h-11 w-full items-center px-4 text-left text-sm transition ${
-                    selectedStage === stage
+                    isSameOption(selectedStage, stage)
                       ? "bg-[#637792] text-white"
                       : "border-t border-[#D7DFEA] bg-white text-[#667085] first:border-t-0 hover:bg-[#F8FAFC]"
                   }`}

@@ -1,4 +1,5 @@
 import type { SearchListing } from "./types";
+import { listSectorOptions, listStageOptions } from "@/components/listings/list-options";
 
 const listingTemplates: Omit<SearchListing, "id">[] = [
   {
@@ -81,7 +82,7 @@ const listingTemplates: Omit<SearchListing, "id">[] = [
     target: "\u00A31.1M",
     fundingValue: 1100000,
     stage: "Pre-seed",
-    sector: "EdTech",
+    sector: "Ed Tech",
     views: 146,
     image: {
       src: "/howitwork.png",
@@ -157,24 +158,8 @@ export const searchListings: SearchListing[] = Array.from({ length: 24 }, (_, in
   };
 });
 
-export const searchSectors = [
-  "Clean Energy",
-  "Sustainable Agriculture",
-  "Climate Tech",
-  "Healthcare",
-  "Ed Tech",
-  "EdTech",
-  "FinTech",
-  "Affordable Housing",
-  "Social",
-  "Supply Chain",
-  "Mobility",
-  "Impact Tech & AI",
-  "Eco Empowerment",
-  "Manufacturing",
-  "Cross-Sector",
-];
+export const searchSectors = listSectorOptions;
 
-export const searchStages = ["Pre-seed", "Seed", "Series A", "Growth"];
+export const searchStages = listStageOptions;
 
 export const searchCountries = ["United Kingdom", "Kenya", "Nigeria", "South Africa"];

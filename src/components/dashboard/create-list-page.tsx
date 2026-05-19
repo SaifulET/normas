@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getApiErrorMessage } from "@/lib/api";
+import { listSectorOptions, listStageOptions } from "@/components/listings/list-options";
 import { createList, getList, updateList, type ListStatus } from "@/lib/list-api";
 import { DashboardPageHeader } from "./page-header";
 import {
@@ -10,7 +11,6 @@ import {
   deleteCreatedListBanner,
   getCreatedListBannerBlob,
   getMaxActiveCreatedLists,
-  getMaxCreatedLists,
   type CreatedListAdditionalDetail,
   type CreatedListBanner,
   type CreatedListItem,
@@ -921,10 +921,11 @@ export function CreateListPage({ listId }: { listId?: string }) {
                   className="h-11 w-full rounded-[10px] border border-[#E4E7EC] bg-white px-4 text-sm text-[#344054] outline-none transition focus:border-[#B9C6D8]"
                 >
                   <option value="">Select stage</option>
-                  <option value="Pre-Seed">Pre-Seed</option>
-                  <option value="Seed">Seed</option>
-                  <option value="Series A">Series A</option>
-                  <option value="Growth">Growth</option>
+                  {listStageOptions.map((stage) => (
+                    <option key={stage} value={stage}>
+                      {stage}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -937,10 +938,11 @@ export function CreateListPage({ listId }: { listId?: string }) {
                 className="h-11 w-full rounded-[10px] border border-[#E4E7EC] bg-white px-4 text-sm text-[#344054] outline-none transition focus:border-[#B9C6D8]"
               >
                 <option value="">Select sector</option>
-                <option value="Climate Tech">Climate Tech</option>
-                <option value="Clean Energy">Clean Energy</option>
-                <option value="FinTech">FinTech</option>
-                <option value="Sustainable Agriculture">Sustainable Agriculture</option>
+                {listSectorOptions.map((sector) => (
+                  <option key={sector} value={sector}>
+                    {sector}
+                  </option>
+                ))}
               </select>
             </div>
 

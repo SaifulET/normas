@@ -12,7 +12,7 @@ import { DashboardIcon } from "./icons";
 export function ListingCard({
   initialSaved = false,
   pitch,
-  queryHref = "/dashboard/messages",
+  queryHref,
   viewHref,
 }: {
   initialSaved?: boolean;
@@ -27,6 +27,7 @@ export function ListingCard({
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const saved = savedFromStore ?? initialSaved;
+  const resolvedQueryHref = queryHref ?? `/dashboard/messages?listId=${encodeURIComponent(pitch.slug)}`;
 
   async function handleSaveClick() {
     if (!isAuthenticated || userRole !== "investor") {
@@ -113,7 +114,7 @@ export function ListingCard({
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <Link
-            href={queryHref}
+            href={resolvedQueryHref}
             className="inline-flex h-10 items-center justify-center rounded-xl bg-[#314B6B] px-4 text-sm font-semibold text-white transition hover:bg-[#243B5A]"
           >
             Query

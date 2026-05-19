@@ -5,24 +5,9 @@ import {
   sitePrimaryCta,
   siteSocialLinks,
 } from "@/components/site/site-data";
+import { listSectorOptions, listStageOptions } from "@/components/listings/list-options";
 
-const sectorOptions = [
-  "All Sectors",
-  "Clean Energy",
-  "Sustainable Agriculture",
-  "Climate Tech",
-  "Healthcare",
-  "Ed Tech",
-  "FinTech",
-  "Affordable Housing",
-  "Social",
-  "Supply Chain",
-  "Mobility",
-  "Impact Tech & AI",
-  "Eco Empowerment",
-  "Manufacturing",
-  "Cross-Sector",
-];
+const sectorOptions = ["All Sectors", ...listSectorOptions];
 
 const fundingOptions = [
   "All Funding",
@@ -33,7 +18,7 @@ const fundingOptions = [
   "\u00A310M+",
 ];
 
-const stageOptions = ["All Stage", "Pre-seed", "Seed", "Series A", "Growth"];
+const stageOptions = ["All Stage", ...listStageOptions];
 
 export const homePageContent: HomePageContent = {
   hero: {
