@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getApiErrorMessage } from "@/lib/api";
+import { getStoredAccessToken, getStoredAuthState } from "@/lib/auth-storage";
 import {
   createMeetingRequest,
   createOrGetInvestmentConversation,
@@ -11,17 +12,71 @@ import {
   getConversationSidebar,
   getInvestmentConversation,
   markConversationSeen,
-  sendConversationMessage,
   type ConversationMessage,
   type ConversationMessagePagination,
   type ConversationStatus,
+  type ConversationUserInfo,
   type InvestmentConversation,
   type SidebarConversation,
 } from "@/lib/investment-conversations-api";
+import { disconnectSocket, getSocket } from "@/lib/socket";
 import { DashboardIcon } from "./icons";
 import { DashboardPageHeader } from "./page-header";
 
 type InboxFilter = "all" | ConversationStatus;
+
+const INVESTMENT_SOCKET_EVENTS = {
+  join: "investment:join",
+  markSeen: "investment:mark-seen",
+  meetingRequest: "investment:meeting-request",
+  meetingRequestUpdated: "investment:meeting-request-updated",
+  message: "investment:message",
+  messagesSeen: "investment:messages-seen",
+  sendMessage: "investment:send-message",
+} as const;
+
+type InvestmentSocketAck = {
+  data?: {
+    message?: ConversationMessage;
+  };
+  message?: string;
+  success?: boolean;
+};
+
+type InvestmentMessagePayload = {
+  conversationId?: string;
+  message?: ConversationMessage;
+};
+
+type InvestmentMessagesSeenPayload = {
+  conversationId?: string;
+  seenMessageIds?: string[];
+};
+
+type InvestmentMeetingRequestPayload = {
+  conversationId?: string;
+};
+
+type SocketParticipant = string | (ConversationUserInfo & { id?: string });
+
+type SocketConversationMessage = ConversationMessage & {
+  createdBy?: SocketParticipant;
+  from?: SocketParticipant;
+  receiver?: SocketParticipant;
+  receiverId?: string;
+  recipient?: SocketParticipant;
+  recipientId?: string;
+  sender?: SocketParticipant;
+  senderId?: string;
+  senderInfo?: SocketParticipant;
+  user?: SocketParticipant;
+  userId?: string;
+};
+
+type PendingOutgoingMessage = {
+  sentAt: number;
+  text: string;
+};
 
 type ScheduleForm = {
   date: string;
@@ -79,6 +134,130 @@ function getConversationListId(conversation?: InvestmentConversation | SidebarCo
 
 function getMessagePreview(conversation: SidebarConversation) {
   return conversation.lastIncomingMessagePreview || conversation.lastIncomingMessage?.message || "No messages yet.";
+}
+
+function getParticipantId(value?: SocketParticipant | null) {
+  return typeof value === "string" ? value : value?._id ?? value?.id;
+}
+
+function getSocketMessageSenderId(message: SocketConversationMessage) {
+  return (
+    message.senderId ??
+    message.userId ??
+    getParticipantId(message.sender) ??
+    getParticipantId(message.senderInfo) ??
+    getParticipantId(message.from) ??
+    getParticipantId(message.createdBy) ??
+    getParticipantId(message.user)
+  );
+}
+
+function getSocketMessageReceiverId(message: SocketConversationMessage) {
+  return (
+    message.receiverId ??
+    message.recipientId ??
+    getParticipantId(message.receiver) ??
+    getParticipantId(message.recipient)
+  );
+}
+
+function normalizeSocketMessage(
+  message: ConversationMessage,
+  currentUserId: string,
+  otherUserId: string,
+  fallbackDirection: "incoming" | "outgoing",
+) {
+  const socketMessage = message as SocketConversationMessage;
+  const senderId = getSocketMessageSenderId(socketMessage);
+  const receiverId = getSocketMessageReceiverId(socketMessage);
+
+  if (senderId && otherUserId && senderId === otherUserId) {
+    return {
+      ...message,
+      direction: "incoming",
+    };
+  }
+
+  if (receiverId && otherUserId && receiverId === otherUserId) {
+    return {
+      ...message,
+      direction: "outgoing",
+    };
+  }
+
+  if (senderId && currentUserId) {
+    return {
+      ...message,
+      direction: senderId === currentUserId ? "outgoing" : "incoming",
+    };
+  }
+
+  if (receiverId && currentUserId) {
+    return {
+      ...message,
+      direction: receiverId === currentUserId ? "incoming" : "outgoing",
+    };
+  }
+
+  return {
+    ...message,
+    direction: fallbackDirection,
+  };
+}
+
+function normalizeBroadcastMessage(
+  message: ConversationMessage,
+  localMessageIds: Set<string>,
+  pendingMessages: PendingOutgoingMessage[],
+) {
+  const now = Date.now();
+  const messageText = message.message.trim();
+  const recentlySentHere = pendingMessages.some((pendingMessage) => (
+    pendingMessage.text === messageText && now - pendingMessage.sentAt < 15000
+  ));
+
+  return {
+    ...message,
+    direction: localMessageIds.has(message._id) || recentlySentHere ? "outgoing" : "incoming",
+  };
+}
+
+function getMessageTimestamp(message: ConversationMessage) {
+  const timestamp = new Date(message.sentAt ?? "").getTime();
+
+  return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
+}
+
+function mergeConversationMessages(
+  current: ConversationMessage[],
+  incoming: ConversationMessage[],
+  options: { preserveCurrentDirection?: boolean } = {},
+) {
+  const currentOrder = new Map(current.map((message, index) => [message._id, index]));
+  const messagesById = new Map(current.map((message) => [message._id, message]));
+
+  for (const message of incoming) {
+    const currentMessage = messagesById.get(message._id);
+    const direction = options.preserveCurrentDirection
+      ? currentMessage?.direction ?? message.direction
+      : message.direction ?? currentMessage?.direction;
+
+    messagesById.set(message._id, {
+      ...currentMessage,
+      ...message,
+      direction,
+    });
+  }
+
+  return Array.from(messagesById.values()).sort((first, second) => {
+    const timestampDifference = getMessageTimestamp(first) - getMessageTimestamp(second);
+
+    if (timestampDifference !== 0) {
+      return timestampDifference;
+    }
+
+    return (currentOrder.get(first._id) ?? Number.MAX_SAFE_INTEGER) - (currentOrder.get(second._id) ?? Number.MAX_SAFE_INTEGER);
+  });
 }
 
 function getStartOfTomorrow() {
@@ -140,6 +319,13 @@ export function MessagesPage() {
   const [scheduleForm, setScheduleForm] = useState<ScheduleForm>(() => createDefaultScheduleForm(""));
   const [scheduleMessage, setScheduleMessage] = useState("");
   const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const selectedIdRef = useRef("");
+  const socketRef = useRef<ReturnType<typeof getSocket> | null>(null);
+  const currentUserIdRef = useRef("");
+  const otherUserIdRef = useRef("");
+  const localOutgoingMessageIdsRef = useRef<Set<string>>(new Set());
+  const pendingOutgoingMessagesRef = useRef<PendingOutgoingMessage[]>([]);
 
   const activeConversation = useMemo(
     () => conversations.find((conversation) => conversation.conversationId === selectedId) ?? null,
@@ -148,9 +334,24 @@ export function MessagesPage() {
   const activeTitle = getConversationTitle(selectedConversation ?? activeConversation);
   const activeListId = getConversationListId(selectedConversation ?? activeConversation);
 
-  async function loadInbox(nextSelectedId?: string) {
-    setLoadingInbox(true);
-    setError("");
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
+  useEffect(() => {
+    const user = getStoredAuthState()?.state?.user as { _id?: string; id?: string } | null | undefined;
+    currentUserIdRef.current = user?.id ?? user?._id ?? "";
+  }, []);
+
+  useEffect(() => {
+    otherUserIdRef.current = selectedConversation?.otherUserInfo?._id ?? activeConversation?.otherUserInfo?._id ?? "";
+  }, [activeConversation?.otherUserInfo?._id, selectedConversation?.otherUserInfo?._id]);
+
+  const loadInbox = useCallback(async (nextSelectedId?: string, options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setLoadingInbox(true);
+      setError("");
+    }
 
     try {
       const response = await getConversationSidebar(filter === "all" ? undefined : filter);
@@ -158,14 +359,51 @@ export function MessagesPage() {
 
       setConversations(items);
 
-      const nextId = nextSelectedId || selectedId || items[0]?.conversationId || "";
+      const nextId = nextSelectedId || selectedIdRef.current || items[0]?.conversationId || "";
       setSelectedId(items.some((item) => item.conversationId === nextId) ? nextId : items[0]?.conversationId || "");
     } catch (loadError) {
-      setError(getApiErrorMessage(loadError, "Unable to load conversations."));
+      if (!options.silent) {
+        setError(getApiErrorMessage(loadError, "Unable to load conversations."));
+      }
     } finally {
-      setLoadingInbox(false);
+      if (!options.silent) {
+        setLoadingInbox(false);
+      }
     }
-  }
+  }, [filter]);
+
+  const emitMarkSeen = useCallback((conversationId: string) => {
+    const socket = socketRef.current;
+
+    if (!socket) {
+      void markConversationSeen(conversationId).catch(() => undefined);
+      return;
+    }
+
+    socket.emit(INVESTMENT_SOCKET_EVENTS.markSeen, { conversationId }, (response: InvestmentSocketAck) => {
+      if (!response?.success) {
+        void markConversationSeen(conversationId).catch(() => undefined);
+      }
+    });
+  }, []);
+
+  const refreshConversationMessages = useCallback(async (conversationId: string) => {
+    const [conversationResponse, messagesResponse] = await Promise.all([
+      getInvestmentConversation(conversationId),
+      getConversationMessages(conversationId, 1, 5),
+    ]);
+
+    if (selectedIdRef.current !== conversationId) {
+      return;
+    }
+
+    setSelectedConversation(conversationResponse.data ?? null);
+    setMessages((current) => mergeConversationMessages(
+      current,
+      messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? [],
+    ));
+    setPagination((current) => messagesResponse.data?.pagination ?? current);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -206,8 +444,7 @@ export function MessagesPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, startListId]);
+  }, [loadInbox, startListId]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -233,7 +470,7 @@ export function MessagesPage() {
         setSelectedConversation(conversationResponse.data ?? null);
         setMessages(messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? []);
         setPagination(messagesResponse.data?.pagination ?? null);
-        void markConversationSeen(selectedId).catch(() => undefined);
+        emitMarkSeen(selectedId);
       } catch (loadError) {
         if (!cancelled) {
           setError(getApiErrorMessage(loadError, "Unable to load conversation messages."));
@@ -250,7 +487,133 @@ export function MessagesPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedId]);
+  }, [emitMarkSeen, selectedId]);
+
+  useEffect(() => {
+    const accessToken = getStoredAccessToken();
+
+    if (!accessToken) {
+      return;
+    }
+
+    const socket = getSocket(accessToken);
+    socketRef.current = socket;
+
+    function joinSelectedConversation() {
+      const conversationId = selectedIdRef.current;
+
+      if (!conversationId) {
+        return;
+      }
+
+      socket.emit(
+        INVESTMENT_SOCKET_EVENTS.join,
+        {
+          conversationId,
+          token: accessToken,
+        },
+        (response: InvestmentSocketAck) => {
+          if (!response?.success) {
+            setError(response?.message ?? "Unable to join live conversation.");
+          }
+        },
+      );
+    }
+
+    function refreshInbox() {
+      void loadInbox(selectedIdRef.current, { silent: true });
+    }
+
+    function handleConnect() {
+      setSocketConnected(true);
+      joinSelectedConversation();
+      refreshInbox();
+    }
+
+    function handleDisconnect() {
+      setSocketConnected(false);
+    }
+
+    function handleMessage(payload: InvestmentMessagePayload) {
+      const conversationId = payload.conversationId ?? "";
+
+      if (payload.message && conversationId === selectedIdRef.current) {
+        const message = normalizeBroadcastMessage(
+          payload.message,
+          localOutgoingMessageIdsRef.current,
+          pendingOutgoingMessagesRef.current,
+        );
+
+        setMessages((current) => mergeConversationMessages(current, [message], { preserveCurrentDirection: true }));
+        emitMarkSeen(conversationId);
+        void refreshConversationMessages(conversationId).catch(() => undefined);
+      }
+
+      refreshInbox();
+    }
+
+    function handleMessagesSeen(payload: InvestmentMessagesSeenPayload) {
+      if (payload.conversationId !== selectedIdRef.current || !payload.seenMessageIds?.length) {
+        return;
+      }
+
+      const seenMessageIds = new Set(payload.seenMessageIds);
+      setMessages((current) => current.map((message) => (
+        seenMessageIds.has(message._id) ? { ...message, isSeen: true } : message
+      )));
+    }
+
+    function handleMeetingRequest(payload: InvestmentMeetingRequestPayload) {
+      if (!payload.conversationId || payload.conversationId === selectedIdRef.current) {
+        refreshInbox();
+      }
+    }
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on(INVESTMENT_SOCKET_EVENTS.message, handleMessage);
+    socket.on(INVESTMENT_SOCKET_EVENTS.messagesSeen, handleMessagesSeen);
+    socket.on(INVESTMENT_SOCKET_EVENTS.meetingRequest, handleMeetingRequest);
+    socket.on(INVESTMENT_SOCKET_EVENTS.meetingRequestUpdated, handleMeetingRequest);
+
+    if (socket.connected) {
+      handleConnect();
+    }
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off(INVESTMENT_SOCKET_EVENTS.message, handleMessage);
+      socket.off(INVESTMENT_SOCKET_EVENTS.messagesSeen, handleMessagesSeen);
+      socket.off(INVESTMENT_SOCKET_EVENTS.meetingRequest, handleMeetingRequest);
+      socket.off(INVESTMENT_SOCKET_EVENTS.meetingRequestUpdated, handleMeetingRequest);
+      disconnectSocket();
+      socketRef.current = null;
+    };
+  }, [emitMarkSeen, loadInbox, refreshConversationMessages]);
+
+  useEffect(() => {
+    const accessToken = getStoredAccessToken();
+    const socket = socketRef.current;
+
+    if (!accessToken || !socket || !selectedId) {
+      return;
+    }
+
+    socket.emit(
+      INVESTMENT_SOCKET_EVENTS.join,
+      {
+        conversationId: selectedId,
+        token: accessToken,
+      },
+      (response: InvestmentSocketAck) => {
+        if (!response?.success) {
+          setError(response?.message ?? "Unable to join live conversation.");
+        }
+      },
+    );
+    emitMarkSeen(selectedId);
+  }, [emitMarkSeen, selectedId]);
 
   async function loadOlderMessages() {
     if (!selectedId || !pagination?.hasMore || !pagination.nextPage) {
@@ -266,31 +629,59 @@ export function MessagesPage() {
     }
   }
 
-  async function handleSend() {
+  function handleSend() {
     const message = draft.trim();
+    const socket = socketRef.current;
 
-    if (!selectedId || !message || sending) {
+    if (!selectedId || !message || sending || !socket) {
+      if (!socket) {
+        setError("Live chat is not connected yet. Please try again in a moment.");
+      }
       return;
     }
 
     setSending(true);
     setError("");
+    pendingOutgoingMessagesRef.current = [
+      ...pendingOutgoingMessagesRef.current.filter((pendingMessage) => Date.now() - pendingMessage.sentAt < 15000),
+      { sentAt: Date.now(), text: message },
+    ];
 
-    try {
-      const response = await sendConversationMessage(selectedId, message);
-      const sentMessage = response.data?.message;
-
-      if (sentMessage) {
-        setMessages((current) => [...current, sentMessage]);
-      }
-
-      setDraft("");
-      await loadInbox(selectedId);
-    } catch (sendError) {
-      setError(getApiErrorMessage(sendError, "Unable to send message."));
-    } finally {
+    const timeoutId = window.setTimeout(() => {
       setSending(false);
-    }
+      setError("Message send timed out. Please try again.");
+    }, 10000);
+
+    socket.emit(
+      INVESTMENT_SOCKET_EVENTS.sendMessage,
+      {
+        conversationId: selectedId,
+        message,
+      },
+      (response: InvestmentSocketAck) => {
+        window.clearTimeout(timeoutId);
+
+        if (!response?.success) {
+          setError(response?.message ?? "Unable to send message.");
+          setSending(false);
+          return;
+        }
+
+        const sentMessage = response.data?.message
+          ? normalizeSocketMessage(response.data.message, currentUserIdRef.current, otherUserIdRef.current, "outgoing")
+          : undefined;
+
+        if (sentMessage) {
+          localOutgoingMessageIdsRef.current.add(sentMessage._id);
+          pendingOutgoingMessagesRef.current = pendingOutgoingMessagesRef.current.filter((pendingMessage) => pendingMessage.text !== message);
+          setMessages((current) => mergeConversationMessages(current, [sentMessage], { preserveCurrentDirection: true }));
+        }
+
+        setDraft("");
+        setSending(false);
+        void loadInbox(selectedId, { silent: true });
+      }
+    );
   }
 
   function openScheduleModal() {
@@ -437,7 +828,7 @@ export function MessagesPage() {
 
                     <div className="inline-flex items-center gap-2 rounded-2xl border border-[#E7ECF3] bg-[#F8FAFC] px-3 py-2 text-xs text-[#6B7280]">
                       <DashboardIcon name="spark" className="h-4 w-4 text-[#ED6A06]" />
-                      Investment conversation
+                      {socketConnected ? "Live conversation" : "Connecting live chat"}
                     </div>
                   </div>
                 </div>
@@ -482,7 +873,7 @@ export function MessagesPage() {
                             </p>
                             <div className="mt-3 flex items-center justify-between gap-3">
                               <span className="text-[11px] text-[#98A2B3]">{formatMessageTime(message.sentAt)}</span>
-                              {outgoing ? <span className="text-[#98A2B3]">Seen</span> : null}
+                              {outgoing ? <span className="text-[#98A2B3]">{message.isSeen ? "Seen" : "Sent"}</span> : null}
                             </div>
                           </div>
                         );
@@ -505,6 +896,11 @@ export function MessagesPage() {
                     <textarea
                       value={draft}
                       onChange={(event) => setDraft(event.target.value)}
+                      onFocus={() => {
+                        if (selectedId) {
+                          emitMarkSeen(selectedId);
+                        }
+                      }}
                       placeholder="Type here..."
                       className="h-28 w-full resize-none rounded-2xl border-0 bg-transparent px-3 py-2 text-sm text-[#1E2746] outline-none placeholder:text-[#98A2B3]"
                     />
