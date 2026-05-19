@@ -112,6 +112,10 @@ function isActivePath(pathname: string, item: DashboardNavItem) {
     return pathname === "/dashboard";
   }
 
+  if (item.href === "/investee-dashboard") {
+    return pathname === "/investee-dashboard";
+  }
+
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
