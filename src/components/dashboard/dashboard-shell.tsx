@@ -145,16 +145,12 @@ function SidebarContent({
   profileHref: string;
   user: SidebarUser;
 }) {
-  const [imageFailed, setImageFailed] = useState(false);
+  const [failedProfileImage, setFailedProfileImage] = useState<string | null>(null);
   const logoutClassName = cx(
     "mt-2 flex w-full items-center rounded-2xl text-left text-sm font-medium text-white/70 transition hover:bg-white/8 hover:text-white disabled:cursor-wait disabled:opacity-70",
     collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-3",
   );
-  const showProfileImage = Boolean(user.profileImage) && !imageFailed;
-
-  useEffect(() => {
-    setImageFailed(false);
-  }, [user.profileImage]);
+  const showProfileImage = Boolean(user.profileImage) && failedProfileImage !== user.profileImage;
 
   return (
     <>
@@ -232,7 +228,7 @@ function SidebarContent({
                 src={user.profileImage}
                 alt={`${user.name} profile`}
                 className="h-full w-full object-cover"
-                onError={() => setImageFailed(true)}
+                onError={() => setFailedProfileImage(user.profileImage ?? null)}
               />
             ) : (
               user.initials
