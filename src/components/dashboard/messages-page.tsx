@@ -114,6 +114,24 @@ function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
 }
 
+function isSeenWriteConflictMessage(message?: string) {
+  return Boolean(
+    message?.includes("No matching document found for id") &&
+    message.includes("modifiedPaths") &&
+    message.includes("seenBy"),
+  );
+}
+
+function isSeenWriteConflictError(error: unknown) {
+  return isSeenWriteConflictMessage(getApiErrorMessage(error, ""));
+}
+
+function isNonBlockingSocketMessage(message?: string) {
+  const normalizedMessage = message?.toLowerCase() ?? "";
+
+  return isSeenWriteConflictMessage(message) || normalizedMessage.includes("socket join failed");
+}
+
 function formatMessageTime(value?: string) {
   if (!value) {
     return "";
@@ -363,6 +381,8 @@ export function MessagesPage() {
   const pendingOutgoingMessagesRef = useRef<PendingOutgoingMessage[]>([]);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const seenOutgoingMessageIdsRef = useRef<Set<string>>(new Set());
+  const markSeenInFlightRef = useRef<Set<string>>(new Set());
+  const lastMarkSeenAtRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -467,17 +487,37 @@ export function MessagesPage() {
   }, [filter]);
 
   const emitMarkSeen = useCallback((conversationId: string) => {
+    const now = Date.now();
+    const lastMarkedAt = lastMarkSeenAtRef.current[conversationId] ?? 0;
+
+    if (markSeenInFlightRef.current.has(conversationId) || now - lastMarkedAt < 1200) {
+      return;
+    }
+
+    markSeenInFlightRef.current.add(conversationId);
+    lastMarkSeenAtRef.current[conversationId] = now;
     const socket = socketRef.current;
 
     if (!socket) {
-      void markConversationSeen(conversationId).catch(() => undefined);
+      void markConversationSeen(conversationId)
+        .catch(() => undefined)
+        .finally(() => {
+          markSeenInFlightRef.current.delete(conversationId);
+        });
       return;
     }
 
     socket.emit(INVESTMENT_SOCKET_EVENTS.markSeen, { conversationId }, (response: InvestmentSocketAck) => {
-      if (!response?.success) {
-        void markConversationSeen(conversationId).catch(() => undefined);
+      if (response?.success || isSeenWriteConflictMessage(response?.message)) {
+        markSeenInFlightRef.current.delete(conversationId);
+        return;
       }
+
+      void markConversationSeen(conversationId)
+        .catch(() => undefined)
+        .finally(() => {
+          markSeenInFlightRef.current.delete(conversationId);
+        });
     });
   }, []);
 
@@ -568,7 +608,9 @@ export function MessagesPage() {
         emitMarkSeen(selectedId);
       } catch (loadError) {
         if (!cancelled) {
-          setError(getApiErrorMessage(loadError, "Unable to load conversation messages."));
+          if (!isSeenWriteConflictError(loadError)) {
+            setError(getApiErrorMessage(loadError, "Unable to load conversation messages."));
+          }
         }
       } finally {
         if (!cancelled) {
@@ -608,7 +650,7 @@ export function MessagesPage() {
           token: accessToken,
         },
         (response: InvestmentSocketAck) => {
-          if (!response?.success) {
+          if (!response?.success && !isNonBlockingSocketMessage(response?.message)) {
             setError(response?.message ?? "Unable to join live conversation.");
           }
         },
@@ -713,7 +755,7 @@ export function MessagesPage() {
         token: accessToken,
       },
       (response: InvestmentSocketAck) => {
-        if (!response?.success) {
+        if (!response?.success && !isNonBlockingSocketMessage(response?.message)) {
           setError(response?.message ?? "Unable to join live conversation.");
         }
       },
