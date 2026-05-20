@@ -1,9 +1,9 @@
 import Image from "next/image";
-import Link from "next/link";
 import { AppIcon } from "@/components/home/icons";
 import { CollapsibleDetailHtml } from "@/components/pitch/collapsible-detail-html";
 import { PitchActions } from "@/components/pitch/pitch-actions";
 import type { PitchDetail } from "@/components/pitch/data";
+import { PreviousPageButton } from "./previous-page-button";
 
 function getFallbackDetailHtml(pitch: PitchDetail) {
   const parts = [
@@ -57,13 +57,7 @@ export function DashboardPitchDetailPage({
     <section className="min-h-screen rounded-[16px] bg-[#FCFCFD] px-4 pb-14 pt-8 text-[#243041] sm:px-6 lg:px-6 lg:pt-10">
       <header className="flex items-start gap-5">
         <div className="flex items-start gap-5">
-          <Link
-            href="/dashboard/save-list"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[4px] bg-white text-[#141B34] transition hover:bg-[#F3F4F6]"
-            aria-label="Back to saved lists"
-          >
-            <AppIcon name="arrowLeft" className="h-6 w-6" />
-          </Link>
+          <PreviousPageButton />
           <div>
             <h1 className="text-[32px] font-semibold leading-10 text-[#16123E]">View Pitch</h1>
             <p className="mt-1 text-[16px] font-medium leading-7 text-[#6B7280]">Details of the business</p>
