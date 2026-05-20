@@ -14,6 +14,7 @@ import {
   markConversationSeen,
   type ConversationMessage,
   type ConversationMessagePagination,
+  type ConversationSeenByEntry,
   type ConversationStatus,
   type ConversationUserInfo,
   type InvestmentConversation,
@@ -50,14 +51,23 @@ type InvestmentMessagePayload = {
 
 type InvestmentMessagesSeenPayload = {
   conversationId?: string;
+  messageId?: string;
+  messageIds?: string[];
+  messages?: ConversationMessage[];
+  readBy?: SocketParticipant;
+  readByUserId?: string;
+  seenBy?: SocketParticipant;
+  seenByUserId?: string;
+  seenMessages?: ConversationMessage[];
   seenMessageIds?: string[];
+  userId?: string;
 };
 
 type InvestmentMeetingRequestPayload = {
   conversationId?: string;
 };
 
-type SocketParticipant = string | (ConversationUserInfo & { id?: string });
+type SocketParticipant = string | ConversationUserInfo | ConversationSeenByEntry;
 
 type SocketConversationMessage = ConversationMessage & {
   createdBy?: SocketParticipant;
@@ -77,6 +87,8 @@ type PendingOutgoingMessage = {
   sentAt: number;
   text: string;
 };
+
+const READ_RECEIPTS_STORAGE_KEY = "earlyn.dashboard.messageReadReceipts.v2";
 
 function MessageStatus({ seen }: { seen?: boolean }) {
   return (
@@ -183,8 +195,130 @@ function formatFundingTarget(value?: number) {
   return `£${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}`;
 }
 
-function getParticipantId(value?: SocketParticipant | null) {
-  return typeof value === "string" ? value : value?._id ?? value?.id;
+function getParticipantId(value?: SocketParticipant | null): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if ("user" in value && value.user) {
+    return getParticipantId(value.user);
+  }
+
+  if ("_id" in value && value._id) {
+    return value._id;
+  }
+
+  if ("id" in value && value.id) {
+    return value.id;
+  }
+
+  return undefined;
+}
+
+function getReadReceiptKey(conversationId: string, messageId: string) {
+  return `${conversationId}:${messageId}`;
+}
+
+function loadStoredReadReceipts() {
+  if (typeof window === "undefined") {
+    return new Set<string>();
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(READ_RECEIPTS_STORAGE_KEY) ?? "[]");
+    return new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function persistStoredReadReceipts(receipts: Set<string>) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(READ_RECEIPTS_STORAGE_KEY, JSON.stringify(Array.from(receipts).slice(-500)));
+}
+
+function hasExplicitRecipientSeen(message: ConversationMessage, otherUserId: string) {
+  if (!otherUserId) {
+    return false;
+  }
+
+  const seenByIds = new Set([
+    ...(message.seenBy ?? []).map((participant) => getParticipantId(participant)),
+    ...(message.readBy ?? []).map((participant) => getParticipantId(participant)),
+    ...(message.seenByUsers ?? []).map((participant) => getParticipantId(participant)),
+    ...(message.seenByIds ?? []),
+  ].filter(Boolean));
+
+  return seenByIds.has(otherUserId);
+}
+
+function getOutgoingSeenStatus(
+  message: ConversationMessage,
+  conversationId: string,
+  otherUserId: string,
+  readReceiptIds: Set<string>,
+) {
+  if (readReceiptIds.has(getReadReceiptKey(conversationId, message._id))) {
+    return true;
+  }
+
+  if (hasExplicitRecipientSeen(message, otherUserId)) {
+    return true;
+  }
+
+  return false;
+}
+
+function rememberExplicitReadReceipts(
+  messages: ConversationMessage[],
+  conversationId: string,
+  otherUserId: string,
+  readReceiptIds: Set<string>,
+) {
+  let changed = false;
+
+  for (const message of messages) {
+    if (message.direction === "outgoing" && hasExplicitRecipientSeen(message, otherUserId)) {
+      readReceiptIds.add(getReadReceiptKey(conversationId, message._id));
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    persistStoredReadReceipts(readReceiptIds);
+  }
+}
+
+function getSeenMessageIds(payload: InvestmentMessagesSeenPayload) {
+  return new Set([
+    ...(payload.seenMessageIds ?? []),
+    ...(payload.messageIds ?? []),
+    ...(payload.messageId ? [payload.messageId] : []),
+    ...(payload.messages ?? []).map((message) => message._id),
+    ...(payload.seenMessages ?? []).map((message) => message._id),
+  ].filter(Boolean));
+}
+
+function normalizeOutgoingSeenStatus(
+  messages: ConversationMessage[],
+  conversationId: string,
+  otherUserId: string,
+  readReceiptIds: Set<string>,
+) {
+  rememberExplicitReadReceipts(messages, conversationId, otherUserId, readReceiptIds);
+
+  return messages.map((message) => (
+    message.direction === "outgoing"
+      ? { ...message, isSeen: getOutgoingSeenStatus(message, conversationId, otherUserId, readReceiptIds) }
+      : message
+  ));
 }
 
 function getSocketMessageSenderId(message: SocketConversationMessage) {
@@ -290,7 +424,7 @@ function mergeConversationMessages(
       ? currentMessage?.direction ?? message.direction
       : message.direction ?? currentMessage?.direction;
     const isSeen = options.preserveCurrentSeen && currentMessage?.direction === "outgoing"
-      ? currentMessage.isSeen
+      ? Boolean(currentMessage.isSeen || message.isSeen)
       : message.isSeen ?? currentMessage?.isSeen;
 
     messagesById.set(message._id, {
@@ -380,9 +514,13 @@ export function MessagesPage() {
   const localOutgoingMessageIdsRef = useRef<Set<string>>(new Set());
   const pendingOutgoingMessagesRef = useRef<PendingOutgoingMessage[]>([]);
   const messageListRef = useRef<HTMLDivElement | null>(null);
-  const seenOutgoingMessageIdsRef = useRef<Set<string>>(new Set());
+  const readReceiptIdsRef = useRef<Set<string>>(new Set());
   const markSeenInFlightRef = useRef<Set<string>>(new Set());
   const lastMarkSeenAtRef = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    readReceiptIdsRef.current = loadStoredReadReceipts();
+  }, []);
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -531,10 +669,21 @@ export function MessagesPage() {
       return;
     }
 
+    const nextOtherUserId = conversationResponse.data?.otherUserInfo?._id ?? otherUserIdRef.current;
+
+    if (nextOtherUserId) {
+      otherUserIdRef.current = nextOtherUserId;
+    }
+
     setSelectedConversation(conversationResponse.data ?? null);
     setMessages((current) => mergeConversationMessages(
       current,
-      messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? [],
+      normalizeOutgoingSeenStatus(
+        messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? [],
+        conversationId,
+        nextOtherUserId,
+        readReceiptIdsRef.current,
+      ),
       { preserveCurrentSeen: true },
     ));
     setPagination((current) => messagesResponse.data?.pagination ?? current);
@@ -602,8 +751,22 @@ export function MessagesPage() {
           return;
         }
 
+        const nextOtherUserId = conversationResponse.data?.otherUserInfo?._id ?? otherUserIdRef.current;
+
+        if (nextOtherUserId) {
+          otherUserIdRef.current = nextOtherUserId;
+        }
+
         setSelectedConversation(conversationResponse.data ?? null);
-        setMessages(mergeConversationMessages([], messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? []));
+        setMessages(mergeConversationMessages(
+          [],
+          normalizeOutgoingSeenStatus(
+            messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? [],
+            selectedId,
+            nextOtherUserId,
+            readReceiptIdsRef.current,
+          ),
+        ));
         setPagination(messagesResponse.data?.pagination ?? null);
         emitMarkSeen(selectedId);
       } catch (loadError) {
@@ -680,7 +843,7 @@ export function MessagesPage() {
           localOutgoingMessageIdsRef.current,
           pendingOutgoingMessagesRef.current,
         );
-        const message = normalizedMessage.direction === "outgoing" && seenOutgoingMessageIdsRef.current.has(normalizedMessage._id)
+        const message = normalizedMessage.direction === "outgoing" && readReceiptIdsRef.current.has(getReadReceiptKey(conversationId, normalizedMessage._id))
           ? { ...normalizedMessage, isSeen: true }
           : normalizedMessage;
 
@@ -698,17 +861,41 @@ export function MessagesPage() {
     }
 
     function handleMessagesSeen(payload: InvestmentMessagesSeenPayload) {
-      if (payload.conversationId !== selectedIdRef.current || !payload.seenMessageIds?.length) {
+      if (payload.conversationId !== selectedIdRef.current) {
         return;
       }
 
-      const seenMessageIds = new Set(payload.seenMessageIds);
-      seenMessageIds.forEach((messageId) => {
-        seenOutgoingMessageIdsRef.current.add(messageId);
-      });
+      const seenMessageIds = getSeenMessageIds(payload);
+      const seenById = (
+        payload.seenByUserId ??
+        payload.readByUserId ??
+        payload.userId ??
+        getParticipantId(payload.seenBy) ??
+        getParticipantId(payload.readBy)
+      );
+      const seenByCurrentUser = Boolean(seenById && seenById === currentUserIdRef.current);
+      const likelyLocalReceipt = !seenById && !seenMessageIds.size && Date.now() - (lastMarkSeenAtRef.current[payload.conversationId] ?? 0) < 1500;
+      const nextReadReceiptIds = new Set(readReceiptIdsRef.current);
+      const canMarkOutgoingSeen = !seenByCurrentUser && !likelyLocalReceipt;
+
       setMessages((current) => current.map((message) => (
-        seenMessageIds.has(message._id) ? { ...message, isSeen: true } : message
-      )));
+        (seenMessageIds.size ? seenMessageIds.has(message._id) : message.direction === "outgoing")
+          ? {
+              ...message,
+              isSeen: message.direction === "outgoing"
+                ? Boolean(message.isSeen || canMarkOutgoingSeen)
+                : true,
+            }
+          : message
+      )).map((message) => {
+        if (message.direction === "outgoing" && message.isSeen) {
+          nextReadReceiptIds.add(getReadReceiptKey(payload.conversationId ?? selectedIdRef.current, message._id));
+        }
+
+        return message;
+      }));
+      readReceiptIdsRef.current = nextReadReceiptIds;
+      persistStoredReadReceipts(nextReadReceiptIds);
     }
 
     function handleMeetingRequest(payload: InvestmentMeetingRequestPayload) {
@@ -770,7 +957,15 @@ export function MessagesPage() {
 
     try {
       const response = await getConversationMessages(selectedId, pagination.nextPage, pagination.limitPairs ?? 5);
-      setMessages((current) => mergeConversationMessages(current, response.data?.messages ?? []));
+      setMessages((current) => mergeConversationMessages(
+        current,
+        normalizeOutgoingSeenStatus(
+          response.data?.messages ?? [],
+          selectedId,
+          otherUserIdRef.current,
+          readReceiptIdsRef.current,
+        ),
+      ));
       setPagination(response.data?.pagination ?? pagination);
     } catch (loadError) {
       setError(getApiErrorMessage(loadError, "Unable to load older messages."));

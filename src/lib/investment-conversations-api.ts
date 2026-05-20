@@ -6,10 +6,19 @@ export type MeetingRequestStatus = "pending" | "accepted" | "rejected" | "cancel
 export type ConversationUserInfo = {
   _id?: string;
   email?: string;
+  id?: string;
   name?: string;
   profileImage?: string;
   role?: string;
 };
+
+export type ConversationSeenByEntry =
+  | string
+  | ConversationUserInfo
+  | {
+      seenAt?: string;
+      user?: string | ConversationUserInfo;
+    };
 
 export type ConversationListInfo = {
   _id?: string;
@@ -21,6 +30,12 @@ export type ConversationMessage = {
   direction?: "incoming" | "outgoing" | string;
   isSeen?: boolean;
   message: string;
+  readAt?: string;
+  readBy?: ConversationSeenByEntry[];
+  seenBy?: ConversationSeenByEntry[];
+  seenByIds?: string[];
+  seenByUsers?: ConversationSeenByEntry[];
+  seenAt?: string;
   sentAt?: string;
 };
 
