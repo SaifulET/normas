@@ -335,6 +335,7 @@ export function MessagesPage() {
   const otherUserIdRef = useRef("");
   const localOutgoingMessageIdsRef = useRef<Set<string>>(new Set());
   const pendingOutgoingMessagesRef = useRef<PendingOutgoingMessage[]>([]);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -398,6 +399,20 @@ export function MessagesPage() {
       cancelled = true;
     };
   }, [activeListId]);
+
+  const latestMessageId = messages.at(-1)?._id ?? "";
+
+  useEffect(() => {
+    if (!latestMessageId) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      if (messageListRef.current) {
+        messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+      }
+    });
+  }, [latestMessageId]);
 
   const loadInbox = useCallback(async (nextSelectedId?: string, options: { silent?: boolean } = {}) => {
     if (!options.silent) {
@@ -520,7 +535,7 @@ export function MessagesPage() {
         }
 
         setSelectedConversation(conversationResponse.data ?? null);
-        setMessages(messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? []);
+        setMessages(mergeConversationMessages([], messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? []));
         setPagination(messagesResponse.data?.pagination ?? null);
         emitMarkSeen(selectedId);
       } catch (loadError) {
@@ -674,7 +689,7 @@ export function MessagesPage() {
 
     try {
       const response = await getConversationMessages(selectedId, pagination.nextPage, pagination.limitPairs ?? 5);
-      setMessages((current) => [...(response.data?.messages ?? []), ...current]);
+      setMessages((current) => mergeConversationMessages(current, response.data?.messages ?? []));
       setPagination(response.data?.pagination ?? pagination);
     } catch (loadError) {
       setError(getApiErrorMessage(loadError, "Unable to load older messages."));
@@ -948,7 +963,7 @@ export function MessagesPage() {
                   </div>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-6 py-4">
+                <div ref={messageListRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-6 py-4">
                   {loadingConversation ? (
                     <div className="flex h-full min-h-[420px] items-center justify-center text-sm text-[#667085]">
                       Loading messages...
