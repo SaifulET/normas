@@ -924,7 +924,7 @@ export function MessagesPage() {
 
                         {activeListId ? (
                           <Link
-                            href={`/dashboard/pitch/${activeListId}`}
+                            href={`${dashboardBase}/pitch/${activeListId}`}
                             className="inline-flex h-8 min-w-8 items-center justify-center gap-2 rounded-lg border border-[#CCCCCC] bg-[#E5E7EB] px-4 font-sans text-sm font-medium leading-[22px] text-[#1F2937] transition hover:bg-[#DDE1E7]"
                           >
                             Preview Pitch
