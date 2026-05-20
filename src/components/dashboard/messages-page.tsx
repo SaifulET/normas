@@ -78,6 +78,27 @@ type PendingOutgoingMessage = {
   text: string;
 };
 
+function MessageStatus({ seen }: { seen?: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center normal-case tracking-normal"
+      aria-label={seen ? "Seen" : "Sent"}
+      title={seen ? "Seen" : "Sent"}
+    >
+      <span className="relative inline-flex h-3.5 w-4 text-[#777777]" aria-hidden="true">
+        <svg className="absolute left-0 top-0 h-3.5 w-3.5" viewBox="0 0 16 16" fill="none">
+          <path d="m3 8.2 2.6 2.6L13 3.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        {seen ? (
+          <svg className="absolute left-[5px] top-0 h-3.5 w-3.5" viewBox="0 0 16 16" fill="none">
+            <path d="m3 8.2 2.6 2.6L13 3.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : null}
+      </span>
+    </span>
+  );
+}
+
 type ScheduleForm = {
   date: string;
   endTime: string;
@@ -227,6 +248,7 @@ function normalizeBroadcastMessage(
   return {
     ...message,
     direction: localMessageIds.has(message._id) || recentlySentHere ? "outgoing" : "incoming",
+    isSeen: localMessageIds.has(message._id) || recentlySentHere ? false : message.isSeen,
   };
 }
 
@@ -239,7 +261,7 @@ function getMessageTimestamp(message: ConversationMessage) {
 function mergeConversationMessages(
   current: ConversationMessage[],
   incoming: ConversationMessage[],
-  options: { preserveCurrentDirection?: boolean } = {},
+  options: { preserveCurrentDirection?: boolean; preserveCurrentSeen?: boolean } = {},
 ) {
   const currentOrder = new Map(current.map((message, index) => [message._id, index]));
   const messagesById = new Map(current.map((message) => [message._id, message]));
@@ -249,11 +271,15 @@ function mergeConversationMessages(
     const direction = options.preserveCurrentDirection
       ? currentMessage?.direction ?? message.direction
       : message.direction ?? currentMessage?.direction;
+    const isSeen = options.preserveCurrentSeen && currentMessage?.direction === "outgoing"
+      ? currentMessage.isSeen
+      : message.isSeen ?? currentMessage?.isSeen;
 
     messagesById.set(message._id, {
       ...currentMessage,
       ...message,
       direction,
+      isSeen,
     });
   }
 
@@ -336,6 +362,7 @@ export function MessagesPage() {
   const localOutgoingMessageIdsRef = useRef<Set<string>>(new Set());
   const pendingOutgoingMessagesRef = useRef<PendingOutgoingMessage[]>([]);
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const seenOutgoingMessageIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -468,6 +495,7 @@ export function MessagesPage() {
     setMessages((current) => mergeConversationMessages(
       current,
       messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? [],
+      { preserveCurrentSeen: true },
     ));
     setPagination((current) => messagesResponse.data?.pagination ?? current);
   }, []);
@@ -605,14 +633,22 @@ export function MessagesPage() {
       const conversationId = payload.conversationId ?? "";
 
       if (payload.message && conversationId === selectedIdRef.current) {
-        const message = normalizeBroadcastMessage(
+        const normalizedMessage = normalizeBroadcastMessage(
           payload.message,
           localOutgoingMessageIdsRef.current,
           pendingOutgoingMessagesRef.current,
         );
+        const message = normalizedMessage.direction === "outgoing" && seenOutgoingMessageIdsRef.current.has(normalizedMessage._id)
+          ? { ...normalizedMessage, isSeen: true }
+          : normalizedMessage;
 
-        setMessages((current) => mergeConversationMessages(current, [message], { preserveCurrentDirection: true }));
-        emitMarkSeen(conversationId);
+        setMessages((current) => mergeConversationMessages(current, [message], {
+          preserveCurrentDirection: true,
+          preserveCurrentSeen: true,
+        }));
+        if (message.direction !== "outgoing") {
+          emitMarkSeen(conversationId);
+        }
         void refreshConversationMessages(conversationId).catch(() => undefined);
       }
 
@@ -625,6 +661,9 @@ export function MessagesPage() {
       }
 
       const seenMessageIds = new Set(payload.seenMessageIds);
+      seenMessageIds.forEach((messageId) => {
+        seenOutgoingMessageIdsRef.current.add(messageId);
+      });
       setMessages((current) => current.map((message) => (
         seenMessageIds.has(message._id) ? { ...message, isSeen: true } : message
       )));
@@ -735,13 +774,19 @@ export function MessagesPage() {
         }
 
         const sentMessage = response.data?.message
-          ? normalizeSocketMessage(response.data.message, currentUserIdRef.current, otherUserIdRef.current, "outgoing")
+          ? {
+              ...normalizeSocketMessage(response.data.message, currentUserIdRef.current, otherUserIdRef.current, "outgoing"),
+              isSeen: false,
+            }
           : undefined;
 
         if (sentMessage) {
           localOutgoingMessageIdsRef.current.add(sentMessage._id);
           pendingOutgoingMessagesRef.current = pendingOutgoingMessagesRef.current.filter((pendingMessage) => pendingMessage.text !== message);
-          setMessages((current) => mergeConversationMessages(current, [sentMessage], { preserveCurrentDirection: true }));
+          setMessages((current) => mergeConversationMessages(current, [sentMessage], {
+            preserveCurrentDirection: true,
+            preserveCurrentSeen: true,
+          }));
         }
 
         setDraft("");
@@ -1012,7 +1057,7 @@ export function MessagesPage() {
                             </p>
                             <div className="flex h-5 items-center justify-between gap-8 font-sans text-xs uppercase leading-5 tracking-[0.05em] text-[#777777]">
                               <span>{formatMessageTime(message.sentAt)}</span>
-                              {outgoing ? <span className="normal-case tracking-normal">{message.isSeen ? "Seen" : "Sent"}</span> : null}
+                              {outgoing ? <MessageStatus seen={message.isSeen} /> : null}
                             </div>
                           </div>
                         );
