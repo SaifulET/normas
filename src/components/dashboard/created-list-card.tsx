@@ -65,8 +65,8 @@ export function CreatedListCard({ item }: { item: CreatedListItem }) {
   const safeDescription = useMemo(() => sanitizeHtml(item.description), [item.description]);
 
   return (
-    <article className="overflow-hidden rounded-[10px] border border-[#E6EBF3] bg-white shadow-[0_24px_60px_-52px_rgba(30,39,70,0.4)]">
-      <div className="relative h-44 bg-[#EEF3FA]">
+    <article className="flex h-full flex-col overflow-hidden rounded-[10px] border border-[#E6EBF3] bg-white shadow-[0_24px_60px_-52px_rgba(30,39,70,0.4)]">
+      <div className="relative h-44 shrink-0 bg-[#EEF3FA]">
         {bannerUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={bannerUrl} alt={item.title} className="h-full w-full object-cover" />
@@ -84,10 +84,19 @@ export function CreatedListCard({ item }: { item: CreatedListItem }) {
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="flex flex-1 flex-col p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-[#1E2746]">{item.title}</h3>
+            <h3
+              className="min-h-[3.125rem] overflow-hidden break-words text-lg font-semibold leading-[1.35] text-[#1E2746]"
+              style={{
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                display: "-webkit-box",
+              }}
+            >
+              {item.title}
+            </h3>
             <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-[#7B8496]">
               <DashboardIcon name="website" className="h-3.5 w-3.5" />
               {item.country}
@@ -115,7 +124,7 @@ export function CreatedListCard({ item }: { item: CreatedListItem }) {
           dangerouslySetInnerHTML={{ __html: safeDescription }}
         />
 
-        <div className="mt-4 border-t border-[#EEF2F7] pt-3">
+        <div className="mt-auto border-t border-[#EEF2F7] pt-3">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#98A2B3]">
               Funding target

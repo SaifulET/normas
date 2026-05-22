@@ -55,8 +55,8 @@ export function ListingCard({
   }
 
   return (
-    <article className="overflow-hidden rounded-[20px] border border-[#E6EBF3] bg-white shadow-[0_24px_60px_-52px_rgba(30,39,70,0.4)]">
-      <div className="relative h-40">
+    <article className="flex h-full flex-col overflow-hidden rounded-[20px] border border-[#E6EBF3] bg-white shadow-[0_24px_60px_-52px_rgba(30,39,70,0.4)]">
+      <div className="relative h-40 shrink-0">
         <Image src={pitch.image} alt={pitch.shortTitle} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" />
         <div className="absolute left-3 top-3 flex flex-wrap gap-2">
           <span className="rounded-full bg-[#314B6B]/95 px-3 py-1 text-[11px] font-medium text-white">
@@ -68,25 +68,43 @@ export function ListingCard({
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="flex flex-1 flex-col p-4">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold text-[#1E2746]">{pitch.shortTitle}</h3>
+          <div className="min-w-0">
+            <h3
+              className="min-h-[3.125rem] overflow-hidden break-words text-lg font-semibold leading-[1.35] text-[#1E2746]"
+              style={{
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                display: "-webkit-box",
+              }}
+            >
+              {pitch.shortTitle}
+            </h3>
             <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-[#7B8496]">
               <DashboardIcon name="website" className="h-3.5 w-3.5" />
               {pitch.location}
             </p>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-[#7B8496]">
+          <div className="flex shrink-0 items-center gap-1.5 text-xs text-[#7B8496]">
             <DashboardIcon name="views" className="h-4 w-4" />
             {pitch.views} views
           </div>
         </div>
 
-        <p className="mt-3 min-h-12 text-sm leading-6 text-[#6B7280]">{pitch.description}</p>
+        <p
+          className="mt-3 min-h-12 overflow-hidden text-sm leading-6 text-[#6B7280]"
+          style={{
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 2,
+            display: "-webkit-box",
+          }}
+        >
+          {pitch.description}
+        </p>
 
-        <div className="mt-4 flex items-end justify-between gap-4">
+        <div className="mt-auto flex items-end justify-between gap-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#98A2B3]">
               Funding target
