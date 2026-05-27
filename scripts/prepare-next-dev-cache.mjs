@@ -13,6 +13,7 @@ import {
 const projectDir = process.cwd();
 const nextDir = path.join(projectDir, ".next");
 const devDir = path.join(nextDir, "dev");
+const projectNodeModulesDir = path.join(projectDir, "node_modules");
 const projectHash = crypto
   .createHash("sha256")
   .update(projectDir)
@@ -47,8 +48,44 @@ async function uniqueBackupPath() {
   return candidate;
 }
 
+async function ensureCacheNodeModules() {
+  const projectNodeModules = await pathExists(projectNodeModulesDir);
+
+  if (!projectNodeModules) {
+    return;
+  }
+
+  const cacheNodeModulesDir = path.join(cacheDir, "node_modules");
+  const current = await pathExists(cacheNodeModulesDir);
+
+  if (current) {
+    if (current.isSymbolicLink()) {
+      const linkTarget = await readlink(cacheNodeModulesDir);
+      const resolvedTarget = path.resolve(cacheDir, linkTarget);
+
+      if (resolvedTarget === path.resolve(projectNodeModulesDir)) {
+        return;
+      }
+    }
+
+    const backup = path.join(
+      cacheDir,
+      `node_modules-backup-${new Date().toISOString().replace(/[:.]/g, "-")}`,
+    );
+    await rename(cacheNodeModulesDir, backup);
+  }
+
+  await symlink(
+    projectNodeModulesDir,
+    cacheNodeModulesDir,
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  console.log(`Linked dev cache node_modules to ${projectNodeModulesDir}`);
+}
+
 await mkdir(cacheDir, { recursive: true });
 await mkdir(nextDir, { recursive: true });
+await ensureCacheNodeModules();
 
 const current = await pathExists(devDir);
 
