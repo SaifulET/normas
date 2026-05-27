@@ -1911,12 +1911,14 @@ export function MessagesPage() {
                       ) : null}
 
                       <div className="flex items-center gap-5">
-                        <Link
-                          href={`${dashboardBase}/upgrade-plan`}
-                          className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg bg-[#E65E02] px-4 font-sans text-sm font-medium leading-[22px] text-[#F9FAFB] transition hover:bg-[#d45602]"
-                        >
-                          Ready to invest
-                        </Link>
+                        {viewerRole !== "superadmin" ? (
+                          <Link
+                            href={`${dashboardBase}/upgrade-plan`}
+                            className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg bg-[#E65E02] px-4 font-sans text-sm font-medium leading-[22px] text-[#F9FAFB] transition hover:bg-[#d45602]"
+                          >
+                            Ready to invest
+                          </Link>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => {
