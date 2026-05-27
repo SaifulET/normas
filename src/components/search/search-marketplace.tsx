@@ -347,7 +347,7 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
             <span className="text-base font-semibold">Filters</span>
           </div>
 
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 flex min-w-0 gap-2">
             <input
               value={query}
               onChange={(event) => {
@@ -355,12 +355,12 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
                 setQuery(event.target.value);
               }}
               placeholder="Search opportunities..."
-              className="h-12 flex-1 rounded-xl border border-[#D7DFEA] px-4 text-sm text-[#1F2937] outline-none transition placeholder:text-[#98A2B3] focus:border-[#243B5A]"
+              className="h-12 min-w-0 flex-1 rounded-xl border border-[#D7DFEA] px-4 text-sm text-[#1F2937] outline-none transition placeholder:text-[#98A2B3] focus:border-[#243B5A]"
             />
             <button
               type="button"
               onClick={() => setPage(1)}
-              className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#637792] text-white transition hover:bg-[#51647c]"
+              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#637792] text-white transition hover:bg-[#51647c]"
               aria-label="Search opportunities"
             >
               <AppIcon name="search" className="h-5 w-5" />
