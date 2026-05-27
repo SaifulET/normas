@@ -5,11 +5,26 @@ export type MeetingRequestStatus = "pending" | "accepted" | "rejected" | "cancel
 
 export type ConversationUserInfo = {
   _id?: string;
+  companyName?: string;
+  displayName?: string;
   email?: string;
+  firstName?: string;
+  fullLegalName?: string;
+  fullName?: string;
   id?: string;
+  lastName?: string;
   name?: string;
+  personalIdentity?: {
+    fullLegalName?: string;
+  };
   profileImage?: string;
+  profile?: {
+    displayName?: string;
+    fullName?: string;
+    name?: string;
+  };
   role?: string;
+  username?: string;
 };
 
 export type ConversationSeenByEntry =
@@ -27,38 +42,78 @@ export type ConversationListInfo = {
 
 export type ConversationMessage = {
   _id: string;
+  author?: ConversationSeenByEntry;
+  authorId?: string;
+  authorRole?: string;
+  createdBy?: ConversationSeenByEntry;
+  createdById?: string;
+  createdByRole?: string;
   direction?: "incoming" | "outgoing" | string;
+  from?: ConversationSeenByEntry;
+  fromId?: string;
+  fromRole?: string;
   isSeen?: boolean;
   message: string;
   readAt?: string;
   readBy?: ConversationSeenByEntry[];
+  receiver?: ConversationSeenByEntry;
+  receiverId?: string;
+  recipient?: ConversationSeenByEntry;
+  recipientId?: string;
   seenBy?: ConversationSeenByEntry[];
   seenByIds?: string[];
   seenByUsers?: ConversationSeenByEntry[];
   seenAt?: string;
+  senderRole?: string;
+  senderType?: string;
+  sender?: ConversationSeenByEntry;
+  senderId?: string;
+  senderInfo?: ConversationSeenByEntry;
+  sentBy?: ConversationSeenByEntry;
+  sentById?: string;
+  sentByRole?: string;
   sentAt?: string;
+  userRole?: string;
+  user?: ConversationSeenByEntry;
+  userId?: string;
 };
 
 export type InvestmentConversation = {
   _id: string;
+  admin?: ConversationUserInfo;
+  adminInfo?: ConversationUserInfo;
   conversationStatus?: ConversationStatus | string;
+  investee?: ConversationUserInfo;
+  investeeInfo?: ConversationUserInfo;
+  investor?: ConversationUserInfo;
+  investorInfo?: ConversationUserInfo;
   lastMessageAt?: string;
   list?: ConversationListInfo;
   messages?: ConversationMessage[];
   otherUserInfo?: ConversationUserInfo;
+  participants?: ConversationUserInfo[];
   unreadCount?: number;
+  users?: ConversationUserInfo[];
 };
 
 export type SidebarConversation = {
+  admin?: ConversationUserInfo;
+  adminInfo?: ConversationUserInfo;
   conversationId: string;
   conversationStatus?: ConversationStatus | string;
+  investee?: ConversationUserInfo;
+  investeeInfo?: ConversationUserInfo;
+  investor?: ConversationUserInfo;
+  investorInfo?: ConversationUserInfo;
   lastIncomingMessage?: ConversationMessage;
   lastIncomingMessagePreview?: string;
   lastMessageTime?: string;
   listInfo?: ConversationListInfo;
   otherUserInfo?: ConversationUserInfo;
+  participants?: ConversationUserInfo[];
   timeAgo?: string;
   unseenMessageCount?: number;
+  users?: ConversationUserInfo[];
 };
 
 export type ConversationMessagePagination = {

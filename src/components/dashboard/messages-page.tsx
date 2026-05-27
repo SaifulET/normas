@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getApiErrorMessage } from "@/lib/api";
 import { getStoredAccessToken, getStoredAuthState } from "@/lib/auth-storage";
 import {
-  createMeetingRequest,
   createOrGetInvestmentConversation,
   getConversationMessages,
   getConversationSidebar,
@@ -21,6 +20,7 @@ import {
   type SidebarConversation,
 } from "@/lib/investment-conversations-api";
 import { getList, type ListItemResponse } from "@/lib/list-api";
+import { createSchedule, getSchedule, getSchedules, type Schedule } from "@/lib/schedule-api";
 import { disconnectSocket, getSocket } from "@/lib/socket";
 import { DashboardIcon } from "./icons";
 
@@ -70,23 +70,53 @@ type InvestmentMeetingRequestPayload = {
 type SocketParticipant = string | ConversationUserInfo | ConversationSeenByEntry;
 
 type SocketConversationMessage = ConversationMessage & {
+  author?: SocketParticipant;
+  authorId?: string;
+  authorRole?: string;
   createdBy?: SocketParticipant;
+  createdById?: string;
+  createdByRole?: string;
   from?: SocketParticipant;
+  fromId?: string;
+  fromRole?: string;
   receiver?: SocketParticipant;
   receiverId?: string;
   recipient?: SocketParticipant;
   recipientId?: string;
+  role?: string;
   sender?: SocketParticipant;
   senderId?: string;
   senderInfo?: SocketParticipant;
+  senderRole?: string;
+  senderType?: string;
+  sentBy?: SocketParticipant;
+  sentById?: string;
+  sentByRole?: string;
   user?: SocketParticipant;
   userId?: string;
+  userRole?: string;
 };
 
 type PendingOutgoingMessage = {
   sentAt: number;
   text: string;
 };
+
+type ChatTimelineItem =
+  | {
+      id: string;
+      item: ConversationMessage;
+      kind: "message";
+      order: number;
+      timestamp: number;
+    }
+  | {
+      id: string;
+      item: Schedule;
+      kind: "schedule";
+      order: number;
+      timestamp: number;
+    };
 
 const READ_RECEIPTS_STORAGE_KEY = "earlyn.dashboard.messageReadReceipts.v2";
 
@@ -195,13 +225,37 @@ function formatFundingTarget(value?: number) {
   return `£${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}`;
 }
 
+function normalizeParticipantRole(role?: string | null) {
+  const normalizedRole = role?.trim().toLowerCase().replace(/[\s_-]+/g, "") ?? "";
+
+  switch (normalizedRole) {
+    case "investee":
+      return "investee";
+    case "investor":
+      return "investor";
+    case "admin":
+    case "superadmin":
+      return "superadmin";
+    default:
+      return "";
+  }
+}
+
+function getParticipantIdValue(value?: string) {
+  if (!value || normalizeParticipantRole(value)) {
+    return undefined;
+  }
+
+  return value;
+}
+
 function getParticipantId(value?: SocketParticipant | null): string | undefined {
   if (!value) {
     return undefined;
   }
 
   if (typeof value === "string") {
-    return value;
+    return getParticipantIdValue(value);
   }
 
   if ("user" in value && value.user) {
@@ -217,6 +271,146 @@ function getParticipantId(value?: SocketParticipant | null): string | undefined 
   }
 
   return undefined;
+}
+
+function getParticipantName(value?: SocketParticipant | null): string {
+  if (!value || typeof value === "string") {
+    return "";
+  }
+
+  if ("user" in value && value.user) {
+    const nestedName = getParticipantName(value.user);
+
+    if (nestedName) {
+      return nestedName;
+    }
+  }
+
+  const participant = value as ConversationUserInfo;
+  const combinedName = [participant.firstName, participant.lastName].filter(Boolean).join(" ").trim();
+
+  return (
+    participant.name?.trim() ||
+    participant.fullName?.trim() ||
+    participant.fullLegalName?.trim() ||
+    participant.displayName?.trim() ||
+    combinedName ||
+    participant.personalIdentity?.fullLegalName?.trim() ||
+    participant.profile?.name?.trim() ||
+    participant.profile?.fullName?.trim() ||
+    participant.profile?.displayName?.trim() ||
+    participant.companyName?.trim() ||
+    participant.username?.trim() ||
+    participant.email?.trim() ||
+    ""
+  );
+}
+
+function getParticipantRole(value?: SocketParticipant | null): string {
+  if (!value) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return normalizeParticipantRole(value);
+  }
+
+  if ("user" in value && value.user) {
+    const nestedRole = getParticipantRole(value.user);
+
+    if (nestedRole) {
+      return nestedRole;
+    }
+  }
+
+  return normalizeParticipantRole((value as ConversationUserInfo).role);
+}
+
+function formatParticipantRole(role?: string) {
+  switch (normalizeParticipantRole(role)) {
+    case "investee":
+      return "Investee";
+    case "investor":
+      return "Investor";
+    case "superadmin":
+      return "Super admin";
+    default:
+      return "";
+  }
+}
+
+function getConversationParticipants(conversation?: InvestmentConversation | SidebarConversation | null): SocketParticipant[] {
+  if (!conversation) {
+    return [];
+  }
+
+  return [
+    conversation.otherUserInfo,
+    conversation.investorInfo,
+    conversation.investeeInfo,
+    conversation.adminInfo,
+    conversation.investor,
+    conversation.investee,
+    conversation.admin,
+    ...(conversation.participants ?? []),
+    ...(conversation.users ?? []),
+  ].filter(Boolean) as SocketParticipant[];
+}
+
+function getConversationRoleParticipants(
+  role: string | undefined,
+  conversation?: InvestmentConversation | SidebarConversation | null,
+): SocketParticipant[] {
+  if (!conversation) {
+    return [];
+  }
+
+  switch (normalizeParticipantRole(role)) {
+    case "investee":
+      return [conversation.investeeInfo, conversation.investee].filter(Boolean) as SocketParticipant[];
+    case "investor":
+      return [conversation.investorInfo, conversation.investor].filter(Boolean) as SocketParticipant[];
+    case "superadmin":
+      return [conversation.adminInfo, conversation.admin].filter(Boolean) as SocketParticipant[];
+    default:
+      return [];
+  }
+}
+
+function findParticipantById(
+  participantId: string | undefined,
+  ...conversations: Array<InvestmentConversation | SidebarConversation | null>
+) {
+  if (!participantId) {
+    return undefined;
+  }
+
+  return conversations
+    .flatMap((conversation) => getConversationParticipants(conversation))
+    .find((participant) => getParticipantId(participant) === participantId);
+}
+
+function findParticipantByRole(
+  role: string | undefined,
+  ...conversations: Array<InvestmentConversation | SidebarConversation | null>
+) {
+  const normalizedRole = normalizeParticipantRole(role);
+
+  if (!normalizedRole) {
+    return undefined;
+  }
+
+  const explicitParticipant = conversations
+    .flatMap((conversation) => getConversationRoleParticipants(normalizedRole, conversation))
+    .find((participant) => getParticipantName(participant) || getParticipantId(participant));
+
+  if (explicitParticipant) {
+    return explicitParticipant;
+  }
+
+  return conversations
+    .flatMap((conversation) => getConversationParticipants(conversation))
+    .find((participant) => getParticipantRole(participant) === normalizedRole);
 }
 
 function getReadReceiptKey(conversationId: string, messageId: string) {
@@ -323,10 +517,16 @@ function normalizeOutgoingSeenStatus(
 
 function getSocketMessageSenderId(message: SocketConversationMessage) {
   return (
-    message.senderId ??
-    message.userId ??
+    getParticipantIdValue(message.senderId) ??
+    getParticipantIdValue(message.sentById) ??
+    getParticipantIdValue(message.authorId) ??
+    getParticipantIdValue(message.createdById) ??
+    getParticipantIdValue(message.fromId) ??
+    getParticipantIdValue(message.userId) ??
     getParticipantId(message.sender) ??
     getParticipantId(message.senderInfo) ??
+    getParticipantId(message.sentBy) ??
+    getParticipantId(message.author) ??
     getParticipantId(message.from) ??
     getParticipantId(message.createdBy) ??
     getParticipantId(message.user)
@@ -335,11 +535,94 @@ function getSocketMessageSenderId(message: SocketConversationMessage) {
 
 function getSocketMessageReceiverId(message: SocketConversationMessage) {
   return (
-    message.receiverId ??
-    message.recipientId ??
+    getParticipantIdValue(message.receiverId) ??
+    getParticipantIdValue(message.recipientId) ??
     getParticipantId(message.receiver) ??
     getParticipantId(message.recipient)
   );
+}
+
+function getSocketMessageSenderRole(message: SocketConversationMessage, matchedParticipant?: SocketParticipant) {
+  return [
+    message.senderRole,
+    message.senderType,
+    message.sentByRole,
+    message.authorRole,
+    message.createdByRole,
+    message.fromRole,
+    message.userRole,
+    message.role,
+    message.senderId,
+    message.sentById,
+    message.authorId,
+    message.createdById,
+    message.fromId,
+    message.userId,
+    getParticipantRole(message.senderInfo),
+    getParticipantRole(message.sender),
+    getParticipantRole(message.sentBy),
+    getParticipantRole(message.author),
+    getParticipantRole(message.from),
+    getParticipantRole(message.createdBy),
+    getParticipantRole(message.user),
+    getParticipantRole(matchedParticipant),
+  ].map((role) => normalizeParticipantRole(role)).find(Boolean);
+}
+
+function getMessageSenderName(
+  message: ConversationMessage,
+  selectedConversation: InvestmentConversation | null,
+  activeConversation: SidebarConversation | null,
+  currentUserId: string,
+  currentUserRole: string,
+) {
+  const socketMessage = message as SocketConversationMessage;
+  const senderId = getSocketMessageSenderId(socketMessage);
+
+  if (senderId && currentUserId && senderId === currentUserId) {
+    return "You";
+  }
+
+  const directName = [
+    getParticipantName(socketMessage.senderInfo),
+    getParticipantName(socketMessage.sender),
+    getParticipantName(socketMessage.sentBy),
+    getParticipantName(socketMessage.author),
+    getParticipantName(socketMessage.from),
+    getParticipantName(socketMessage.createdBy),
+    getParticipantName(socketMessage.user),
+  ].find(Boolean);
+
+  if (directName) {
+    return directName;
+  }
+
+  const matchedParticipant = findParticipantById(senderId, selectedConversation, activeConversation);
+  const matchedName = getParticipantName(matchedParticipant);
+
+  if (matchedName) {
+    return matchedName;
+  }
+
+  const directRole = getSocketMessageSenderRole(socketMessage, matchedParticipant);
+  const matchedRoleParticipant = findParticipantByRole(directRole, selectedConversation, activeConversation);
+  const matchedRoleName = getParticipantName(matchedRoleParticipant);
+
+  if (matchedRoleName) {
+    return matchedRoleName;
+  }
+
+  const roleLabel = formatParticipantRole(directRole);
+
+  if (roleLabel) {
+    return roleLabel;
+  }
+
+  if (currentUserRole !== "superadmin") {
+    return selectedConversation?.otherUserInfo?.name ?? activeConversation?.otherUserInfo?.name ?? "Sender";
+  }
+
+  return "Participant";
 }
 
 function normalizeSocketMessage(
@@ -386,11 +669,43 @@ function normalizeSocketMessage(
   };
 }
 
+function normalizeLoadedMessageDirections(messages: ConversationMessage[], currentUserId: string) {
+  if (!currentUserId) {
+    return messages;
+  }
+
+  return messages.map((message) => {
+    const senderId = getSocketMessageSenderId(message as SocketConversationMessage);
+
+    if (!senderId) {
+      return message;
+    }
+
+    return {
+      ...message,
+      direction: senderId === currentUserId ? "outgoing" : "incoming",
+    };
+  });
+}
+
 function normalizeBroadcastMessage(
   message: ConversationMessage,
+  currentUserId: string,
   localMessageIds: Set<string>,
   pendingMessages: PendingOutgoingMessage[],
 ) {
+  const senderId = getSocketMessageSenderId(message as SocketConversationMessage);
+
+  if (senderId && currentUserId) {
+    const outgoing = senderId === currentUserId;
+
+    return {
+      ...message,
+      direction: outgoing ? "outgoing" : "incoming",
+      isSeen: outgoing ? false : message.isSeen,
+    };
+  }
+
   const now = Date.now();
   const messageText = message.message.trim();
   const recentlySentHere = pendingMessages.some((pendingMessage) => (
@@ -408,6 +723,125 @@ function getMessageTimestamp(message: ConversationMessage) {
   const timestamp = new Date(message.sentAt ?? "").getTime();
 
   return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
+}
+
+function getScheduleStart(schedule: Schedule) {
+  return schedule.startsAt ?? schedule.dateTime;
+}
+
+function getScheduleTimelineTimestamp(schedule: Schedule) {
+  const timestamp = new Date(schedule.createdAt ?? schedule.updatedAt ?? getScheduleStart(schedule) ?? "").getTime();
+
+  return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
+}
+
+function getScheduleUserId(user?: Schedule["createdBy"] | null) {
+  return user?._id ?? user?.id ?? "";
+}
+
+function isScheduleOutgoing(schedule: Schedule, currentUserId: string) {
+  const creatorId = getScheduleUserId(schedule.createdBy);
+
+  return Boolean(creatorId && currentUserId && creatorId === currentUserId);
+}
+
+function formatScheduleDate(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatScheduleDateTime(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatScheduleTimeRange(schedule?: Schedule | null) {
+  if (!schedule) {
+    return "";
+  }
+
+  return [formatMessageTime(getScheduleStart(schedule)), formatMessageTime(schedule.endsAt)]
+    .filter(Boolean)
+    .join(" - ") || formatScheduleDateTime(getScheduleStart(schedule));
+}
+
+function formatScheduleParticipant(user?: Schedule["investor"] | null) {
+  if (!user) {
+    return "Not assigned";
+  }
+
+  return user.name?.trim() || user.email?.trim() || "Not assigned";
+}
+
+function mergeSchedules(current: Schedule[], incoming: Schedule[]) {
+  const schedulesById = new Map(current.map((schedule) => [schedule._id, schedule]));
+
+  for (const schedule of incoming) {
+    schedulesById.set(schedule._id, {
+      ...schedulesById.get(schedule._id),
+      ...schedule,
+    });
+  }
+
+  return Array.from(schedulesById.values()).sort((first, second) => (
+    getScheduleTimelineTimestamp(first) - getScheduleTimelineTimestamp(second)
+  ));
+}
+
+function buildTimelineItems(messages: ConversationMessage[], schedules: Schedule[]): ChatTimelineItem[] {
+  return [
+    ...messages.map((message, index): ChatTimelineItem => ({
+      id: `message-${message._id}`,
+      item: message,
+      kind: "message",
+      order: index,
+      timestamp: getMessageTimestamp(message),
+    })),
+    ...schedules.map((schedule, index): ChatTimelineItem => ({
+      id: `schedule-${schedule._id}`,
+      item: schedule,
+      kind: "schedule",
+      order: messages.length + index,
+      timestamp: getScheduleTimelineTimestamp(schedule),
+    })),
+  ].sort((first, second) => {
+    const timestampDifference = first.timestamp - second.timestamp;
+
+    if (timestampDifference !== 0) {
+      return timestampDifference;
+    }
+
+    return first.order - second.order;
+  });
 }
 
 function mergeConversationMessages(
@@ -501,15 +935,28 @@ export function MessagesPage() {
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [conversationSchedules, setConversationSchedules] = useState<Schedule[]>([]);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleForm, setScheduleForm] = useState<ScheduleForm>(() => createDefaultScheduleForm(""));
   const [scheduleMessage, setScheduleMessage] = useState("");
   const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleDetailOpen, setScheduleDetailOpen] = useState(false);
+  const [activeSchedule, setActiveSchedule] = useState<Schedule | null>(null);
+  const [scheduleDetailError, setScheduleDetailError] = useState("");
+  const [loadingScheduleDetail, setLoadingScheduleDetail] = useState(false);
+  const [currentUser] = useState(() => {
+    const user = getStoredAuthState()?.state?.user as { _id?: string; id?: string; role?: string } | null | undefined;
+
+    return {
+      id: user?.id ?? user?._id ?? "",
+      role: user?.role ?? "",
+    };
+  });
   const [socketConnected, setSocketConnected] = useState(false);
   const [activeList, setActiveList] = useState<ListItemResponse | null>(null);
   const selectedIdRef = useRef("");
   const socketRef = useRef<ReturnType<typeof getSocket> | null>(null);
-  const currentUserIdRef = useRef("");
+  const currentUserIdRef = useRef(currentUser.id);
   const otherUserIdRef = useRef("");
   const localOutgoingMessageIdsRef = useRef<Set<string>>(new Set());
   const pendingOutgoingMessagesRef = useRef<PendingOutgoingMessage[]>([]);
@@ -543,15 +990,16 @@ export function MessagesPage() {
   const activeListId = getConversationListId(selectedConversation ?? activeConversation);
   const visibleActiveList = activeList?._id === activeListId ? activeList : null;
   const activeFundingTarget = formatFundingTarget(visibleActiveList?.fundingTarget);
+  const viewerRole = normalizeParticipantRole(currentUser.role) || (pathname.startsWith("/superadmin") ? "superadmin" : "");
+  const canCreateSchedules = viewerRole === "superadmin";
+  const timelineItems = useMemo(
+    () => buildTimelineItems(messages, conversationSchedules),
+    [conversationSchedules, messages],
+  );
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
-
-  useEffect(() => {
-    const user = getStoredAuthState()?.state?.user as { _id?: string; id?: string } | null | undefined;
-    currentUserIdRef.current = user?.id ?? user?._id ?? "";
-  }, []);
 
   useEffect(() => {
     otherUserIdRef.current = selectedConversation?.otherUserInfo?._id ?? activeConversation?.otherUserInfo?._id ?? "";
@@ -585,10 +1033,10 @@ export function MessagesPage() {
     };
   }, [activeListId]);
 
-  const latestMessageId = messages.at(-1)?._id ?? "";
+  const latestTimelineItemId = timelineItems.at(-1)?.id ?? "";
 
   useEffect(() => {
-    if (!latestMessageId) {
+    if (!latestTimelineItemId) {
       return;
     }
 
@@ -597,7 +1045,7 @@ export function MessagesPage() {
         messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
       }
     });
-  }, [latestMessageId]);
+  }, [latestTimelineItemId]);
 
   const loadInbox = useCallback(async (nextSelectedId?: string, options: { silent?: boolean } = {}) => {
     if (!options.silent) {
@@ -659,10 +1107,25 @@ export function MessagesPage() {
     });
   }, []);
 
+  const refreshConversationSchedules = useCallback(async (conversationId: string) => {
+    if (!conversationId) {
+      setConversationSchedules([]);
+      return;
+    }
+
+    const response = await getSchedules({ conversationId });
+    const items = Array.isArray(response.data) ? response.data : [];
+
+    if (selectedIdRef.current === conversationId) {
+      setConversationSchedules(items);
+    }
+  }, []);
+
   const refreshConversationMessages = useCallback(async (conversationId: string) => {
-    const [conversationResponse, messagesResponse] = await Promise.all([
+    const [conversationResponse, messagesResponse, schedulesResponse] = await Promise.all([
       getInvestmentConversation(conversationId),
       getConversationMessages(conversationId, 1, 5),
+      getSchedules({ conversationId }).catch(() => ({ data: [] as Schedule[] })),
     ]);
 
     if (selectedIdRef.current !== conversationId) {
@@ -679,7 +1142,10 @@ export function MessagesPage() {
     setMessages((current) => mergeConversationMessages(
       current,
       normalizeOutgoingSeenStatus(
-        messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? [],
+        normalizeLoadedMessageDirections(
+          messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? [],
+          currentUserIdRef.current,
+        ),
         conversationId,
         nextOtherUserId,
         readReceiptIdsRef.current,
@@ -687,6 +1153,7 @@ export function MessagesPage() {
       { preserveCurrentSeen: true },
     ));
     setPagination((current) => messagesResponse.data?.pagination ?? current);
+    setConversationSchedules(Array.isArray(schedulesResponse.data) ? schedulesResponse.data : []);
   }, []);
 
   useEffect(() => {
@@ -742,9 +1209,10 @@ export function MessagesPage() {
       setError("");
 
       try {
-        const [conversationResponse, messagesResponse] = await Promise.all([
+        const [conversationResponse, messagesResponse, schedulesResponse] = await Promise.all([
           getInvestmentConversation(selectedId),
           getConversationMessages(selectedId, 1, 5),
+          getSchedules({ conversationId: selectedId }).catch(() => ({ data: [] as Schedule[] })),
         ]);
 
         if (cancelled) {
@@ -761,13 +1229,17 @@ export function MessagesPage() {
         setMessages(mergeConversationMessages(
           [],
           normalizeOutgoingSeenStatus(
-            messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? [],
+            normalizeLoadedMessageDirections(
+              messagesResponse.data?.messages ?? conversationResponse.data?.messages ?? [],
+              currentUserIdRef.current,
+            ),
             selectedId,
             nextOtherUserId,
             readReceiptIdsRef.current,
           ),
         ));
         setPagination(messagesResponse.data?.pagination ?? null);
+        setConversationSchedules(Array.isArray(schedulesResponse.data) ? schedulesResponse.data : []);
         emitMarkSeen(selectedId);
       } catch (loadError) {
         if (!cancelled) {
@@ -840,6 +1312,7 @@ export function MessagesPage() {
       if (payload.message && conversationId === selectedIdRef.current) {
         const normalizedMessage = normalizeBroadcastMessage(
           payload.message,
+          currentUserIdRef.current,
           localOutgoingMessageIdsRef.current,
           pendingOutgoingMessagesRef.current,
         );
@@ -900,6 +1373,7 @@ export function MessagesPage() {
 
     function handleMeetingRequest(payload: InvestmentMeetingRequestPayload) {
       if (!payload.conversationId || payload.conversationId === selectedIdRef.current) {
+        void refreshConversationSchedules(selectedIdRef.current).catch(() => undefined);
         refreshInbox();
       }
     }
@@ -925,7 +1399,7 @@ export function MessagesPage() {
       disconnectSocket();
       socketRef.current = null;
     };
-  }, [emitMarkSeen, loadInbox, refreshConversationMessages]);
+  }, [emitMarkSeen, loadInbox, refreshConversationMessages, refreshConversationSchedules]);
 
   useEffect(() => {
     const accessToken = getStoredAccessToken();
@@ -960,7 +1434,10 @@ export function MessagesPage() {
       setMessages((current) => mergeConversationMessages(
         current,
         normalizeOutgoingSeenStatus(
-          response.data?.messages ?? [],
+          normalizeLoadedMessageDirections(
+            response.data?.messages ?? [],
+            currentUserIdRef.current,
+          ),
           selectedId,
           otherUserIdRef.current,
           readReceiptIdsRef.current,
@@ -1040,7 +1517,7 @@ export function MessagesPage() {
   }
 
   async function submitScheduleRequest() {
-    if (!selectedId || scheduleSaving) {
+    if (!canCreateSchedules || !selectedId || scheduleSaving) {
       return;
     }
 
@@ -1052,27 +1529,74 @@ export function MessagesPage() {
       return;
     }
 
+    if (!scheduleForm.location.trim()) {
+      setScheduleMessage("Please provide a location.");
+      return;
+    }
+
     setScheduleSaving(true);
     setScheduleMessage("");
 
     try {
-      await createMeetingRequest(selectedId, {
+      const response = await createSchedule({
+        conversationId: selectedId,
+        dateTime: startsAt,
         endsAt,
         location: scheduleForm.location.trim(),
-        locationDetails: scheduleForm.locationDetails.trim(),
-        note: scheduleForm.note.trim(),
+        locationDetails: scheduleForm.locationDetails.trim() || undefined,
+        note: scheduleForm.note.trim() || undefined,
         startsAt,
         timeZone: scheduleForm.timeZone.trim() || "UTC",
         title: scheduleForm.title.trim() || "Investment Meeting",
       });
-      setScheduleMessage("Meeting request sent.");
+      const savedSchedule = response.data
+        ? {
+            ...response.data,
+            createdAt: response.data.createdAt ?? new Date().toISOString(),
+            createdBy: response.data.createdBy ?? (currentUser.id ? { _id: currentUser.id, role: viewerRole } : undefined),
+          }
+        : null;
+
+      if (savedSchedule?._id) {
+        setConversationSchedules((current) => mergeSchedules(current, [savedSchedule]));
+      } else {
+        void refreshConversationSchedules(selectedId).catch(() => undefined);
+      }
+
+      setScheduleMessage("Schedule created.");
       setScheduleOpen(false);
+      void loadInbox(selectedId, { silent: true });
     } catch (scheduleError) {
-      setScheduleMessage(getApiErrorMessage(scheduleError, "Unable to create meeting request."));
+      setScheduleMessage(getApiErrorMessage(scheduleError, "Unable to create schedule."));
     } finally {
       setScheduleSaving(false);
     }
   }
+
+  async function openScheduleDetails(schedule: Schedule) {
+    setActiveSchedule(schedule);
+    setScheduleDetailError("");
+    setScheduleDetailOpen(true);
+
+    if (!schedule._id) {
+      return;
+    }
+
+    setLoadingScheduleDetail(true);
+
+    try {
+      const response = await getSchedule(schedule._id);
+      setActiveSchedule(response.data ?? schedule);
+    } catch (detailError) {
+      setScheduleDetailError(getApiErrorMessage(detailError, "Unable to load schedule details."));
+    } finally {
+      setLoadingScheduleDetail(false);
+    }
+  }
+
+  const activeScheduleStart = activeSchedule ? getScheduleStart(activeSchedule) : "";
+  const activeScheduleDateLabel = formatScheduleDate(activeScheduleStart);
+  const activeScheduleTimeLabel = formatScheduleTimeRange(activeSchedule);
 
   return (
     <section className="flex h-[calc(100dvh-2rem)] min-h-0 flex-col overflow-hidden rounded-2xl bg-[#FCFCFD] sm:h-[calc(100dvh-3rem)] xl:h-[calc(100dvh-4rem)]">
@@ -1250,7 +1774,7 @@ export function MessagesPage() {
                     <div className="flex h-full min-h-[420px] items-center justify-center text-sm text-[#667085]">
                       Loading messages...
                     </div>
-                  ) : messages.length ? (
+                  ) : timelineItems.length ? (
                     <div className="flex flex-col gap-4">
                       {pagination?.hasMore ? (
                         <div className="flex justify-center">
@@ -1266,12 +1790,61 @@ export function MessagesPage() {
                         </div>
                       ) : null}
 
-                      {messages.map((message) => {
+                      {timelineItems.map((timelineItem) => {
+                        if (timelineItem.kind === "schedule") {
+                          const schedule = timelineItem.item;
+                          const outgoing = isScheduleOutgoing(schedule, currentUser.id);
+                          const scheduleTime = formatMessageTime(schedule.createdAt ?? schedule.updatedAt ?? getScheduleStart(schedule));
+
+                          return (
+                            <div
+                              key={timelineItem.id}
+                              className={cx(
+                                "flex w-full max-w-[507px] flex-col gap-1 font-sans",
+                                outgoing ? "ml-auto items-end" : "mr-auto items-start",
+                              )}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void openScheduleDetails(schedule);
+                                }}
+                                className="inline-flex min-h-[52px] w-[152px] items-center gap-2 rounded-md bg-[#F8F5EF] px-3 py-2 text-left shadow-sm transition hover:bg-[#F1ECE3] focus:outline-none focus:ring-2 focus:ring-[#ED6A06]/35"
+                              >
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-[#2B425D]">
+                                  <DashboardIcon name="schedule" className="h-4 w-4" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-xs font-semibold leading-4 text-[#111111]">
+                                    Schedule
+                                  </span>
+                                  <span className="block truncate text-[9px] font-normal leading-3 text-[#6B7280]">
+                                    Set if you are available or not
+                                  </span>
+                                </span>
+                              </button>
+                              {scheduleTime ? (
+                                <span className="px-1 text-[10px] font-normal leading-4 text-[#8A8A8A]">
+                                  {scheduleTime}
+                                </span>
+                              ) : null}
+                            </div>
+                          );
+                        }
+
+                        const message = timelineItem.item;
                         const outgoing = message.direction === "outgoing";
+                        const senderName = getMessageSenderName(
+                          message,
+                          selectedConversation,
+                          activeConversation,
+                          currentUser.id,
+                          viewerRole,
+                        );
 
                         return (
                           <div
-                            key={message._id}
+                            key={timelineItem.id}
                             className={cx(
                               "flex w-full max-w-[507px] min-w-0 flex-col justify-center gap-2 px-8 py-3 font-sans shadow-sm",
                               outgoing
@@ -1281,7 +1854,7 @@ export function MessagesPage() {
                           >
                             {!outgoing ? (
                               <p className="font-sans text-base font-semibold leading-6 tracking-[0.015em] text-[#111111]">
-                                {selectedConversation?.otherUserInfo?.name ?? "Sender"}
+                                {senderName}
                               </p>
                             ) : null}
                             {outgoing ? (
@@ -1326,14 +1899,16 @@ export function MessagesPage() {
                       className="min-h-0 flex-1 resize-none rounded-2xl border-0 bg-transparent px-4 py-2 font-[family-name:var(--font-manrope)] text-base leading-[120%] tracking-normal text-[#16123E] outline-none placeholder:text-[#6B7280]"
                     />
                     <div className="flex h-10 items-center justify-between gap-5 px-2 pb-2">
-                      <button
-                        type="button"
-                        onClick={openScheduleModal}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[#213448] transition hover:bg-[#F3F4F6]"
-                        aria-label="Open schedule"
-                      >
-                        <DashboardIcon name="calendar" className="h-6 w-6" />
-                      </button>
+                      {canCreateSchedules ? (
+                        <button
+                          type="button"
+                          onClick={openScheduleModal}
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[#213448] transition hover:bg-[#F3F4F6]"
+                          aria-label="Open schedule"
+                        >
+                          <DashboardIcon name="calendar" className="h-6 w-6" />
+                        </button>
+                      ) : null}
 
                       <div className="flex items-center gap-5">
                         <Link
@@ -1370,6 +1945,76 @@ export function MessagesPage() {
           </div>
         </div>
 
+      {scheduleDetailOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/35 p-4"
+          onClick={() => setScheduleDetailOpen(false)}
+        >
+          <div
+            className="w-full max-w-[480px] rounded-[18px] bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-semibold text-[#1E2746]">
+                  {activeSchedule?.title || "Scheduled meeting"}
+                </h2>
+                {loadingScheduleDetail ? <p className="mt-1 text-xs text-[#6B7280]">Loading details...</p> : null}
+                {scheduleDetailError ? <p className="mt-1 text-xs text-[#B42318]">{scheduleDetailError}</p> : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => setScheduleDetailOpen(false)}
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#6B7280] transition hover:bg-[#F3F5F8]"
+                aria-label="Close schedule details"
+              >
+                x
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className="inline-flex items-center gap-2 text-sm text-[#1F2937]">
+                <DashboardIcon name="schedule" className="h-5 w-5" />
+                {activeScheduleDateLabel || "Date not provided"}
+              </div>
+
+              <div className="rounded-[12px] bg-[#F4F6FB] px-3 py-2 text-sm text-[#1F2937]">
+                {activeScheduleTimeLabel || "Time not provided"}
+              </div>
+
+              <div className="rounded-[12px] border border-[#E6EBF3] px-3 py-2 text-sm text-[#1F2937]">
+                <p className="text-xs text-[#6B7280]">Location</p>
+                <p className="mt-1 font-medium text-[#1E2746]">{activeSchedule?.location || "Location not provided"}</p>
+                {activeSchedule?.locationDetails ? (
+                  <p className="mt-1 text-xs text-[#6B7280]">{activeSchedule.locationDetails}</p>
+                ) : null}
+              </div>
+
+              <div className="grid gap-3 text-sm sm:grid-cols-2">
+                <div className="rounded-[12px] border border-[#E6EBF3] px-3 py-2">
+                  <p className="text-xs text-[#6B7280]">Investor</p>
+                  <p className="mt-1 font-medium text-[#1E2746]">{formatScheduleParticipant(activeSchedule?.investor)}</p>
+                </div>
+                <div className="rounded-[12px] border border-[#E6EBF3] px-3 py-2">
+                  <p className="text-xs text-[#6B7280]">Investee</p>
+                  <p className="mt-1 font-medium text-[#1E2746]">{formatScheduleParticipant(activeSchedule?.investee)}</p>
+                </div>
+              </div>
+
+              {activeSchedule?.note ? (
+                <div className="rounded-[12px] bg-[#F4F6FB] px-3 py-2 text-sm text-[#475467]">
+                  {activeSchedule.note}
+                </div>
+              ) : null}
+
+              <p className="text-xs text-[#6B7280]">
+                Time zone: {activeSchedule?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {scheduleOpen ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/35 p-4"
@@ -1380,7 +2025,7 @@ export function MessagesPage() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[#1E2746]">Request Meeting</h2>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[#1E2746]">Schedule Meeting</h2>
               <button
                 type="button"
                 onClick={() => setScheduleOpen(false)}
@@ -1469,7 +2114,7 @@ export function MessagesPage() {
                 disabled={scheduleSaving}
                 className="inline-flex h-11 items-center justify-center rounded-xl bg-[#ED6A06] px-5 text-sm font-semibold text-white transition hover:bg-[#d35f05] disabled:cursor-wait disabled:opacity-60"
               >
-                {scheduleSaving ? "Sending..." : "Send Request"}
+                {scheduleSaving ? "Saving..." : "Create Schedule"}
               </button>
             </div>
           </div>
@@ -1478,4 +2123,3 @@ export function MessagesPage() {
     </section>
   );
 }
-

@@ -11,7 +11,7 @@ function sanitizeDetailHtml(html: string) {
     .replace(/\s(href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi, "");
 }
 
-export function CollapsibleDetailHtml({ html }: { html: string }) {
+export function CollapsibleDetailHtml({ html, collapse = true }: { html: string; collapse?: boolean }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [collapsedMaxHeight, setCollapsedMaxHeight] = useState<string>();
   const [expanded, setExpanded] = useState(false);
@@ -21,7 +21,9 @@ export function CollapsibleDetailHtml({ html }: { html: string }) {
   useEffect(() => {
     const content = contentRef.current;
 
-    if (!content) {
+    if (!content || !collapse) {
+      setCollapsedMaxHeight(undefined);
+      setHasOverflow(false);
       return;
     }
 
@@ -45,14 +47,14 @@ export function CollapsibleDetailHtml({ html }: { html: string }) {
     observer.observe(content);
 
     return () => observer.disconnect();
-  }, [safeHtml]);
+  }, [collapse, safeHtml]);
 
   return (
     <div>
       <div
         ref={contentRef}
         style={
-          expanded || !hasOverflow
+          !collapse || expanded || !hasOverflow
             ? undefined
             : {
                 maxHeight: collapsedMaxHeight,
@@ -62,7 +64,7 @@ export function CollapsibleDetailHtml({ html }: { html: string }) {
         dangerouslySetInnerHTML={{ __html: safeHtml }}
       />
 
-      {hasOverflow ? (
+      {collapse && hasOverflow ? (
         <button
           type="button"
           onClick={() => setExpanded((current) => !current)}

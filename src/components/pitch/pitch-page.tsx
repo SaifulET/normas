@@ -80,7 +80,7 @@ function UnlockedPitchDetails({ pitch }: { pitch: PitchDetail }) {
       <h2 className="text-[24px] font-semibold text-[#1F2937]">{pitch.equipmentTitle}</h2>
 
       <div className="mt-6 max-w-[860px] space-y-8">
-        <CollapsibleDetailHtml html={detailHtml} />
+        <CollapsibleDetailHtml html={detailHtml} collapse={false} />
 
         <div className="overflow-hidden rounded-[14px] border border-[#E7ECF3]">
           <div className="bg-[#F8FAFC] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6B7280]">
@@ -94,69 +94,6 @@ function UnlockedPitchDetails({ pitch }: { pitch: PitchDetail }) {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LockedPitchDetails({ pitch }: { pitch: PitchDetail }) {
-  return (
-    <div className="mt-10">
-      <h2 className="text-[24px] font-semibold text-[#1F2937]">{pitch.equipmentTitle}</h2>
-
-      <div className="relative mt-6 overflow-hidden rounded-[20px] border border-[#EEF2F7] bg-white shadow-[0_24px_60px_-54px_rgba(15,23,42,0.24)]">
-        <div className="pointer-events-none select-none blur-[7px]">
-          <div className="px-8 py-8 text-[17px] leading-8 text-[#5F6B7A]">
-            <div>
-              <p className="font-medium text-[#243041]">AI Project Overview for Windmill Optimization</p>
-              <p className="mt-3">{pitch.overview}</p>
-            </div>
-
-            <div className="mt-8">
-              <p className="font-medium text-[#243041]">Key Components:</p>
-              <ol className="mt-3 list-decimal space-y-1 pl-5">
-                {pitch.keyComponents.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ol>
-            </div>
-
-            <div className="mt-8">
-              <p className="font-medium text-[#243041]">Benefits:</p>
-              <ul className="mt-3 space-y-1">
-                {pitch.benefits.map((item) => (
-                  <li key={item}>- {item}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="mt-8">
-              <p>{pitch.closing}</p>
-            </div>
-          </div>
-
-          <div className="border-t border-[#EEF2F7] px-8 py-6">
-            <div className="grid gap-y-3 text-sm text-[#475467] sm:grid-cols-[1fr_auto] sm:gap-x-8">
-              {pitch.additionalDetails.map((row) => (
-                <div key={row.label} className="contents">
-                  <span>{row.label}</span>
-                  <span className="font-medium text-[#243041]">{row.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="absolute inset-0 bg-white/42" />
-        <div className="absolute inset-0 flex items-center justify-center px-6">
-          <Link
-            href="/pricing"
-            className="inline-flex h-14 items-center justify-center gap-3 rounded-[12px] bg-[#314B6B] px-9 text-[17px] font-medium text-white shadow-[0_18px_40px_-24px_rgba(49,75,107,0.75)] transition hover:bg-[#243B5A]"
-          >
-            <AppIcon name="aiLock" className="h-5 w-5" />
-            Subscribe to Unlock Features
-          </Link>
         </div>
       </div>
     </div>
@@ -234,7 +171,7 @@ export async function PitchPage({
             </div>
           </div>
 
-          {authenticated ? <UnlockedPitchDetails pitch={pitch} /> : <LockedPitchDetails pitch={pitch} />}
+          <UnlockedPitchDetails pitch={pitch} />
         </div>
       </section>
 
