@@ -373,41 +373,47 @@ export function SuperadminStatusBadge({
 }: {
   status: string;
 }) {
+  const normalizedStatus = status.toLowerCase();
+  const label = status ? `${status.charAt(0).toUpperCase()}${status.slice(1)}` : "Unknown";
   const tone =
-    status === "Active"
+    normalizedStatus === "active"
       ? "bg-[#D6F8E3] text-[#0F9F5D]"
-      : status === "Resolved" || status === "Solved"
+      : normalizedStatus === "resolved" || normalizedStatus === "solved"
         ? "bg-[#D6F8E3] text-[#0F9F5D]"
-        : status === "Pending"
+        : normalizedStatus === "pending"
           ? "bg-[#FFE9D9] text-[#F97316]"
+          : normalizedStatus === "inactive"
+            ? "bg-[#FEE2E2] text-[#DC2626]"
           : "bg-[#EFF1F5] text-[#98A2B3]";
 
-  return <span className={cx("inline-flex rounded-full px-2 py-1 text-[10px] font-medium", tone)}>{status}</span>;
+  return <span className={cx("inline-flex rounded-full px-2 py-1 text-[10px] font-medium", tone)}>{label}</span>;
 }
 
 export function SuperadminAvatar({
   from,
   initials,
+  src,
   size = 42,
   to,
 }: {
   from: string;
   initials: string;
+  src?: string;
   size?: number;
   to: string;
 }) {
   return (
     <span
-      className="inline-flex items-center justify-center rounded-full text-white shadow-[0_10px_20px_-18px_rgba(0,0,0,0.7)]"
+      className="inline-flex items-center justify-center rounded-full bg-cover bg-center text-white shadow-[0_10px_20px_-18px_rgba(0,0,0,0.7)]"
       style={{
-        backgroundImage: `linear-gradient(135deg, ${from}, ${to})`,
+        backgroundImage: src ? `url("${src}")` : `linear-gradient(135deg, ${from}, ${to})`,
         fontSize: size < 40 ? "10px" : "12px",
         fontWeight: 700,
         height: size,
         width: size,
       }}
     >
-      {initials}
+      {src ? null : initials}
     </span>
   );
 }

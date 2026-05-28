@@ -10,7 +10,6 @@ import {
   superadminReports,
   superadminSettingsTabs,
   superadminSupportThreads,
-  superadminUsers,
 } from "./data";
 import {
   SuperadminAvatar,
@@ -27,14 +26,13 @@ import {
   SuperadminSupportPanel,
 } from "./report-controls";
 import { PaymentDetailClient, SupportMessageDetailClient } from "./detail-interactions";
-import { UserDetailTabsClient } from "./user-detail-tabs-client";
-import { SuperadminPaymentActionMenu, SuperadminUserActionMenu } from "./user-action-menu";
+import { SuperadminPaymentActionMenu } from "./user-action-menu";
 import { SuperadminSettingsGeneralClient, SuperadminSettingsPricingClient, SuperadminSettingsShell } from "./settings-general-client";
 import { LegalSettingsClient } from "./legal-settings-client";
 import { FaqSettingsClient } from "./faq-settings-client";
 import { SuperadminAnalyticsClient, SuperadminDashboardOverviewClient } from "./overview-analytics-client";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { UserGroup03Icon } from "@hugeicons/core-free-icons";
+import { SuperadminUserDetailClient } from "./admin-user-detail-client";
+import { SuperadminUserManagementClient } from "./admin-users-client";
 
 function SectionCard({
   children,
@@ -235,55 +233,7 @@ export function SuperadminUserManagementPage() {
   return (
     <div className="space-y-6">
       <SuperadminPageHeader title="User Management" subtitle="Manage personnel access credentials" />
-
-      <SectionCard className="flex items-center justify-between p-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Total User</p>
-          <p className="mt-1 text-[18px] font-semibold text-[#202350]">24</p>
-        </div>
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#F2ECFB] text-[#7E61B5]">
-          <HugeiconsIcon icon={UserGroup03Icon} />
-        </div>
-      </SectionCard>
-
-      <div className="flex justify-end">
-        <SuperadminSearch />
-      </div>
-
-      <TableCard>
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
-          <p>Name</p>
-          <p>Account Type</p>
-          <p>Joining Date</p>
-          <p>Account Status</p>
-          <p className="text-right">Actions</p>
-        </div>
-
-        {superadminUsers.map((user) => (
-          <div
-            key={user.slug}
-            className="grid grid-cols-[2fr_1fr_1fr_1fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
-          >
-            <Link href={`/superadmin/dashboard/user-management/${user.slug}`} className="flex items-center gap-3">
-              <SuperadminAvatar from={user.avatarFrom} to={user.avatarTo} initials={user.initials} size={28} />
-              <div>
-                <p className="text-[13px] font-medium text-[#202350]">{user.name}</p>
-                <p className="text-[11px] text-[#8A91AB]">{user.email}</p>
-              </div>
-            </Link>
-            <p className="text-[13px] text-[#34395B]">{user.accountType}</p>
-            <p className="text-[13px] text-[#34395B]">{user.joiningDate}</p>
-            <div>
-              <SuperadminStatusBadge status={user.status} />
-            </div>
-            <div className="flex justify-end">
-              <SuperadminUserActionMenu slug={user.slug} />
-            </div>
-          </div>
-        ))}
-
-        <TableFooter />
-      </TableCard>
+      <SuperadminUserManagementClient />
     </div>
   );
 }
@@ -293,12 +243,6 @@ export function SuperadminUserDetailPage({
 }: {
   slug: string;
 }) {
-  const user = getSuperadminUser(slug);
-
-  if (!user) {
-    notFound();
-  }
-
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
@@ -312,7 +256,7 @@ export function SuperadminUserDetailPage({
         <SuperadminNotificationButton />
       </div>
 
-      <UserDetailTabsClient user={user} />
+      <SuperadminUserDetailClient userId={slug} />
     </div>
   );
 }

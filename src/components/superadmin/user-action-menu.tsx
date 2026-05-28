@@ -5,8 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { SuperadminDotsButton } from "./shell";
 
 function SuperadminRowActionMenu({
+  showSuspend = true,
   viewHref,
 }: {
+  showSuspend?: boolean;
   viewHref: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -54,13 +56,15 @@ function SuperadminRowActionMenu({
           >
             View
           </Link>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="block w-full border-t border-[#EEF1F6] px-4 py-3 text-left text-[14px] text-[#202350] transition hover:bg-[#F7F8FC]"
-          >
-            Suspend
-          </button>
+          {showSuspend ? (
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="block w-full border-t border-[#EEF1F6] px-4 py-3 text-left text-[14px] text-[#202350] transition hover:bg-[#F7F8FC]"
+            >
+              Suspend
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -72,7 +76,7 @@ export function SuperadminUserActionMenu({
 }: {
   slug: string;
 }) {
-  return <SuperadminRowActionMenu viewHref={`/superadmin/dashboard/user-management/${slug}`} />;
+  return <SuperadminRowActionMenu showSuspend={false} viewHref={`/superadmin/dashboard/user-management/${slug}`} />;
 }
 
 export function SuperadminPaymentActionMenu({
