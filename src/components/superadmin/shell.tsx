@@ -240,17 +240,17 @@ export function SuperadminShell({
 
   return (
     <div className="min-h-screen bg-[#F4F4F7] text-[#212443]">
-      <aside className={cx("fixed inset-y-0 left-0 z-30 flex flex-col border-r border-[#D4D7E2] bg-[#2B425D] text-white transition-all duration-200", sidebarWidth)}>
-        <div className=" relative ">
+      <aside className={cx("fixed inset-y-0 left-0 z-30 flex min-h-0 flex-col overflow-hidden border-r border-[#D4D7E2] bg-[#2B425D] text-white transition-all duration-200", sidebarWidth)}>
+        <div className="relative shrink-0">
           <SidebarLogo collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
         </div>
 
-        <div className={cx(" flex-1  space-y-5 py-5", collapsed ? "px-2" : "px-2.5")}>
+        <div className={cx("min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain py-5", collapsed ? "px-2" : "px-2.5")}>
           <SidebarSection collapsed={collapsed} pathname={pathname} section="main" />
           <SidebarSection collapsed={collapsed} pathname={pathname} section="core" />
         </div>
 
-        <div className={cx("border-t border-white/8 py-4", collapsed ? "px-2" : "px-3")}>
+        <div className={cx("shrink-0 border-t border-white/8 py-4", collapsed ? "px-2" : "px-3")}>
           <button type="button" className={cx("flex w-full text-left", collapsed ? "justify-center" : "items-center gap-3")}>
             <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-[#111217]">
               {superadminUser.name

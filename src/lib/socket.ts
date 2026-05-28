@@ -1,5 +1,5 @@
 import { io, type Socket } from "socket.io-client";
-import { API_BASE_URL } from "./api";
+import { API_BASE_URL } from "./api-config";
 
 let socket: Socket | null = null;
 let socketToken: string | null = null;

@@ -5,10 +5,9 @@ import {
   getStoredRefreshToken,
   updateStoredAuthTokens,
 } from "./auth-storage";
+import { API_BASE_URL } from "./api-config";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://normas-backend.vercel.app/api/v1/";
-  // process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000/api/v1/";
+export { API_BASE_URL };
 
 type RefreshTokenResponse = ApiSuccessResponse<{
   accessToken?: string;

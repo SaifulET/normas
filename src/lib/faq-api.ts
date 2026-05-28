@@ -1,4 +1,5 @@
-import { API_BASE_URL, apiRequest, type ApiSuccessResponse } from "./api";
+import { API_BASE_URL } from "./api-config";
+import { apiRequest, type ApiSuccessResponse } from "./api";
 
 export type FaqPayload = {
   answer: string;

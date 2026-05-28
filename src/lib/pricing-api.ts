@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./api";
+import { API_BASE_URL } from "./api-config";
 import type { PricingPlan } from "@/components/home/types";
 
 export type SubscriptionPlan = {

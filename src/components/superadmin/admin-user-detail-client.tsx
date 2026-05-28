@@ -7,9 +7,7 @@ import {
   type AdminAccountStatus,
   type AdminKyc,
   type AdminPitch,
-  type AdminProfileKyc,
   type AdminUserDetailsData,
-  type AdminUserProfile,
 } from "@/lib/admin-users-api";
 import { getApiErrorMessage } from "@/lib/api";
 import { SuperadminAvatar, SuperadminStatusBadge } from "./shell";
@@ -104,6 +102,10 @@ function getDescriptionText(description?: string) {
     .trim();
 }
 
+function isInvestorProfile(profile?: { accountType?: string; role?: string }) {
+  return (profile?.accountType || profile?.role || "").trim().toLowerCase() === "investor";
+}
+
 function getInitials(name?: string, email?: string) {
   const source = name?.trim() || email?.split("@")[0] || "User";
   return source
@@ -174,46 +176,6 @@ function StatusSelect({
         </option>
       ))}
     </select>
-  );
-}
-
-function KycSummaryCard({
-  profile,
-  profileKyc,
-}: {
-  profile: AdminUserProfile;
-  profileKyc: AdminProfileKyc;
-}) {
-  const [avatarFrom, avatarTo] = getGradientSeed(profile.id || profile.email || profile.name || "user");
-
-  return (
-    <div className="rounded-[12px] border border-[#D7DEE8] bg-white px-5 py-4">
-      <div className="flex items-center gap-3">
-        <SuperadminAvatar
-          from={avatarFrom}
-          to={avatarTo}
-          initials={getInitials(profileKyc.name || profile.name, profile.email)}
-          src={profileKyc.profileImage || profile.profileImage || undefined}
-          size={44}
-        />
-        <div>
-          <p className="text-[14px] font-semibold text-[#223555]">{profileKyc.name || profile.name || "Unnamed user"}</p>
-          <div className="mt-1 flex flex-wrap gap-2">
-            <SuperadminStatusBadge status={profileKyc.status || "not_submitted"} />
-            <span className="rounded-full bg-[#E5E7EB] px-2 py-1 text-[10px] font-medium capitalize text-[#4B5563]">
-              {profileKyc.accountType || profile.accountType || "N/A"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <InfoField label="KYC ID" value={profileKyc.kycId || "Not submitted"} />
-        <InfoField label="Current Step" value={profileKyc.currentStep ?? "N/A"} />
-        <InfoField label="Submitted At" value={formatDate(profileKyc.submittedAt)} />
-        <InfoField label="Updated At" value={formatDate(profileKyc.updatedAt)} />
-      </div>
-    </div>
   );
 }
 
@@ -426,6 +388,10 @@ export function SuperadminUserDetailClient({ userId }: { userId: string }) {
       try {
         const response = await getAdminUserDetails(userId);
         if (!active) return;
+        if (isInvestorProfile(response.data.profile)) {
+          setActiveTab((currentTab) => currentTab === "pitch" || currentTab === "viewPitch" ? "profile" : currentTab);
+          setSelectedPitchId(null);
+        }
         setDetails(response.data);
       } catch (caughtError) {
         if (!active) return;
@@ -447,6 +413,7 @@ export function SuperadminUserDetailClient({ userId }: { userId: string }) {
   const profile = details?.profile;
   const pitches = useMemo(() => details?.pitches ?? details?.features ?? [], [details]);
   const selectedPitch = pitches.find((pitch) => pitch._id === selectedPitchId) ?? pitches[0];
+  const isInvestor = isInvestorProfile(profile);
 
   async function handleStatusChange(status: AdminAccountStatus) {
     if (!profile || profile.accountStatus === status) return;
@@ -493,6 +460,11 @@ export function SuperadminUserDetailClient({ userId }: { userId: string }) {
     ["Tax Percentage", typeof profile.taxPercentage === "number" ? `${profile.taxPercentage}%` : undefined],
     ["Updated At", formatDate(profile.updatedAt)],
   ] as const;
+  const tabs: Array<[Exclude<UserDetailTab, "viewPitch">, string]> = [
+    ["profile", "Profile"],
+    ["kyc", "KYC"],
+    ...(!isInvestor ? ([["pitch", "Pitch"]] as Array<[Exclude<UserDetailTab, "viewPitch">, string]>) : []),
+  ];
 
   return (
     <>
@@ -529,11 +501,7 @@ export function SuperadminUserDetailClient({ userId }: { userId: string }) {
 
         <div className="border-b border-[#DCE2EC]">
           <div className="flex items-center gap-8 text-[13px] text-[#202350]">
-            {[
-              ["profile", "Profile"],
-              ["kyc", "KYC"],
-              ["pitch", "Pitch"],
-            ].map(([id, label]) => (
+            {tabs.map(([id, label]) => (
               <button
                 key={id}
                 type="button"
@@ -556,13 +524,12 @@ export function SuperadminUserDetailClient({ userId }: { userId: string }) {
                 <InfoField key={label} label={label} value={value} />
               ))}
             </div>
-            <KycSummaryCard profile={profile} profileKyc={details.profileKyc} />
           </div>
         ) : null}
 
         {activeTab === "kyc" ? <KycDetails kyc={details.kyc} /> : null}
 
-        {activeTab === "pitch" ? (
+        {!isInvestor && activeTab === "pitch" ? (
           pitches.length ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {pitches.map((pitch) => (
@@ -583,7 +550,7 @@ export function SuperadminUserDetailClient({ userId }: { userId: string }) {
           )
         ) : null}
 
-        {activeTab === "viewPitch" && selectedPitch ? (
+        {!isInvestor && activeTab === "viewPitch" && selectedPitch ? (
           <PitchDetails pitch={selectedPitch} onBack={() => setActiveTab("pitch")} />
         ) : null}
       </section>

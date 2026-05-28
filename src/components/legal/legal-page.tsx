@@ -6,7 +6,7 @@ import {
   sitePrimaryCta,
   siteSocialLinks,
 } from "@/components/site/site-data";
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api-config";
 import type { LegalContent, LegalContentByTypeResponse, LegalContentType } from "@/lib/legal-api";
 
 export interface LegalSection {
