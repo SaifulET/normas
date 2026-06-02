@@ -655,6 +655,23 @@ function TextInput({
   );
 }
 
+function DateInput({
+  onChange,
+  value,
+}: {
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  return (
+    <input
+      type="date"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="h-11 w-full rounded-[6px] border border-[#D7DEE8] bg-white px-3 text-sm text-[#344054] outline-none transition placeholder:text-[#98A2B3] focus:border-[#B9C6D8]"
+    />
+  );
+}
+
 function SelectInput({
   onChange,
   options,
@@ -1499,8 +1516,7 @@ export function ProfilePage() {
             </div>
             <div>
               <FieldLabel>Date of Birth</FieldLabel>
-              <TextInput
-                placeholder="mm/dd/yyyy"
+              <DateInput
                 value={profile.dateOfBirth}
                 onChange={(value) => updateField("dateOfBirth", value)}
               />
