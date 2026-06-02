@@ -134,8 +134,8 @@ export async function PitchPage({
           <span>View Pitch Deck</span>
         </div>
 
-        <div className="relative mt-8 h-[340px] overflow-hidden rounded-[18px] lg:h-[390px]">
-          <Image src={pitch.image} alt={pitch.title} fill className="object-cover" priority sizes="100vw" />
+        <div className="relative mt-8 h-[50vh] overflow-hidden rounded-[18px] bg-[#F3F6FA] lg:h-[70vh]">
+          <Image src={pitch.image} alt={pitch.title} fill className="object-fit" priority sizes="100vw" />
         </div>
 
         <div className="px-0 py-8 lg:px-[172px]">

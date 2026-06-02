@@ -65,8 +65,8 @@ export function DashboardPitchDetailPage({
         </div>
       </header>
 
-      <div className="relative mt-10 h-[260px] overflow-hidden rounded-[12px] sm:h-[320px] lg:h-[364px]">
-        <Image src={pitch.image} alt={pitch.title} fill className="object-cover" priority sizes="100vw" />
+      <div className="relative mt-10 h-[50vh] md:h-[60vh] overflow-hidden rounded-[12px] bg-[#F3F6FA]  lg:h-[70vh]">
+        <Image src={pitch.image} alt={pitch.title} fill className="object-fit" priority sizes="100vw" />
       </div>
 
       <div className="mx-auto mt-10 max-w-[1306px]">
