@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
         hostname: "norman-bucket-file.s3.eu-north-1.amazonaws.com",
         pathname: "/lists/**",
       },
+      {
+        protocol: "https",
+        hostname: "norman-bucket-file.s3.eu-north-1.amazonaws.com",
+        pathname: "/profiles/**",
+      },
     ],
   },
 };

@@ -4,7 +4,13 @@ import { ChatQuestion01Icon, File01Icon, MoneyBag02Icon, SecurityCheckIcon, User
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { getApiErrorMessage } from "@/lib/api";
+import {
+  getSuperadminProfile,
+  updateSuperadminProfile,
+  type SuperadminProfile,
+} from "@/lib/superadmin-profile-api";
 
 type SettingsTab = {
   href: string;
@@ -302,6 +308,22 @@ function PricingPlanCard({
   );
 }
 
+function mapProfileToForm(profile?: SuperadminProfile): ProfileForm {
+  return {
+    name: profile?.name?.trim() || initialProfile.name,
+    email: profile?.email?.trim() || initialProfile.email,
+    contact: profile?.mobile?.trim() || "",
+  };
+}
+
+function mapProfileToTaxForm(profile?: SuperadminProfile): TaxForm {
+  const tax = typeof profile?.taxPercentage === "number" && Number.isFinite(profile.taxPercentage)
+    ? String(profile.taxPercentage)
+    : initialTax.tax;
+
+  return { tax };
+}
+
 export function SuperadminSettingsShell({
   activeHref,
   children,
@@ -359,26 +381,73 @@ export function SuperadminSettingsGeneralClient() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profile, setProfile] = useState(initialProfile);
   const [savedProfile, setSavedProfile] = useState(initialProfile);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarSrc, setAvatarSrc] = useState("/login.jpg");
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const [taxForm, setTaxForm] = useState(initialTax);
   const [savedTaxForm, setSavedTaxForm] = useState(initialTax);
   const [taxMessage, setTaxMessage] = useState<string | null>(null);
+  const [taxSaving, setTaxSaving] = useState(false);
 
   const [editingPassword, setEditingPassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState(initialPassword);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordUpdatedAt, setPasswordUpdatedAt] = useState("Last changed 4 months ago");
 
   const hasProfileChanges = useMemo(
     () =>
       profile.name !== savedProfile.name ||
       profile.email !== savedProfile.email ||
-      profile.contact !== savedProfile.contact,
-    [profile, savedProfile],
+      profile.contact !== savedProfile.contact ||
+      Boolean(avatarFile),
+    [avatarFile, profile, savedProfile],
   );
 
   const hasTaxChanges = taxForm.tax !== savedTaxForm.tax;
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProfile = async () => {
+      setProfileLoading(true);
+      setProfileMessage(null);
+
+      try {
+        const response = await getSuperadminProfile();
+        const nextProfile = mapProfileToForm(response.data);
+        const nextTaxForm = mapProfileToTaxForm(response.data);
+
+        if (active) {
+          setProfile(nextProfile);
+          setSavedProfile(nextProfile);
+          setTaxForm(nextTaxForm);
+          setSavedTaxForm(nextTaxForm);
+
+          if (response.data?.profileImage) {
+            setAvatarSrc(response.data.profileImage);
+          }
+        }
+      } catch (error) {
+        if (active) {
+          setProfileMessage(getApiErrorMessage(error, "Unable to load profile information."));
+        }
+      } finally {
+        if (active) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -388,19 +457,52 @@ export function SuperadminSettingsGeneralClient() {
     }
 
     const objectUrl = URL.createObjectURL(file);
+    setAvatarFile(file);
     setAvatarSrc(objectUrl);
   }
 
-  function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSavedProfile(profile);
+
+    const data = new FormData();
+    data.set("name", profile.name.trim());
+    data.set("email", profile.email.trim());
+    data.set("mobile", profile.contact.trim());
+
+    if (avatarFile) {
+      data.set("profileImage", avatarFile);
+    }
+
+    setProfileSaving(true);
+    setProfileMessage(null);
+
+    try {
+      const response = await updateSuperadminProfile(data);
+      const nextProfile = mapProfileToForm(response.data);
+
+      setProfile(nextProfile);
+      setSavedProfile(nextProfile);
+      setAvatarFile(null);
+
+      if (response.data?.profileImage) {
+        setAvatarSrc(response.data.profileImage);
+      }
+
+      setProfileMessage("Profile information saved.");
+    } catch (error) {
+      setProfileMessage(getApiErrorMessage(error, "Unable to save profile information."));
+    } finally {
+      setProfileSaving(false);
+    }
   }
 
   function resetProfile() {
     setProfile(savedProfile);
+    setAvatarFile(null);
+    setProfileMessage("Profile changes discarded.");
   }
 
-  function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
@@ -418,10 +520,24 @@ export function SuperadminSettingsGeneralClient() {
       return;
     }
 
-    setPasswordForm(initialPassword);
-    setEditingPassword(false);
-    setPasswordUpdatedAt("Last changed just now");
-    setPasswordMessage("Password updated successfully.");
+    const data = new FormData();
+    data.set("currentPassword", passwordForm.currentPassword);
+    data.set("newPassword", passwordForm.newPassword);
+
+    setPasswordSaving(true);
+    setPasswordMessage(null);
+
+    try {
+      await updateSuperadminProfile(data);
+      setPasswordForm(initialPassword);
+      setEditingPassword(false);
+      setPasswordUpdatedAt("Last changed just now");
+      setPasswordMessage("Password updated successfully.");
+    } catch (error) {
+      setPasswordMessage(getApiErrorMessage(error, "Unable to update password."));
+    } finally {
+      setPasswordSaving(false);
+    }
   }
 
   function resetPasswordEditor() {
@@ -430,10 +546,26 @@ export function SuperadminSettingsGeneralClient() {
     setPasswordMessage("Password update cancelled.");
   }
 
-  function handleTaxSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleTaxSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSavedTaxForm(taxForm);
-    setTaxMessage("Tax percentage saved.");
+    const data = new FormData();
+    data.set("taxPercentage", taxForm.tax);
+
+    setTaxSaving(true);
+    setTaxMessage(null);
+
+    try {
+      const response = await updateSuperadminProfile(data);
+      const nextTaxForm = mapProfileToTaxForm(response.data);
+
+      setTaxForm(nextTaxForm);
+      setSavedTaxForm(nextTaxForm);
+      setTaxMessage("Tax percentage saved.");
+    } catch (error) {
+      setTaxMessage(getApiErrorMessage(error, "Unable to save tax percentage."));
+    } finally {
+      setTaxSaving(false);
+    }
   }
 
   function resetTax() {
@@ -453,6 +585,7 @@ export function SuperadminSettingsGeneralClient() {
                     <button
                       type="button"
                       onClick={resetProfile}
+                      disabled={profileSaving || profileLoading}
                       className="rounded-[10px] border border-[#D8DEEA] bg-white px-4 py-2 text-[13px] font-medium text-[#5F6786] transition hover:border-[#BFC8D9]"
                     >
                       Cancel
@@ -460,9 +593,9 @@ export function SuperadminSettingsGeneralClient() {
                     <button
                       type="submit"
                       className="rounded-[10px] bg-[#5E568E] px-4 py-2 text-[13px] font-medium text-white transition hover:bg-[#4f487c] disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={!hasProfileChanges}
+                      disabled={!hasProfileChanges || profileSaving || profileLoading}
                     >
-                      Save
+                      {profileSaving ? "Saving..." : "Save"}
                     </button>
                 </div>
               }
@@ -519,6 +652,12 @@ export function SuperadminSettingsGeneralClient() {
                   onChange={(value) => setProfile((current) => ({ ...current, contact: value }))}
                 />
               </label>
+
+              {profileMessage ? (
+                <p className="mt-4 rounded-[8px] bg-[#F6F7FA] px-4 py-3 text-[13px] text-[#5F6786]">
+                  {profileMessage}
+                </p>
+              ) : null}
             </SettingsCard>
           </form>
 
@@ -589,17 +728,19 @@ export function SuperadminSettingsGeneralClient() {
                     <p className="text-[13px] text-[#727A96]">{passwordMessage ?? "Use at least 8 characters."}</p>
                     <div className="flex justify-end gap-3">
                       <button
-                        type="button"
-                        onClick={resetPasswordEditor}
-                        className="rounded-[10px] border border-[#D8DEEA] bg-white px-4 py-2 text-[13px] font-medium text-[#5F6786] transition hover:border-[#BFC8D9]"
-                      >
+                      type="button"
+                      onClick={resetPasswordEditor}
+                      disabled={passwordSaving}
+                      className="rounded-[10px] border border-[#D8DEEA] bg-white px-4 py-2 text-[13px] font-medium text-[#5F6786] transition hover:border-[#BFC8D9]"
+                    >
                         Cancel
                       </button>
                       <button
-                        type="submit"
-                        className="rounded-[10px] bg-[#5E568E] px-4 py-2 text-[13px] font-medium text-white transition hover:bg-[#4f487c]"
-                      >
-                        Save
+                      type="submit"
+                      disabled={passwordSaving}
+                      className="rounded-[10px] bg-[#5E568E] px-4 py-2 text-[13px] font-medium text-white transition hover:bg-[#4f487c]"
+                    >
+                        {passwordSaving ? "Saving..." : "Save"}
                       </button>
                     </div>
                   </div>
@@ -619,6 +760,7 @@ export function SuperadminSettingsGeneralClient() {
                     <button
                       type="button"
                       onClick={resetTax}
+                      disabled={taxSaving}
                       className="rounded-[10px] border border-[#D8DEEA] bg-white px-4 py-2 text-[13px] font-medium text-[#5F6786] transition hover:border-[#BFC8D9]"
                     >
                       Cancel
@@ -626,9 +768,9 @@ export function SuperadminSettingsGeneralClient() {
                     <button
                       type="submit"
                       className="rounded-[10px] bg-[#5E568E] px-4 py-2 text-[13px] font-medium text-white transition hover:bg-[#4f487c] disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={!hasTaxChanges}
+                      disabled={!hasTaxChanges || taxSaving}
                     >
-                      Save
+                      {taxSaving ? "Saving..." : "Save"}
                     </button>
                   </div>
                 </div>

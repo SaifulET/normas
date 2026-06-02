@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
+import { getSuperadminProfile, type SuperadminProfile } from "@/lib/superadmin-profile-api";
 import { superadminNavItems, superadminUser, type SuperadminNavIcon } from "./data";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Logout03Icon, Notification01Icon, Settings01Icon, SidebarRightIcon, User02Icon } from "@hugeicons/core-free-icons";
@@ -128,6 +129,16 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function getInitials(name?: string, fallback = "SA") {
+  return name
+    ?.trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || fallback;
+}
+
 function SidebarLogo({
   collapsed,
   onToggle,
@@ -235,9 +246,37 @@ export function SuperadminShell({
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [profile, setProfile] = useState<SuperadminProfile | null>(null);
 
   const sidebarWidth = collapsed ? "w-[88px]" : "w-[300px]";
   const contentPadding = collapsed ? "pl-[88px]" : "pl-[300px]";
+  const sidebarName = profile?.name?.trim() || superadminUser.name;
+  const sidebarEmail = profile?.email?.trim() || superadminUser.email;
+  const sidebarImage = profile?.profileImage?.trim() || "";
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProfile = async () => {
+      try {
+        const response = await getSuperadminProfile();
+
+        if (active) {
+          setProfile(response.data ?? null);
+        }
+      } catch {
+        if (active) {
+          setProfile(null);
+        }
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F4F4F7] text-[#212443]">
@@ -253,18 +292,18 @@ export function SuperadminShell({
 
         <div className={cx("shrink-0 border-t border-white/8 py-4", collapsed ? "px-2" : "px-3")}>
           <button type="button" className={cx("flex w-full text-left", collapsed ? "justify-center" : "items-center gap-3")}>
-            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-[#111217]">
-              {superadminUser.name
-                .split(" ")
-                .map((part) => part[0])
-                .join("")
-                .slice(0, 2)}
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-semibold text-[#111217]">
+              {sidebarImage ? (
+                <img src={sidebarImage} alt={`${sidebarName} profile`} className="h-full w-full object-cover" />
+              ) : (
+                getInitials(sidebarName)
+              )}
             </span>
             {!collapsed ? (
               <>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">{superadminUser.name}</p>
-                  <p className="truncate text-[11px] text-white/42">{superadminUser.email}</p>
+                  <p className="truncate text-sm font-medium text-white">{sidebarName}</p>
+                  <p className="truncate text-[11px] text-white/42">{sidebarEmail}</p>
                 </div>
                 <SuperadminIcon name="chevronDown" className="h-4 w-4 text-white/55" />
               </>
