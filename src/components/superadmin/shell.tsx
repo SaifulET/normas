@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
 import { superadminNavItems, superadminUser, type SuperadminNavIcon } from "./data";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Logout03Icon, Notification01Icon, Settings01Icon, SidebarRightIcon, User02Icon } from "@hugeicons/core-free-icons";
@@ -309,14 +310,10 @@ export function SuperadminPageHeader({
 
       <div className="flex items-center gap-3">
         {actionArea}
-        <button
-          type="button"
-          className="relative inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[#E2E4ED] bg-white text-[#4D5572]"
-          aria-label="Notifications"
-        >
-          <SuperadminIcon name="bell" className="h-4 w-4" />
-          <span className="absolute right-[5px] top-[5px] h-[4px] w-[4px] rounded-full bg-[#EF4444]" />
-        </button>
+        <NotificationDropdown
+          variant="superadmin"
+          iconClassName="h-4 w-4"
+        />
       </div>
     </div>
   );
@@ -324,14 +321,11 @@ export function SuperadminPageHeader({
 
 export function SuperadminNotificationButton() {
   return (
-    <button
-      type="button"
-      className="relative inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[#E2E4ED]  text-[#4D5572]"
-      aria-label="Notifications"
-    >
-      <SuperadminIcon name="bell" className="h-4 w-4" />
-      <span className="absolute right-[5px] top-[5px] h-[4px] w-[4px] rounded-full bg-[#EF4444]" />
-    </button>
+    <NotificationDropdown
+      variant="superadmin"
+      className="relative inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[#E2E4ED] text-[#4D5572]"
+      iconClassName="h-4 w-4"
+    />
   );
 }
 

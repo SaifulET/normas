@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
 
 export function DashboardPageHeader({
   title,
@@ -20,14 +20,7 @@ export function DashboardPageHeader({
 
       <div className="flex items-center gap-3 self-start">
         {children}
-        <button
-          type="button"
-          className="relative inline-flex items-center justify-center rounded-[8px] border border-[#E5EAF2] bg-white p-[13px] text-[#314B6B] shadow-[0_14px_35px_-28px_rgba(36,59,90,0.55)]"
-          aria-label="Notifications"
-        >
-          <Image src="/notification-01.svg" alt="" width={20} height={20} aria-hidden="true" />
-          <span className="absolute right-[9px] top-[9px] h-[6px] w-[6px] rounded-full bg-[#EF4444]" />
-        </button>
+        <NotificationDropdown />
       </div>
     </div>
   );
