@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { API_BASE_URL, getApiErrorMessage } from "@/lib/api";
@@ -49,14 +50,67 @@ function isRead(notification: NotificationItem) {
   return Boolean(notification.readAt || notification.isRead);
 }
 
+function getMetadataString(notification: NotificationItem, key: string) {
+  const value = notification.metadata?.[key];
+  return typeof value === "string" ? value : "";
+}
+
+function getReferenceId(notification: NotificationItem) {
+  if (typeof notification.referenceId === "string") {
+    return notification.referenceId;
+  }
+
+  return (
+    getMetadataString(notification, "scheduleId") ||
+    getMetadataString(notification, "invoiceId") ||
+    getMetadataString(notification, "reportId") ||
+    getMetadataString(notification, "userId")
+  );
+}
+
+function getNotificationHref(notification: NotificationItem, pathname: string) {
+  const referenceId = getReferenceId(notification);
+
+  if (!referenceId) {
+    return "";
+  }
+
+  const referenceType = notification.referenceType || "";
+  const isSuperadmin = pathname.startsWith("/superadmin");
+  const isInvestee = pathname.startsWith("/investee-dashboard");
+  const dashboardPrefix = isSuperadmin
+    ? "/superadmin/dashboard"
+    : isInvestee
+      ? "/investee-dashboard"
+      : "/dashboard";
+
+  if (referenceType === "schedule") {
+    return `${dashboardPrefix}/schedule?scheduleId=${encodeURIComponent(referenceId)}`;
+  }
+
+  if (isSuperadmin && referenceType === "payment") {
+    return `/superadmin/dashboard/payment-management/${encodeURIComponent(referenceId)}`;
+  }
+
+  if (isSuperadmin && referenceType === "report") {
+    return `/superadmin/dashboard/reports/${encodeURIComponent(referenceId)}`;
+  }
+
+  if (isSuperadmin && referenceType === "user") {
+    return `/superadmin/dashboard/user-management/${encodeURIComponent(referenceId)}`;
+  }
+
+  return "";
+}
+
 function NotificationList({
   emptyLabel,
   items,
-  onRead,
+  onActivate,
 }: {
   emptyLabel: string;
   items: NotificationItem[];
-  onRead: (notification: NotificationItem) => void;
+  onActivate: (notification: NotificationItem) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -75,7 +129,7 @@ function NotificationList({
           <button
             key={notification._id}
             type="button"
-            onClick={() => onRead(notification)}
+            onClick={() => onActivate(notification)}
             className={cx(
               "w-full rounded-[8px] border px-3 py-3 text-left transition",
               read
@@ -118,6 +172,8 @@ export function NotificationDropdown({
   iconClassName?: string;
   variant?: "dashboard" | "superadmin";
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const [activeTab, setActiveTab] = useState<"unread" | "read">("unread");
@@ -198,8 +254,15 @@ export function NotificationDropdown({
     };
   }, [open]);
 
-  const handleRead = async (notification: NotificationItem) => {
+  const handleActivateNotification = async (notification: NotificationItem) => {
+    const href = getNotificationHref(notification, pathname);
+
     if (isRead(notification)) {
+      if (href) {
+        setOpen(false);
+        router.push(href);
+      }
+
       return;
     }
 
@@ -219,6 +282,11 @@ export function NotificationDropdown({
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, "Notification could not be updated"));
       void loadNotifications();
+    }
+
+    if (href) {
+      setOpen(false);
+      router.push(href);
     }
   };
 
@@ -311,7 +379,7 @@ export function NotificationDropdown({
               <NotificationList
                 emptyLabel={activeTab === "unread" ? "No unread notifications" : "No read notifications"}
                 items={currentItems}
-                onRead={handleRead}
+                onActivate={handleActivateNotification}
               />
             )}
           </div>

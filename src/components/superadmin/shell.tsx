@@ -310,23 +310,14 @@ export function SuperadminPageHeader({
 
       <div className="flex items-center gap-3">
         {actionArea}
-        <NotificationDropdown
-          variant="superadmin"
-          iconClassName="h-4 w-4"
-        />
+        <NotificationDropdown />
       </div>
     </div>
   );
 }
 
 export function SuperadminNotificationButton() {
-  return (
-    <NotificationDropdown
-      variant="superadmin"
-      className="relative inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[#E2E4ED] text-[#4D5572]"
-      iconClassName="h-4 w-4"
-    />
-  );
+  return <NotificationDropdown />;
 }
 
 export function SuperadminSearch({

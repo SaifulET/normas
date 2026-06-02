@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { dashboardCalendarSlots } from "./data";
 import { DashboardIcon } from "./icons";
@@ -248,7 +249,9 @@ function formatParticipant(user?: Schedule["investor"]) {
 }
 
 export function SchedulePage({ audience = "investor" }: SchedulePageProps) {
+  const searchParams = useSearchParams();
   const isSuperadmin = audience === "superadmin";
+  const selectedScheduleId = searchParams.get("scheduleId") ?? "";
   const initialSelectedDate = useMemo(() => new Date(), []);
   const [displayedMonth, setDisplayedMonth] = useState(
     new Date(initialSelectedDate.getFullYear(), initialSelectedDate.getMonth(), 1),
@@ -319,6 +322,54 @@ export function SchedulePage({ audience = "investor" }: SchedulePageProps) {
 
     return () => window.clearTimeout(timeoutId);
   }, [refreshSchedules]);
+
+  useEffect(() => {
+    if (!selectedScheduleId) {
+      return;
+    }
+
+    let active = true;
+
+    const openSelectedSchedule = async () => {
+      setScheduleDetailError("");
+      setLoadingScheduleDetails(true);
+
+      try {
+        const response = await getSchedule(selectedScheduleId);
+        const schedule = response.data;
+
+        if (!active || !schedule) {
+          return;
+        }
+
+        const scheduleStart = getScheduleStart(schedule);
+        const scheduleDate = scheduleStart ? new Date(scheduleStart) : null;
+
+        if (scheduleDate && !Number.isNaN(scheduleDate.getTime())) {
+          setSelectedDate(scheduleDate);
+          setDisplayedMonth(new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), 1));
+        }
+
+        setActiveSchedule(schedule);
+        setModalOpen(true);
+      } catch (error) {
+        if (active) {
+          setScheduleDetailError(getApiErrorMessage(error, "Unable to load schedule details."));
+          setModalOpen(true);
+        }
+      } finally {
+        if (active) {
+          setLoadingScheduleDetails(false);
+        }
+      }
+    };
+
+    void openSelectedSchedule();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedScheduleId]);
 
   const calendarDates = useMemo(() => {
     const year = displayedMonth.getFullYear();
