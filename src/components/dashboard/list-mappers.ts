@@ -25,6 +25,7 @@ export function mapApiListToCreatedListItem(item: ListItemResponse): CreatedList
     keyword: item.keyword ?? "",
     sector: item.sector ?? "",
     stage: item.stage ?? "",
+    status: item.status ?? "deactivated",
     title: item.title ?? "Untitled list",
     viewCount: item.viewCount ?? 0,
   };

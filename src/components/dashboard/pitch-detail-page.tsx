@@ -49,9 +49,11 @@ function UnlockedPitchDetails({ pitch }: { pitch: PitchDetail }) {
 
 export function DashboardPitchDetailPage({
   pitch,
+  showActions = true,
 }: {
   pitch: PitchDetail;
   relatedPitches: PitchDetail[];
+  showActions?: boolean;
 }) {
   return (
     <section className="min-h-screen rounded-[16px] bg-[#FCFCFD] px-4 pb-14 pt-8 text-[#243041] sm:px-6 lg:px-6 lg:pt-10">
@@ -84,7 +86,7 @@ export function DashboardPitchDetailPage({
               </span>
             </div>
 
-            <PitchActions authenticated listId={pitch.slug} />
+            {showActions ? <PitchActions authenticated listId={pitch.slug} /> : null}
           </div>
 
           <div className="space-y-4">

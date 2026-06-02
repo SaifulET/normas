@@ -63,6 +63,7 @@ function getReferenceId(notification: NotificationItem) {
   return (
     getMetadataString(notification, "scheduleId") ||
     getMetadataString(notification, "invoiceId") ||
+    getMetadataString(notification, "listId") ||
     getMetadataString(notification, "reportId") ||
     getMetadataString(notification, "userId")
   );
@@ -88,6 +89,18 @@ function getNotificationHref(notification: NotificationItem, pathname: string) {
     return `${dashboardPrefix}/schedule?scheduleId=${encodeURIComponent(referenceId)}`;
   }
 
+  if (referenceType === "list") {
+    if (isInvestee) {
+      return `/investee-dashboard/created-list/${encodeURIComponent(referenceId)}`;
+    }
+
+    if (!isSuperadmin && getMetadataString(notification, "action") === "restore") {
+      return `/pitch/${encodeURIComponent(referenceId)}`;
+    }
+
+    return isSuperadmin ? "/superadmin/dashboard" : dashboardPrefix;
+  }
+
   if (isSuperadmin && referenceType === "payment") {
     return `/superadmin/dashboard/payment-management/${encodeURIComponent(referenceId)}`;
   }
@@ -98,6 +111,20 @@ function getNotificationHref(notification: NotificationItem, pathname: string) {
 
   if (isSuperadmin && referenceType === "user") {
     return `/superadmin/dashboard/user-management/${encodeURIComponent(referenceId)}`;
+  }
+
+  if (referenceType === "report") {
+    const listId = getMetadataString(notification, "listId");
+
+    if (isInvestee && listId) {
+      return `/investee-dashboard/created-list/${encodeURIComponent(listId)}`;
+    }
+
+    if (listId && getMetadataString(notification, "action") === "restore") {
+      return `/pitch/${encodeURIComponent(listId)}`;
+    }
+
+    return dashboardPrefix;
   }
 
   return "";

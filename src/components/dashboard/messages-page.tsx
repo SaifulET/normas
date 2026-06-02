@@ -11,6 +11,7 @@ import {
   getConversationSidebar,
   getInvestmentConversation,
   markConversationSeen,
+  sendConversationMessage,
   type ConversationMessage,
   type ConversationMessagePagination,
   type ConversationSeenByEntry,
@@ -921,7 +922,11 @@ function createDefaultScheduleForm(title: string): ScheduleForm {
 export function MessagesPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const dashboardBase = pathname.startsWith("/investee-dashboard") ? "/investee-dashboard" : "/dashboard";
+  const dashboardBase = pathname.startsWith("/superadmin")
+    ? "/superadmin/dashboard"
+    : pathname.startsWith("/investee-dashboard")
+      ? "/investee-dashboard"
+      : "/dashboard";
   const startListId = searchParams.get("listId") ?? "";
 
   const [conversations, setConversations] = useState<SidebarConversation[]>([]);
@@ -1449,14 +1454,33 @@ export function MessagesPage() {
     }
   }
 
-  function handleSend() {
+  async function sendMessageWithHttpFallback(message: string) {
+    const response = await sendConversationMessage(selectedId, message);
+    const sentMessage = response.data?.message
+      ? {
+          ...normalizeSocketMessage(response.data.message, currentUserIdRef.current, otherUserIdRef.current, "outgoing"),
+          isSeen: false,
+        }
+      : undefined;
+
+    if (sentMessage) {
+      localOutgoingMessageIdsRef.current.add(sentMessage._id);
+      pendingOutgoingMessagesRef.current = pendingOutgoingMessagesRef.current.filter((pendingMessage) => pendingMessage.text !== message);
+      setMessages((current) => mergeConversationMessages(current, [sentMessage], {
+        preserveCurrentDirection: true,
+        preserveCurrentSeen: true,
+      }));
+    }
+
+    setDraft("");
+    void loadInbox(selectedId, { silent: true });
+  }
+
+  async function handleSend() {
     const message = draft.trim();
     const socket = socketRef.current;
 
-    if (!selectedId || !message || sending || !socket) {
-      if (!socket) {
-        setError("Live chat is not connected yet. Please try again in a moment.");
-      }
+    if (!selectedId || !message || sending) {
       return;
     }
 
@@ -1467,9 +1491,33 @@ export function MessagesPage() {
       { sentAt: Date.now(), text: message },
     ];
 
+    if (!socket?.connected) {
+      try {
+        await sendMessageWithHttpFallback(message);
+      } catch (sendError) {
+        setError(getApiErrorMessage(sendError, "Unable to send message. Please try again."));
+      } finally {
+        setSending(false);
+      }
+
+      return;
+    }
+
+    let acknowledged = false;
     const timeoutId = window.setTimeout(() => {
-      setSending(false);
-      setError("Message send timed out. Please try again.");
+      if (acknowledged) {
+        return;
+      }
+
+      acknowledged = true;
+
+      void sendMessageWithHttpFallback(message)
+        .catch((sendError) => {
+          setError(getApiErrorMessage(sendError, "Message send timed out. Please try again."));
+        })
+        .finally(() => {
+          setSending(false);
+        });
     }, 10000);
 
     socket.emit(
@@ -1479,6 +1527,11 @@ export function MessagesPage() {
         message,
       },
       (response: InvestmentSocketAck) => {
+        if (acknowledged) {
+          return;
+        }
+
+        acknowledged = true;
         window.clearTimeout(timeoutId);
 
         if (!response?.success) {

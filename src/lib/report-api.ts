@@ -71,6 +71,14 @@ export function updateReportStatus(reportId: string, status: ReportStatus) {
   });
 }
 
+export function takeReportAction(reportId: string, data: { action: "suspend" | "restore"; reason?: string }) {
+  return apiRequest<ReportEnvelope<Report>>({
+    data,
+    method: "PATCH",
+    url: `reports/${reportId}/action`,
+  });
+}
+
 export function deleteReport(reportId: string) {
   return apiRequest<ReportEnvelope<{ id?: string; message?: string }>>({
     method: "DELETE",

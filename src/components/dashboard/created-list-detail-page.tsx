@@ -10,8 +10,8 @@ import { sanitizeHtml } from "./html-utils";
 import { mapApiListToCreatedListItem } from "./list-mappers";
 import { loadCreatedLists, persistCreatedLists, type CreatedListItem } from "./created-list-storage";
 
-function statusLabel(active: boolean) {
-  return active ? "activated" : "deactivated";
+function statusLabel(item: CreatedListItem) {
+  return item.status || (item.active ? "activated" : "deactivated");
 }
 
 export function CreatedListDetailPage({ listId }: { listId: string }) {
@@ -23,6 +23,7 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
   const [loading, setLoading] = useState(true);
   const safeDescription = useMemo(() => sanitizeHtml(item?.description ?? ""), [item?.description]);
   const bannerUrl = item?.banner?.kind === "path" ? item.banner.src : null;
+  const isSuspended = item?.status === "suspended";
 
   useEffect(() => {
     let active = true;
@@ -81,6 +82,7 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
       const nextItem = {
         ...item,
         active: nextStatus === "activated",
+        status: nextStatus,
       };
 
       setItem(nextItem);
@@ -191,7 +193,7 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
                   <DashboardIcon name="views" className="h-3.5 w-3.5" />
                   {item.viewCount ?? 0} views
                 </span>
-                <span>{statusLabel(item.active)}</span>
+                <span>{statusLabel(item)}</span>
               </div>
 
               <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-[#1E2746]">{item.title}</h2>
@@ -235,13 +237,19 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
                 onClick={() => {
                   void handleStatusUpdate();
                 }}
-                disabled={isDeleting || isUpdatingStatus}
+                disabled={isDeleting || isUpdatingStatus || isSuspended}
                 className="inline-flex h-8 items-center rounded-[6px] bg-[#ED6A06] px-3 text-xs font-semibold text-white transition hover:bg-[#d35f05] disabled:cursor-wait disabled:opacity-60"
               >
-                {isUpdatingStatus ? "Updating..." : item.active ? "Deactivate" : "Activate"}
+                {isSuspended ? "Suspended by admin" : isUpdatingStatus ? "Updating..." : item.active ? "Deactivate" : "Activate"}
               </button>
             </div>
           </div>
+
+          {isSuspended ? (
+            <p className="rounded-[8px] border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B42318]">
+              This pitch is suspended by admin. Please correct the reported issue and inform the support center to restore it.
+            </p>
+          ) : null}
 
           <section className="space-y-4">
             <h3 className="text-base font-semibold text-[#1E2746]">Equipment Details</h3>

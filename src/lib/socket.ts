@@ -26,7 +26,7 @@ export function getSocket(token: string) {
     socketToken = token;
     socket = io(getSocketUrl(), {
       auth: { token },
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
       withCredentials: true,
     });
   }

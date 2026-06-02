@@ -32,6 +32,7 @@ function mapSavedLists(items: SavedListItemResponse[] = []) {
   return items
     .map(getSavedListItem)
     .filter((item): item is ListItemResponse => Boolean(item))
+    .filter((item) => !item.status || item.status === "activated")
     .map((item) => mapApiListToPitchDetail(item));
 }
 

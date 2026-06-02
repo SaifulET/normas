@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { AppIcon } from "@/components/home/icons";
 import { CollapsibleDetailHtml } from "@/components/pitch/collapsible-detail-html";
 import { getApiErrorMessage } from "@/lib/api";
-import { getReport, type Report } from "@/lib/report-api";
+import { getReport, takeReportAction, type Report } from "@/lib/report-api";
 import {
   SuperadminBackLink,
   SuperadminNotificationButton,
@@ -127,17 +127,71 @@ function getPitchFundingTarget(report?: Report | null) {
   return report?.list && typeof report.list === "object" ? formatFundingTarget(report.list.fundingTarget) : "Not available";
 }
 
+function getPitchStatus(report?: Report | null) {
+  return report?.list && typeof report.list === "object" ? report.list.status || "" : "";
+}
+
 export function SuperadminReportDetailClient({
   reportId,
 }: {
   reportId: string;
 }) {
+  const [actionMessage, setActionMessage] = useState("");
+  const [actionReason, setActionReason] = useState("");
+  const [actionSaving, setActionSaving] = useState(false);
+  const [showActionForm, setShowActionForm] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState<Report | null>(null);
   const pitchImage = getPitchImage(report);
   const pitchDescription = getPitchDescription(report);
   const pitchDetails = getPitchDetails(report);
+  const isSuspended = getPitchStatus(report) === "suspended";
+
+  const openActionForm = () => {
+    setActionMessage("");
+    setShowActionForm(true);
+  };
+
+  const closeActionForm = () => {
+    setActionReason("");
+    setShowActionForm(false);
+  };
+
+  const handleReportAction = async () => {
+    if (!report?._id || actionSaving) {
+      return;
+    }
+
+    const action = isSuspended ? "restore" : "suspend";
+
+    if (!isSuspended && !actionReason.trim()) {
+      setActionMessage("Please add a suspension reason so the investee knows what to correct.");
+      return;
+    }
+
+    setActionSaving(true);
+    setActionMessage("");
+
+    try {
+      const response = await takeReportAction(report._id, {
+        action,
+        reason: actionReason.trim(),
+      });
+
+      setReport(response.data ?? report);
+      closeActionForm();
+      setActionMessage(
+        isSuspended
+          ? "Pitch restored. The investee and reporter were notified."
+          : "Pitch suspended. The reporter and investee were notified.",
+      );
+    } catch (error) {
+      setActionMessage(getApiErrorMessage(error, "Unable to update pitch status."));
+    } finally {
+      setActionSaving(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -246,11 +300,11 @@ export function SuperadminReportDetailClient({
               alt={getPitchTitle(report)}
               width={1360}
               height={760}
-              className="h-[260px] w-full rounded-[8px] object-cover sm:h-[330px]"
+              className="h-[50vh] w-full rounded-[8px] object-fit md:h-[60vh] lg:h-[70vh]"
             />
           ) : null}
 
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between pl-[32px]">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#7D86A2]">
                 <span className="inline-flex items-center gap-1">
@@ -282,15 +336,75 @@ export function SuperadminReportDetailClient({
               </div>
             </div>
 
-            <button
-              type="button"
-              className="inline-flex h-9 shrink-0 items-center justify-center rounded-[8px] bg-[#324B6B] px-4 text-[12px] font-medium text-white"
-            >
-              Suspend Content
-            </button>
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={openActionForm}
+                disabled={actionSaving}
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-[8px] bg-[#324B6B] px-4 text-[12px] font-medium text-white transition hover:bg-[#273D59] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSuspended ? "Restore Content" : "Suspend Content"}
+              </button>
+
+              {showActionForm ? (
+                <form
+                  className="absolute right-0 top-[calc(100%+10px)] z-20 w-[320px] rounded-[8px] border border-[#DDE4EF] bg-white p-3 shadow-[0_16px_44px_-34px_rgba(30,39,70,0.45)]"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleReportAction();
+                  }}
+                >
+                  <label htmlFor="report-action-reason" className="text-[12px] font-semibold text-[#27324A]">
+                    {isSuspended ? "Restore note" : "Suspension reason"}
+                  </label>
+                  <textarea
+                    id="report-action-reason"
+                    value={actionReason}
+                    onChange={(event) => setActionReason(event.target.value)}
+                    rows={3}
+                    maxLength={250}
+                    placeholder={
+                      isSuspended
+                        ? "Add the support-center note for this restore"
+                        : "Tell the investee what issue must be corrected"
+                    }
+                    className="mt-2 w-full resize-none rounded-[7px] border border-[#D9E1EC] px-3 py-2 text-[13px] text-[#202350] outline-none transition placeholder:text-[#9AA4B8] focus:border-[#314B6B]"
+                  />
+                  <div className="mt-3 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={closeActionForm}
+                      disabled={actionSaving}
+                      className="inline-flex h-8 items-center justify-center rounded-[6px] border border-[#DDE4EF] px-3 text-[12px] font-semibold text-[#526079] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={actionSaving}
+                      className="inline-flex h-8 items-center justify-center rounded-[6px] bg-[#ED6A06] px-3 text-[12px] font-semibold text-white transition hover:bg-[#d35f05] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {actionSaving
+                        ? isSuspended
+                          ? "Restoring..."
+                          : "Suspending..."
+                        : isSuspended
+                          ? "Restore"
+                          : "Suspend"}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+            </div>
           </div>
 
-          <div className="max-w-[920px] space-y-6">
+          {actionMessage ? (
+            <p className="rounded-[8px] border border-[#DDE4EF] bg-white px-4 py-3 text-[13px] text-[#324B6B]">
+              {actionMessage}
+            </p>
+          ) : null}
+
+          <div className="max-w-[920px] space-y-6  pl-[32px]">
             <div>
               <h3 className="text-[16px] font-semibold text-[#27324A]">Equipment Details</h3>
               <div className="mt-4 text-[14px] leading-7 text-[#6B748F]">

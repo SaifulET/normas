@@ -8,7 +8,7 @@ export function generateStaticParams() {
   return getPitchSlugs().map((slug) => ({ slug }));
 }
 
-export default async function InvesteeDashboardPitchPage({
+export default async function SuperadminDashboardPitchPage({
   params,
 }: {
   params: Promise<{ slug: string }>;

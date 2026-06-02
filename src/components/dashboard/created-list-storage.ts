@@ -28,6 +28,7 @@ export type CreatedListItem = {
   keyword: string;
   sector: string;
   stage: string;
+  status?: "activated" | "deactivated" | "suspended" | string;
   title: string;
   viewCount?: number;
 };
@@ -51,6 +52,7 @@ const seededCreatedLists: CreatedListItem[] = [
       "AI-powered carbon accounting for SMEs with investor-ready reporting, automated emissions workflows, and audit-friendly summaries.",
     createdAt: "2026-04-22T08:00:00.000Z",
     active: true,
+    status: "activated",
     banner: { kind: "path", src: "/howitwork.png" },
     additionalDetails: [
       { label: "Asking Price", value: "$45,000" },
@@ -70,6 +72,7 @@ const seededCreatedLists: CreatedListItem[] = [
       "Distributed solar infrastructure financing platform for industrial estates with visibility, performance tracking, and blended capital workflows.",
     createdAt: "2026-04-23T08:00:00.000Z",
     active: true,
+    status: "activated",
     banner: { kind: "path", src: "/howitwork.png" },
     additionalDetails: [
       { label: "Deployment Stage", value: "Pilot" },
@@ -89,6 +92,7 @@ const seededCreatedLists: CreatedListItem[] = [
       "Climate-smart supply network connecting growers and buyers with traceability, logistics coordination, and fair-value market access.",
     createdAt: "2026-04-24T08:00:00.000Z",
     active: true,
+    status: "activated",
     banner: { kind: "path", src: "/howitwork.png" },
     additionalDetails: [
       { label: "Primary Users", value: "Growers & Buyers" },
@@ -181,6 +185,7 @@ function hydrateCreatedList(raw: unknown): CreatedListItem | null {
     description: source.description,
     createdAt: source.createdAt,
     active: source.active,
+    status: typeof source.status === "string" ? source.status : source.active ? "activated" : "deactivated",
     additionalDetails,
     banner: isCreatedListBanner(source.banner) ? source.banner : null,
   };
@@ -205,12 +210,16 @@ function normalizeActiveState(items: CreatedListItem[]) {
   return items.map((item) => {
     if (item.active && activeCount < MAX_ACTIVE_CREATED_LISTS) {
       activeCount += 1;
-      return item;
+      return {
+        ...item,
+        status: item.status || "activated",
+      };
     }
 
     return {
       ...item,
       active: false,
+      status: item.status === "suspended" ? "suspended" : "deactivated",
     };
   });
 }
