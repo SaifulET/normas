@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getApiErrorMessage } from "@/lib/api";
 import { getSavedListStatus, removeSavedList, saveList } from "@/lib/list-api";
+import { createReport } from "@/lib/report-api";
 import { useAuthStore } from "@/store";
 
 function QueryIcon() {
@@ -55,10 +56,13 @@ export function PitchActions({
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportSaving, setReportSaving] = useState(false);
   const [reportText, setReportText] = useState("");
 
   const queryHref = authenticated ? `/dashboard/messages?listId=${encodeURIComponent(listId)}` : "/signup";
   const canSaveList = authenticated && userRole === "investor";
+  const canReport = authenticated && userRole === "investor";
   const compact = variant === "dashboard";
 
   useEffect(() => {
@@ -99,12 +103,58 @@ export function PitchActions({
   }, [canSaveList, listId]);
 
   function closeReportModal() {
+    if (reportSaving) {
+      return;
+    }
+
     setReportModalOpen(false);
   }
 
-  function submitReport() {
-    setReportModalOpen(false);
-    setReportText("");
+  function handleReportClick() {
+    if (!authenticated) {
+      setReportMessage("Please sign in as an investor to report this pitch.");
+      return;
+    }
+
+    if (userRole !== "investor") {
+      setReportMessage("Only investor accounts can report a pitch.");
+      return;
+    }
+
+    setReportMessage("");
+    setReportModalOpen(true);
+  }
+
+  async function submitReport() {
+    const description = reportText.trim();
+
+    if (!canReport) {
+      setReportMessage("Only investor accounts can report a pitch.");
+      setReportModalOpen(false);
+      return;
+    }
+
+    if (!description) {
+      setReportMessage("Please write a short report before submitting.");
+      return;
+    }
+
+    setReportSaving(true);
+    setReportMessage("");
+
+    try {
+      await createReport({
+        description,
+        listId,
+      });
+      setReportModalOpen(false);
+      setReportText("");
+      setReportMessage("Report submitted. Super admin has been notified.");
+    } catch (error) {
+      setReportMessage(getApiErrorMessage(error, "Unable to submit report. Please try again."));
+    } finally {
+      setReportSaving(false);
+    }
   }
 
   async function handleSaveClick() {
@@ -173,7 +223,7 @@ export function PitchActions({
 
           <button
             type="button"
-            onClick={() => setReportModalOpen(true)}
+            onClick={handleReportClick}
             className={
               compact
                 ? "inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-[#141B34] transition hover:bg-[#F3F4F6]"
@@ -188,6 +238,11 @@ export function PitchActions({
         {saveMessage ? (
           <p className="mt-2 max-w-[250px] text-right text-xs font-medium text-[#5F6B7A] lg:ml-auto">
             {saveMessage}
+          </p>
+        ) : null}
+        {reportMessage ? (
+          <p className="mt-2 max-w-[290px] text-right text-xs font-medium text-[#5F6B7A] lg:ml-auto">
+            {reportMessage}
           </p>
         ) : null}
       </div>
@@ -216,22 +271,30 @@ export function PitchActions({
               className="mt-4 h-[236px] w-full resize-none rounded-[10px] bg-[#F3F4F6] px-4 py-3 text-sm text-[#1F2937] outline-none placeholder:text-[#8B919C]"
             />
 
+            {reportMessage ? (
+              <p className="mt-2 text-xs font-medium text-[#5F6B7A]">
+                {reportMessage}
+              </p>
+            ) : null}
+
             <div className="mt-auto flex items-center justify-between gap-3">
               <button
-                type="button"
-                onClick={closeReportModal}
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-[10px] bg-[#F3F4F6] text-sm font-medium text-[#1F2937] transition hover:bg-[#E8EAEE]"
-              >
-                Cancel
-              </button>
+              type="button"
+              onClick={closeReportModal}
+              disabled={reportSaving}
+              className="inline-flex h-11 flex-1 items-center justify-center rounded-[10px] bg-[#F3F4F6] text-sm font-medium text-[#1F2937] transition hover:bg-[#E8EAEE]"
+            >
+              Cancel
+            </button>
               <button
-                type="button"
-                onClick={submitReport}
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-[10px] bg-[#314B6B] text-sm font-medium text-white transition hover:bg-[#243B5A]"
-              >
-                Done
-              </button>
-            </div>
+              type="button"
+              onClick={submitReport}
+              disabled={reportSaving}
+              className="inline-flex h-11 flex-1 items-center justify-center rounded-[10px] bg-[#314B6B] text-sm font-medium text-white transition hover:bg-[#243B5A] disabled:cursor-wait disabled:opacity-70"
+            >
+              {reportSaving ? "Submitting..." : "Done"}
+            </button>
+          </div>
           </div>
         </div>
       ) : null}

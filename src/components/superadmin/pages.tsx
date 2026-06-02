@@ -33,6 +33,7 @@ import { FaqSettingsClient } from "./faq-settings-client";
 import { SuperadminAnalyticsClient, SuperadminDashboardOverviewClient } from "./overview-analytics-client";
 import { SuperadminUserDetailClient } from "./admin-user-detail-client";
 import { SuperadminUserManagementClient } from "./admin-users-client";
+import { SuperadminReportDetailClient } from "./report-detail-client";
 
 function SectionCard({
   children,
@@ -392,6 +393,10 @@ export function SuperadminReportDetailPage({
 }: {
   slug: string;
 }) {
+  if (/^[a-f\d]{24}$/i.test(slug)) {
+    return <SuperadminReportDetailClient reportId={slug} />;
+  }
+
   const reportResult = getSuperadminReport(slug);
 
   if (!reportResult) {

@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SuperadminReportRecord, SuperadminSupportRecord } from "./data";
 import { getSuperadminUser } from "./data";
 import { SuperadminAvatar, SuperadminDotsButton, SuperadminStatusBadge } from "./shell";
+import { getApiErrorMessage } from "@/lib/api";
+import { getReports, type Report } from "@/lib/report-api";
 
 function SearchIcon() {
   return (
@@ -293,37 +295,156 @@ function TableFooter() {
   );
 }
 
+type ReportTableRecord = {
+  createdAt?: string;
+  imageSrc?: string;
+  reportByEmail: string;
+  reportByName: string;
+  reportedEmail: string;
+  reportedName: string;
+  slug: string;
+  status: "Resolved" | "Dismissed" | "Pending";
+  type: string;
+};
+
+function normalizeReportStatus(status?: string): ReportTableRecord["status"] {
+  if (status === "solved") {
+    return "Resolved";
+  }
+
+  if (status === "dismiss") {
+    return "Dismissed";
+  }
+
+  return "Pending";
+}
+
+function getPopulatedUserName(user: Report["user"]) {
+  if (user && typeof user === "object") {
+    return user.name?.trim() || user.email?.trim() || "Unknown user";
+  }
+
+  return "Unknown user";
+}
+
+function getPopulatedUserEmail(user: Report["user"]) {
+  return user && typeof user === "object" ? user.email?.trim() || "" : "";
+}
+
+function getPopulatedListTitle(list: Report["list"]) {
+  return list && typeof list === "object" ? list.title?.trim() || "Reported pitch" : "Reported pitch";
+}
+
+function getPopulatedListOwner(list: Report["list"]) {
+  if (!list || typeof list !== "object" || !list.user || typeof list.user !== "object") {
+    return "";
+  }
+
+  return list.user.name?.trim() || list.user.email?.trim() || "";
+}
+
+function mapApiReportToTableRecord(report: Report): ReportTableRecord {
+  const reportedTitle = getPopulatedListTitle(report.list);
+  const listOwner = getPopulatedListOwner(report.list);
+
+  return {
+    createdAt: report.createdAt,
+    imageSrc: report.list && typeof report.list === "object" ? report.list.bannerImage || "" : "",
+    reportByEmail: getPopulatedUserEmail(report.user),
+    reportByName: getPopulatedUserName(report.user),
+    reportedEmail: listOwner,
+    reportedName: reportedTitle,
+    slug: report._id,
+    status: normalizeReportStatus(report.status),
+    type: "Pitch",
+  };
+}
+
+function mapStaticReportToTableRecord(record: SuperadminReportRecord): ReportTableRecord | null {
+  const reporter = getSuperadminUser(record.reportBySlug);
+  const reported = getSuperadminUser(record.reportedUserSlug);
+
+  if (!reporter || !reported) {
+    return null;
+  }
+
+  return {
+    imageSrc: record.imageSrc,
+    reportByEmail: reporter.email,
+    reportByName: reporter.name,
+    reportedEmail: reported.email,
+    reportedName: reported.name,
+    slug: record.slug,
+    status: record.status,
+    type: record.type,
+  };
+}
+
 export function SuperadminReportsPanel({
   records,
 }: {
   records: SuperadminReportRecord[];
 }) {
   const [query, setQuery] = useState("");
+  const [apiReports, setApiReports] = useState<ReportTableRecord[]>([]);
+  const [loadingReports, setLoadingReports] = useState(true);
+  const [reportsError, setReportsError] = useState("");
   const [status, setStatus] = useState<"All" | "Dismissed" | "Pending" | "Resolved">("All");
+  const fallbackRecords = useMemo(
+    () => records.map(mapStaticReportToTableRecord).filter((record): record is ReportTableRecord => Boolean(record)),
+    [records],
+  );
+  const tableRecords = apiReports.length > 0 || !reportsError ? apiReports : fallbackRecords;
+
+  useEffect(() => {
+    let active = true;
+
+    const loadReports = async () => {
+      setLoadingReports(true);
+      setReportsError("");
+
+      try {
+        const response = await getReports();
+        const nextReports = (response.data ?? []).map(mapApiReportToTableRecord);
+
+        if (active) {
+          setApiReports(nextReports);
+        }
+      } catch (error) {
+        if (active) {
+          setReportsError(getApiErrorMessage(error, "Unable to load backend reports."));
+          setApiReports([]);
+        }
+      } finally {
+        if (active) {
+          setLoadingReports(false);
+        }
+      }
+    };
+
+    void loadReports();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredRecords = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return records.filter((record) => {
-      const reporter = getSuperadminUser(record.reportBySlug);
-      const reported = getSuperadminUser(record.reportedUserSlug);
-
-      if (!reporter || !reported) {
-        return false;
-      }
-
+    return tableRecords.filter((record) => {
       const matchesStatus = status === "All" ? true : record.status === status;
       const matchesQuery =
         !normalizedQuery ||
-        reporter.name.toLowerCase().includes(normalizedQuery) ||
-        reporter.email.toLowerCase().includes(normalizedQuery) ||
-        reported.name.toLowerCase().includes(normalizedQuery) ||
-        reported.email.toLowerCase().includes(normalizedQuery) ||
+        record.reportByName.toLowerCase().includes(normalizedQuery) ||
+        record.reportByEmail.toLowerCase().includes(normalizedQuery) ||
+        record.reportedName.toLowerCase().includes(normalizedQuery) ||
+        record.reportedEmail.toLowerCase().includes(normalizedQuery) ||
         record.type.toLowerCase().includes(normalizedQuery);
 
       return matchesStatus && matchesQuery;
     });
-  }, [query, records, status]);
+  }, [query, status, tableRecords]);
 
   return (
     <div className="space-y-6">
@@ -341,6 +462,12 @@ export function SuperadminReportsPanel({
         <ReportStatusFilter value={status} onChange={setStatus} />
       </div>
 
+      {reportsError ? (
+        <div className="rounded-[10px] border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B42318]">
+          {reportsError}
+        </div>
+      ) : null}
+
       <div className="overflow-visible rounded-[14px] border border-[#E6E9F0] bg-white">
         <div className="grid grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
           <p>Report by</p>
@@ -350,31 +477,28 @@ export function SuperadminReportsPanel({
           <p className="text-right">Actions</p>
         </div>
 
-        {filteredRecords.map((record) => {
-          const reporter = getSuperadminUser(record.reportBySlug);
-          const reported = getSuperadminUser(record.reportedUserSlug);
-
-          if (!reporter || !reported) {
-            return null;
-          }
-
-          return (
+        {loadingReports ? (
+          <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">Loading reports...</div>
+        ) : filteredRecords.length === 0 ? (
+          <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">No reports found.</div>
+        ) : (
+          filteredRecords.map((record) => (
             <div
               key={record.slug}
               className="grid grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
             >
               <div className="flex items-center gap-3">
-                <SuperadminAvatar from={reporter.avatarFrom} to={reporter.avatarTo} initials={reporter.initials} size={28} />
+                <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={record.reportByName.slice(0, 2).toUpperCase()} size={28} />
                 <div>
-                  <p className="text-[13px] font-medium text-[#202350]">{reporter.name}</p>
-                  <p className="text-[11px] text-[#8A91AB]">{reporter.email}</p>
+                  <p className="text-[13px] font-medium text-[#202350]">{record.reportByName}</p>
+                  <p className="text-[11px] text-[#8A91AB]">{record.reportByEmail || "No email"}</p>
                 </div>
               </div>
               <Link href={`/superadmin/dashboard/reports/${record.slug}`} className="flex items-center gap-3">
-                <SuperadminAvatar from={reported.avatarFrom} to={reported.avatarTo} initials={reported.initials} size={28} />
+                <SuperadminAvatar from="#22C55E" to="#38BDF8" initials={record.reportedName.slice(0, 2).toUpperCase()} size={28} />
                 <div>
-                  <p className="text-[13px] font-medium text-[#202350]">{reported.name}</p>
-                  <p className="text-[11px] text-[#8A91AB]">{reported.email}</p>
+                  <p className="text-[13px] font-medium text-[#202350]">{record.reportedName}</p>
+                  <p className="text-[11px] text-[#8A91AB]">{record.reportedEmail || "Reported pitch"}</p>
                 </div>
               </Link>
               <p className="text-[13px] text-[#34395B]">{record.type}</p>
@@ -385,8 +509,8 @@ export function SuperadminReportsPanel({
                 <ReportActionMenu slug={record.slug} />
               </div>
             </div>
-          );
-        })}
+          ))
+        )}
 
         <TableFooter />
       </div>
