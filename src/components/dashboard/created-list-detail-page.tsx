@@ -168,10 +168,10 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
       ) : null}
 
       <article className="space-y-7">
-        <div className="overflow-hidden rounded-[8px] border border-[#E6EBF3] bg-[#EEF3FA]">
+        <div className="overflow-hidden rounded-[8px] border border-[#E6EBF3] bg-[#F3F6FA]">
           {bannerUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={bannerUrl} alt={item.title} className="h-[240px] w-full object-cover sm:h-[320px]" />
+            <img src={bannerUrl} alt={item.title} className="h-[50vh] w-full object-fit md:h-[60vh] lg:h-[70vh]" />
           ) : (
             <div className="flex h-[240px] items-center justify-center text-sm text-[#98A2B3] sm:h-[320px]">
               No banner uploaded
