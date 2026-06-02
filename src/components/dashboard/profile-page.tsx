@@ -1460,7 +1460,7 @@ export function ProfilePage() {
     <section className="space-y-6">
       <DashboardPageHeader title="Profile" subtitle="Edit your profile section here" />
 
-      <div className="mx-auto max-w-[760px] space-y-6">
+      <div className=" space-y-6">
         <ProfileSummary
           error={accountUpdateError}
           form={accountForm}
