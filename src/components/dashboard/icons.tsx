@@ -20,6 +20,7 @@ type DashboardIconName =
   | "schedule"
   | "settings"
   | "spark"
+  | "support"
   | "upgrade"
   | "views"
   | "website";
@@ -176,6 +177,15 @@ export function DashboardIcon({
       return (
         <svg {...iconProps(className)}>
           <path d="m12 4 1.6 4.4L18 10l-4.4 1.6L12 16l-1.6-4.4L6 10l4.4-1.6Z" />
+        </svg>
+      );
+    case "support":
+      return (
+        <svg {...iconProps(className)}>
+          <path d="M5.5 13v-1a6.5 6.5 0 0 1 13 0v1" />
+          <path d="M5.5 13.5h2.2v4H5.5a2 2 0 0 1-2-2 2 2 0 0 1 2-2Z" />
+          <path d="M18.5 13.5h-2.2v4h2.2a2 2 0 0 0 2-2 2 2 0 0 0-2-2Z" />
+          <path d="M16.3 17.5v.4a2.6 2.6 0 0 1-2.6 2.6h-1.4" />
         </svg>
       );
     case "upgrade":

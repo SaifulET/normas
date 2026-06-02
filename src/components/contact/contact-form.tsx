@@ -8,6 +8,7 @@ import { submitSupportRequest } from "@/lib/support-api";
 const initialForm = {
   email: "",
   message: "",
+  name: "",
   subject: "",
 };
 
@@ -32,6 +33,7 @@ export function ContactForm() {
     const payload = {
       email: form.email.trim(),
       message: form.message.trim(),
+      name: form.name.trim(),
       subject: form.subject.trim(),
     };
 
@@ -57,6 +59,15 @@ export function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-10 space-y-4">
+      <input
+        type="text"
+        name="name"
+        value={form.name}
+        onChange={(event) => updateField("name", event.target.value)}
+        placeholder="Name"
+        autoComplete="name"
+        className="h-14 w-full rounded-none border-0 bg-[#F6F7FA] px-5 text-[15px] text-[#1F2937] outline-none placeholder:text-[#7A8190]"
+      />
       <input
         type="email"
         name="email"

@@ -4,12 +4,10 @@ import { notFound } from "next/navigation";
 import {
   getSuperadminPayment,
   getSuperadminReport,
-  getSuperadminSupportThread,
   getSuperadminUser,
   superadminPayments,
   superadminReports,
   superadminSettingsTabs,
-  superadminSupportThreads,
 } from "./data";
 import {
   SuperadminAvatar,
@@ -23,9 +21,8 @@ import {
 import {
   SuperadminReportDetailActionMenu,
   SuperadminReportsPanel,
-  SuperadminSupportPanel,
 } from "./report-controls";
-import { PaymentDetailClient, SupportMessageDetailClient } from "./detail-interactions";
+import { PaymentDetailClient } from "./detail-interactions";
 import { SuperadminPaymentActionMenu } from "./user-action-menu";
 import { SuperadminSettingsGeneralClient, SuperadminSettingsPricingClient, SuperadminSettingsShell } from "./settings-general-client";
 import { LegalSettingsClient } from "./legal-settings-client";
@@ -34,6 +31,7 @@ import { SuperadminAnalyticsClient, SuperadminDashboardOverviewClient } from "./
 import { SuperadminUserDetailClient } from "./admin-user-detail-client";
 import { SuperadminUserManagementClient } from "./admin-users-client";
 import { SuperadminReportDetailClient } from "./report-detail-client";
+import { SuperadminSupportCenterClient, SuperadminSupportDetailClient } from "./support-center-client";
 
 function SectionCard({
   children,
@@ -698,12 +696,7 @@ export function SuperadminReportDetailPage({
 }
 
 export function SuperadminSupportCenterPage() {
-  return (
-    <div className="space-y-6">
-      <SuperadminPageHeader title="Support Center" subtitle="Manage customer support here" />
-      <SuperadminSupportPanel records={superadminSupportThreads} />
-    </div>
-  );
+  return <SuperadminSupportCenterClient />;
 }
 
 export function SuperadminSupportDetailPage({
@@ -711,34 +704,7 @@ export function SuperadminSupportDetailPage({
 }: {
   slug: string;
 }) {
-  const thread = getSuperadminSupportThread(slug);
-
-  if (!thread) {
-    notFound();
-  }
-
-  const user = getSuperadminUser(thread.userSlug);
-
-  if (!user) {
-    notFound();
-  }
-
-  return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <SuperadminBackLink href="/superadmin/dashboard/support-center" />
-          <div>
-            <h1 className="text-[20px] font-semibold tracking-[-0.04em] text-[#202350]">View Support message</h1>
-            <p className="mt-1 text-[13px] text-[#69729A]">This section will help you to view message of that client</p>
-          </div>
-        </div>
-        <SuperadminNotificationButton />
-      </div>
-
-      <SupportMessageDetailClient thread={thread} user={user} />
-    </div>
-  );
+  return <SuperadminSupportDetailClient conversationId={slug} />;
 }
 
 export function SuperadminSettingsGeneralPage() {

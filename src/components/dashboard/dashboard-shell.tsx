@@ -53,7 +53,7 @@ function getRoleDashboardHref(pathname: string, role?: string) {
 
   if (normalizedRole === "investee" && pathname.startsWith("/dashboard")) {
     const suffix = pathname.slice("/dashboard".length);
-    const allowedSuffixes = ["", "/messages", "/profile", "/schedule", "/upgrade-plan"];
+    const allowedSuffixes = ["", "/messages", "/profile", "/schedule", "/support-center", "/upgrade-plan"];
     const canUseSuffix = allowedSuffixes.some((item) => suffix === item || suffix.startsWith(`${item}/`));
 
     return canUseSuffix ? `/investee-dashboard${suffix}` : "/investee-dashboard";
@@ -61,7 +61,7 @@ function getRoleDashboardHref(pathname: string, role?: string) {
 
   if (normalizedRole === "investor" && pathname.startsWith("/investee-dashboard")) {
     const suffix = pathname.slice("/investee-dashboard".length);
-    const allowedSuffixes = ["", "/messages", "/profile", "/schedule", "/upgrade-plan"];
+    const allowedSuffixes = ["", "/messages", "/profile", "/schedule", "/support-center", "/upgrade-plan"];
     const canUseSuffix = allowedSuffixes.some((item) => suffix === item || suffix.startsWith(`${item}/`));
 
     return canUseSuffix ? `/dashboard${suffix}` : "/dashboard";
