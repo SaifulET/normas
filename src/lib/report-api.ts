@@ -9,7 +9,20 @@ export type ReportUser = ListUser & {
 
 export type ReportList = Pick<
   ListItemResponse,
-  "_id" | "bannerImage" | "country" | "createdAt" | "fundingTarget" | "sector" | "stage" | "status" | "title" | "updatedAt" | "user" | "viewCount"
+  | "_id"
+  | "additionalDetails"
+  | "bannerImage"
+  | "country"
+  | "createdAt"
+  | "description"
+  | "fundingTarget"
+  | "sector"
+  | "stage"
+  | "status"
+  | "title"
+  | "updatedAt"
+  | "user"
+  | "viewCount"
 >;
 
 export type Report = {
