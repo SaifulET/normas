@@ -153,7 +153,7 @@ function NotificationList({
   }
 
   return (
-    <div className="max-h-[260px] space-y-2 overflow-y-auto pr-1">
+    <div className="max-h-[calc(100dvh-260px)] space-y-2 overflow-y-auto pr-1 sm:max-h-[260px]">
       {items.map((notification) => {
         const read = isRead(notification);
 
@@ -370,7 +370,7 @@ export function NotificationDropdown({
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-[min(360px,calc(100vw-32px))] rounded-[8px] border border-[#E2E8F0] bg-white p-3 text-[#1E2746] shadow-[0_24px_80px_-44px_rgba(15,23,42,0.55)]">
+        <div className="fixed left-3 right-3 top-[76px] z-50 max-h-[calc(100dvh-92px)] overflow-hidden rounded-[8px] border border-[#E2E8F0] bg-white p-3 text-[#1E2746] shadow-[0_24px_80px_-44px_rgba(15,23,42,0.55)] sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+10px)] sm:w-[min(360px,calc(100vw-32px))] sm:max-h-none">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-[#1E2746]">Notifications</p>
