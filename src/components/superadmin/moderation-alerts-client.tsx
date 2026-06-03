@@ -18,6 +18,8 @@ import { SuperadminPageHeader, SuperadminStatusBadge } from "./shell";
 
 type AlertFilter = "pending" | "reviewed" | "all";
 
+const PAGE_LIMIT = 8;
+
 function formatDate(value?: string | null) {
   if (!value) {
     return "";
@@ -55,6 +57,13 @@ export function ModerationAlertsClient() {
   const router = useRouter();
   const [alerts, setAlerts] = useState<ModerationAlert[]>([]);
   const [filter, setFilter] = useState<AlertFilter>("pending");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    limit: PAGE_LIMIT,
+    page: 1,
+    total: 0,
+    totalPages: 1,
+  });
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
   const [error, setError] = useState("");
@@ -64,21 +73,31 @@ export function ModerationAlertsClient() {
   const filteredStatus = filter === "all" ? undefined : filter;
 
   const counts = useMemo(() => ({
-    total: alerts.length,
+    total: pagination.total,
     pending: pendingCount,
-  }), [alerts.length, pendingCount]);
+  }), [pagination.total, pendingCount]);
+
+  const pageStart = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
+  const pageEnd = Math.min(pagination.page * pagination.limit, pagination.total);
 
   const loadAlerts = async () => {
     setLoading(true);
 
     try {
       const response = await getModerationAlerts({
-        limit: 50,
+        limit: PAGE_LIMIT,
+        page,
         status: filteredStatus,
       });
 
       startTransition(() => {
         setAlerts(response.data.alerts ?? []);
+        setPagination({
+          limit: response.data.pagination?.limit ?? PAGE_LIMIT,
+          page: response.data.pagination?.page ?? page,
+          total: response.data.pagination?.total ?? response.data.alerts?.length ?? 0,
+          totalPages: response.data.pagination?.totalPages ?? 1,
+        });
         setPendingCount(response.data.pendingCount ?? 0);
         setError("");
       });
@@ -92,7 +111,7 @@ export function ModerationAlertsClient() {
   useEffect(() => {
     void loadAlerts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredStatus]);
+  }, [filteredStatus, page]);
 
   const runAction = async (alertId: string, action: (id: string, note?: string) => Promise<unknown>) => {
     if (savingId) {
@@ -137,7 +156,10 @@ export function ModerationAlertsClient() {
             <button
               key={item}
               type="button"
-              onClick={() => setFilter(item)}
+              onClick={() => {
+                setPage(1);
+                setFilter(item);
+              }}
               className={`h-9 rounded-[8px] px-4 text-xs font-medium transition ${
                 filter === item ? "bg-[#2B425D] text-white" : "text-[#5B6477] hover:bg-[#F4F6FA]"
               }`}
@@ -321,6 +343,39 @@ export function ModerationAlertsClient() {
             );
           })
         )}
+
+        {!loading && alerts.length > 0 ? (
+          <div className="flex items-center justify-between border-t border-[#EEF1F6] px-4 py-3 text-[10px] text-[#727A96]">
+            <p>
+              Showing {pageStart}-{pageEnd} of {pagination.total} alerts
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={pagination.page <= 1 || loading}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                className={`inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#E4E8F0] px-2 ${
+                  pagination.page <= 1 || loading ? "text-[#C2C8D6]" : "text-[#4A5271] hover:bg-[#F7F8FC]"
+                }`}
+              >
+                Prev
+              </button>
+              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#CFD5E3] bg-white px-2 text-[#4A5271]">
+                {pagination.page} / {pagination.totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={pagination.page >= pagination.totalPages || loading}
+                onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
+                className={`inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#E4E8F0] px-2 ${
+                  pagination.page >= pagination.totalPages || loading ? "text-[#C2C8D6]" : "text-[#4A5271] hover:bg-[#F7F8FC]"
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

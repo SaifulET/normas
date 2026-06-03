@@ -8,6 +8,8 @@ import { SuperadminAvatar, SuperadminDotsButton, SuperadminStatusBadge } from ".
 import { getApiErrorMessage } from "@/lib/api";
 import { getReports, type Report } from "@/lib/report-api";
 
+const PAGE_LIMIT = 8;
+
 function SearchIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -273,22 +275,53 @@ export function SuperadminReportDetailActionMenu() {
   );
 }
 
-function TableFooter() {
+function TableFooter({
+  itemLabel = "items",
+  onNext,
+  onPrevious,
+  page,
+  pageEnd,
+  pageStart,
+  total,
+  totalPages,
+}: {
+  itemLabel?: string;
+  onNext: () => void;
+  onPrevious: () => void;
+  page: number;
+  pageEnd: number;
+  pageStart: number;
+  total: number;
+  totalPages: number;
+}) {
   return (
     <div className="flex items-center justify-between border-t border-[#EEF1F6] px-4 py-3 text-[10px] text-[#727A96]">
-      <p>Showing 1-4 of 24 members</p>
+      <p>
+        Showing {pageStart}-{pageEnd} of {total} {itemLabel}
+      </p>
       <div className="flex items-center gap-2">
-        <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#E4E8F0] text-[#C2C8D6]">
-          {"<"}
+        <button
+          type="button"
+          disabled={page <= 1}
+          onClick={onPrevious}
+          className={`inline-flex h-6 min-w-6 items-center justify-center rounded-[8px] border border-[#E4E8F0] px-2 ${
+            page <= 1 ? "text-[#C2C8D6]" : "text-[#4A5271] hover:bg-[#F7F8FC]"
+          }`}
+        >
+          Prev
         </button>
-        <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#CFD5E3] bg-white text-[#4A5271]">
-          1
-        </button>
-        <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#E4E8F0] text-[#9AA1B6]">
-          2
-        </button>
-        <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#E4E8F0] text-[#C2C8D6]">
-          {">"}
+        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-[8px] border border-[#CFD5E3] bg-white px-2 text-[#4A5271]">
+          {page} / {totalPages}
+        </span>
+        <button
+          type="button"
+          disabled={page >= totalPages}
+          onClick={onNext}
+          className={`inline-flex h-6 min-w-6 items-center justify-center rounded-[8px] border border-[#E4E8F0] px-2 ${
+            page >= totalPages ? "text-[#C2C8D6]" : "text-[#4A5271] hover:bg-[#F7F8FC]"
+          }`}
+        >
+          Next
         </button>
       </div>
     </div>
@@ -389,6 +422,7 @@ export function SuperadminReportsPanel({
   const [apiReports, setApiReports] = useState<ReportTableRecord[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
   const [reportsError, setReportsError] = useState("");
+  const [page, setPage] = useState(1);
   const [status, setStatus] = useState<"All" | "Dismissed" | "Pending" | "Resolved">("All");
   const fallbackRecords = useMemo(
     () => records.map(mapStaticReportToTableRecord).filter((record): record is ReportTableRecord => Boolean(record)),
@@ -446,6 +480,22 @@ export function SuperadminReportsPanel({
     });
   }, [query, status, tableRecords]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / PAGE_LIMIT));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = filteredRecords.length === 0 ? 0 : (safePage - 1) * PAGE_LIMIT + 1;
+  const pageEnd = Math.min(safePage * PAGE_LIMIT, filteredRecords.length);
+  const paginatedRecords = filteredRecords.slice((safePage - 1) * PAGE_LIMIT, safePage * PAGE_LIMIT);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, status]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end gap-2">
@@ -482,7 +532,7 @@ export function SuperadminReportsPanel({
         ) : filteredRecords.length === 0 ? (
           <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">No reports found.</div>
         ) : (
-          filteredRecords.map((record) => (
+          paginatedRecords.map((record) => (
             <div
               key={record.slug}
               className="grid grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
@@ -512,7 +562,16 @@ export function SuperadminReportsPanel({
           ))
         )}
 
-        <TableFooter />
+        <TableFooter
+          itemLabel="reports"
+          onNext={() => setPage((current) => Math.min(totalPages, current + 1))}
+          onPrevious={() => setPage((current) => Math.max(1, current - 1))}
+          page={safePage}
+          pageEnd={pageEnd}
+          pageStart={pageStart}
+          total={filteredRecords.length}
+          totalPages={totalPages}
+        />
       </div>
     </div>
   );
@@ -524,6 +583,7 @@ export function SuperadminSupportPanel({
   records: SuperadminSupportRecord[];
 }) {
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [status, setStatus] = useState<"All" | "Dismissed" | "Pending" | "Solved">("All");
 
   const filteredRecords = useMemo(() => {
@@ -546,6 +606,22 @@ export function SuperadminSupportPanel({
       return matchesStatus && matchesQuery;
     });
   }, [query, records, status]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / PAGE_LIMIT));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = filteredRecords.length === 0 ? 0 : (safePage - 1) * PAGE_LIMIT + 1;
+  const pageEnd = Math.min(safePage * PAGE_LIMIT, filteredRecords.length);
+  const paginatedRecords = filteredRecords.slice((safePage - 1) * PAGE_LIMIT, safePage * PAGE_LIMIT);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, status]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   return (
     <div className="space-y-6">
@@ -571,7 +647,7 @@ export function SuperadminSupportPanel({
           <p className="text-right">Actions</p>
         </div>
 
-        {filteredRecords.map((record) => {
+        {paginatedRecords.map((record) => {
           const user = getSuperadminUser(record.userSlug);
 
           if (!user) {
@@ -603,7 +679,16 @@ export function SuperadminSupportPanel({
           );
         })}
 
-        <TableFooter />
+        <TableFooter
+          itemLabel="support requests"
+          onNext={() => setPage((current) => Math.min(totalPages, current + 1))}
+          onPrevious={() => setPage((current) => Math.max(1, current - 1))}
+          page={safePage}
+          pageEnd={pageEnd}
+          pageStart={pageStart}
+          total={filteredRecords.length}
+          totalPages={totalPages}
+        />
       </div>
     </div>
   );

@@ -81,7 +81,7 @@ export function submitSupportRequest(payload: SupportRequestPayload) {
   });
 }
 
-export function getSupportConversations(params: { page?: number; search?: string; status?: string } = {}) {
+export function getSupportConversations(params: { limit?: number; page?: number; search?: string; status?: string } = {}) {
   return apiRequest<SupportConversationsResponse>({
     method: "GET",
     params,

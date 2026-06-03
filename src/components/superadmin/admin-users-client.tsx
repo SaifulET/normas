@@ -16,7 +16,7 @@ import { SuperadminUserActionMenu } from "./user-action-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon, UserGroup03Icon } from "@hugeicons/core-free-icons";
 
-const PAGE_LIMIT = 20;
+const PAGE_LIMIT = 8;
 const STATUS_OPTIONS: AdminAccountStatus[] = ["pending", "active", "inactive"];
 
 function cx(...values: Array<string | false | null | undefined>) {

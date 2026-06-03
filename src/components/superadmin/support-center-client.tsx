@@ -21,6 +21,8 @@ import {
   SuperadminStatusBadge,
 } from "./shell";
 
+const PAGE_LIMIT = 8;
+
 function formatDate(value?: string) {
   if (!value) {
     return "Not available";
@@ -149,6 +151,13 @@ export function SuperadminSupportCenterClient() {
   const [conversations, setConversations] = useState<SupportConversationListItem[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    limit: PAGE_LIMIT,
+    page: 1,
+    total: 0,
+    totalPages: 1,
+  });
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"All" | "Dismissed" | "Pending" | "Solved">("All");
 
@@ -161,12 +170,20 @@ export function SuperadminSupportCenterClient() {
 
       try {
         const response = await getSupportConversations({
+          limit: PAGE_LIMIT,
+          page,
           search: query.trim() || undefined,
           status: statusForApi(status) || undefined,
         });
 
         if (active) {
           setConversations(response.data?.conversations ?? []);
+          setPagination({
+            limit: response.data?.pagination?.limit ?? PAGE_LIMIT,
+            page: response.data?.pagination?.page ?? page,
+            total: response.data?.pagination?.total ?? response.data?.conversations?.length ?? 0,
+            totalPages: response.data?.pagination?.totalPages ?? 1,
+          });
         }
       } catch (error) {
         if (active) {
@@ -185,11 +202,14 @@ export function SuperadminSupportCenterClient() {
       active = false;
       window.clearTimeout(timeoutId);
     };
-  }, [query, status]);
+  }, [page, query, status]);
 
   const openConversationDetails = (conversationId: string) => {
     router.push(`/superadmin/dashboard/support-center/${conversationId}`);
   };
+
+  const pageStart = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
+  const pageEnd = Math.min(pagination.page * pagination.limit, pagination.total);
 
   return (
     <div className="space-y-6">
@@ -202,12 +222,21 @@ export function SuperadminSupportCenterClient() {
             <input
               type="text"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setPage(1);
+                setQuery(event.target.value);
+              }}
               placeholder="Search user by name or company name"
               className="w-full border-0 bg-transparent text-[12px] text-[#20243A] outline-none placeholder:text-[#9AA1B6]"
             />
           </label>
-          <SupportStatusSelect value={status} onChange={setStatus} />
+          <SupportStatusSelect
+            value={status}
+            onChange={(nextStatus) => {
+              setPage(1);
+              setStatus(nextStatus);
+            }}
+          />
         </div>
 
         {errorMessage ? (
@@ -265,6 +294,39 @@ export function SuperadminSupportCenterClient() {
               );
             })
           )}
+
+          {!loading && conversations.length > 0 ? (
+            <div className="flex items-center justify-between border-t border-[#EEF1F6] px-4 py-3 text-[10px] text-[#727A96]">
+              <p>
+                Showing {pageStart}-{pageEnd} of {pagination.total} support requests
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={pagination.page <= 1 || loading}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  className={`inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#E4E8F0] px-2 ${
+                    pagination.page <= 1 || loading ? "text-[#C2C8D6]" : "text-[#4A5271] hover:bg-[#F7F8FC]"
+                  }`}
+                >
+                  Prev
+                </button>
+                <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#CFD5E3] bg-white px-2 text-[#4A5271]">
+                  {pagination.page} / {pagination.totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={pagination.page >= pagination.totalPages || loading}
+                  onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
+                  className={`inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#E4E8F0] px-2 ${
+                    pagination.page >= pagination.totalPages || loading ? "text-[#C2C8D6]" : "text-[#4A5271] hover:bg-[#F7F8FC]"
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
