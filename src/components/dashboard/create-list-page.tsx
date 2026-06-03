@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getApiErrorMessage } from "@/lib/api";
 import { listSectorOptions, listStageOptions } from "@/components/listings/list-options";
-import { createList, getList, updateList, type ListStatus } from "@/lib/list-api";
+import { createList, getList, updateList, type ListItemResponse, type ListStatus } from "@/lib/list-api";
 import { DashboardPageHeader } from "./page-header";
 import {
   createCreatedListId,
@@ -742,6 +742,8 @@ export function CreateListPage({ listId }: { listId?: string }) {
     setError("");
     setIsSaving(true);
 
+    let savedList: ListItemResponse | undefined;
+
     try {
       const response = isEditMode && listId ? await updateList(listId, formData, status) : await createList(formData);
 
@@ -749,26 +751,41 @@ export function CreateListPage({ listId }: { listId?: string }) {
 
         throw new Error(response.message ?? `Unable to ${isEditMode ? "update" : "create"} list. Please try again.`);
       }
+
+      savedList = response.data;
     } catch (saveError) {
       setError(getApiErrorMessage(saveError, `Unable to ${isEditMode ? "update" : "create"} list. Please try again.`));
       setIsSaving(false);
       return;
     }
 
+    const savedStatus = savedList?.status ?? status;
+    const savedAdditionalDetails = savedList?.additionalDetails
+      ? savedList.additionalDetails.map((detail) => ({
+          label: detail.key ?? "",
+          value: detail.value ?? "",
+        }))
+      : cleanedDetails;
+
     const nextItem: CreatedListItem = {
-      id: initialItem?.id ?? createCreatedListId(),
-      title: trimmedTitle,
-      country: trimmedCountry,
-      stage: trimmedStage,
-      sector: trimmedSector,
-      fundingTarget: trimmedFundingTarget ? `£${trimmedFundingTarget}` : "£0.00",
-      keyword: trimmedKeyword || "project listing",
-      description: trimmedDescription || "Project description will appear here once added.",
-      createdAt: initialItem?.createdAt ?? new Date().toISOString(),
-      active,
-      banner: form.banner,
-      additionalDetails: cleanedDetails,
-      viewCount: initialItem?.viewCount,
+      id: savedList?._id ?? initialItem?.id ?? createCreatedListId(),
+      title: savedList?.title ?? trimmedTitle,
+      country: savedList?.country ?? trimmedCountry,
+      stage: savedList?.stage ?? trimmedStage,
+      sector: savedList?.sector ?? trimmedSector,
+      fundingTarget: typeof savedList?.fundingTarget === "number"
+        ? `£${savedList.fundingTarget.toLocaleString("en-US")}`
+        : trimmedFundingTarget ? `£${trimmedFundingTarget}` : "£0.00",
+      keyword: savedList?.keyword ?? (trimmedKeyword || "project listing"),
+      description: savedList?.description ?? (trimmedDescription || "Project description will appear here once added."),
+      createdAt: savedList?.createdAt ?? initialItem?.createdAt ?? new Date().toISOString(),
+      active: savedStatus === "activated",
+      status: savedStatus,
+      moderationStatus: savedList?.moderationStatus ?? "approved",
+      moderationReasons: savedList?.moderationReasons ?? [],
+      banner: savedList?.bannerImage ? { kind: "path", src: savedList.bannerImage } : form.banner,
+      additionalDetails: savedAdditionalDetails,
+      viewCount: savedList?.viewCount ?? initialItem?.viewCount,
     };
 
     if (isEditMode) {

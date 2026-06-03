@@ -65,7 +65,8 @@ function getReferenceId(notification: NotificationItem) {
     getMetadataString(notification, "invoiceId") ||
     getMetadataString(notification, "listId") ||
     getMetadataString(notification, "reportId") ||
-    getMetadataString(notification, "userId")
+    getMetadataString(notification, "userId") ||
+    getMetadataString(notification, "alertId")
   );
 }
 
@@ -111,6 +112,10 @@ function getNotificationHref(notification: NotificationItem, pathname: string) {
 
   if (isSuperadmin && referenceType === "user") {
     return `/superadmin/dashboard/user-management/${encodeURIComponent(referenceId)}`;
+  }
+
+  if (isSuperadmin && referenceType === "moderation_alert") {
+    return `/superadmin/dashboard/moderation/${encodeURIComponent(referenceId)}`;
   }
 
   if (referenceType === "report") {

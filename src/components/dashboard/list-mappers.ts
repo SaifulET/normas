@@ -23,6 +23,8 @@ export function mapApiListToCreatedListItem(item: ListItemResponse): CreatedList
     fundingTarget: formatFundingTarget(item.fundingTarget),
     id: item._id,
     keyword: item.keyword ?? "",
+    moderationReasons: item.moderationReasons ?? [],
+    moderationStatus: item.moderationStatus ?? "approved",
     sector: item.sector ?? "",
     stage: item.stage ?? "",
     status: item.status ?? "deactivated",

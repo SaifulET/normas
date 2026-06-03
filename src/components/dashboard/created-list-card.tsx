@@ -64,6 +64,7 @@ export function CreatedListCard({ item }: { item: CreatedListItem }) {
   const bannerUrl = useCreatedListBannerUrl(item.banner);
   const safeDescription = useMemo(() => sanitizeHtml(item.description), [item.description]);
   const status = item.status || (item.active ? "activated" : "deactivated");
+  const moderationReasons = item.moderationReasons ?? [];
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-[10px] border border-[#E6EBF3] bg-white shadow-[0_24px_60px_-52px_rgba(30,39,70,0.4)]">
@@ -85,6 +86,11 @@ export function CreatedListCard({ item }: { item: CreatedListItem }) {
           {status === "suspended" ? (
             <span className="rounded-full bg-[#B42318]/95 px-3 py-1 text-[11px] font-medium text-white shadow-sm">
               Suspended
+            </span>
+          ) : null}
+          {status === "under_review" ? (
+            <span className="rounded-full bg-[#B45309]/95 px-3 py-1 text-[11px] font-medium text-white shadow-sm">
+              Under review
             </span>
           ) : null}
         </div>
@@ -129,6 +135,17 @@ export function CreatedListCard({ item }: { item: CreatedListItem }) {
           }}
           dangerouslySetInnerHTML={{ __html: safeDescription }}
         />
+
+        {status === "suspended" || status === "under_review" ? (
+          <div className="mt-3 rounded-[10px] border border-[#F7C98B] bg-[#FFF7ED] px-3 py-2 text-xs leading-5 text-[#9A4B00]">
+            {status === "under_review"
+              ? "This pitch is under superadmin review and is not public."
+              : "This pitch is suspended and is not public."}
+            {moderationReasons.length ? (
+              <span className="mt-1 block text-[#B45309]">{moderationReasons.join(", ")}</span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="mt-auto border-t border-[#EEF2F7] pt-3">
           <div>

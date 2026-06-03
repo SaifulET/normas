@@ -26,6 +26,8 @@ export type CreatedListItem = {
   fundingTarget: string;
   id: string;
   keyword: string;
+  moderationReasons?: string[];
+  moderationStatus?: "approved" | "suspended" | "manual_review" | string;
   sector: string;
   stage: string;
   status?: "activated" | "deactivated" | "suspended" | string;
@@ -182,6 +184,10 @@ function hydrateCreatedList(raw: unknown): CreatedListItem | null {
     sector: source.sector,
     fundingTarget: source.fundingTarget,
     keyword: source.keyword,
+    moderationReasons: Array.isArray(source.moderationReasons)
+      ? source.moderationReasons.filter((value): value is string => typeof value === "string")
+      : [],
+    moderationStatus: typeof source.moderationStatus === "string" ? source.moderationStatus : "approved",
     description: source.description,
     createdAt: source.createdAt,
     active: source.active,

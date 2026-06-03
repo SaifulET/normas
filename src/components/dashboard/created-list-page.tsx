@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 import { getApiErrorMessage } from "@/lib/api";
-import { getLists } from "@/lib/list-api";
+import { getMyLists } from "@/lib/list-api";
 import { CreatedListCard } from "./created-list-card";
 import { type CreatedListItem, loadCreatedLists } from "./created-list-storage";
 import { mapApiListToCreatedListItem } from "./list-mappers";
@@ -21,7 +21,7 @@ export function CreatedListPage() {
       setLoading(true);
 
       try {
-        const response = await getLists();
+        const response = await getMyLists();
         const nextItems = (response.data ?? []).map(mapApiListToCreatedListItem);
 
         if (!active) {

@@ -1,12 +1,12 @@
 import { apiRequest } from "./api";
 
 export type ListMutationResponse = {
-  data?: unknown;
+  data?: ListItemResponse;
   message?: string;
   success?: boolean;
 };
 
-export type ListStatus = "activated" | "deactivated";
+export type ListStatus = "activated" | "deactivated" | "suspended" | "under_review";
 
 export type ListStatusResponse = {
   data?: {
@@ -67,9 +67,11 @@ export type ListItemResponse = {
   description?: string;
   fundingTarget?: number;
   keyword?: string;
+  moderationReasons?: string[];
+  moderationStatus?: "approved" | "suspended" | "manual_review" | string;
   sector?: string;
   stage?: string;
-  status?: ListStatus | "suspended" | string;
+  status?: ListStatus | string;
   title?: string;
   updatedAt?: string;
   user?: ListUser;
@@ -164,6 +166,13 @@ export function getLists() {
   return apiRequest<ListsResponse>({
     method: "GET",
     url: "lists",
+  });
+}
+
+export function getMyLists() {
+  return apiRequest<ListsResponse>({
+    method: "GET",
+    url: "lists/user/me",
   });
 }
 

@@ -39,7 +39,7 @@ const INVESTMENT_SOCKET_EVENTS = {
 
 type InvestmentSocketAck = {
   data?: {
-    message?: ConversationMessage;
+    message?: ConversationMessage | null;
   };
   message?: string;
   success?: boolean;
@@ -47,7 +47,7 @@ type InvestmentSocketAck = {
 
 type InvestmentMessagePayload = {
   conversationId?: string;
-  message?: ConversationMessage;
+  message?: ConversationMessage | null;
 };
 
 type InvestmentMessagesSeenPayload = {
@@ -928,6 +928,8 @@ export function MessagesPage() {
       ? "/investee-dashboard"
       : "/dashboard";
   const startListId = searchParams.get("listId") ?? "";
+  const startConversationId = searchParams.get("conversationId") ?? "";
+  const targetMessageId = searchParams.get("messageId") ?? "";
 
   const [conversations, setConversations] = useState<SidebarConversation[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -1052,6 +1054,19 @@ export function MessagesPage() {
     });
   }, [latestTimelineItemId]);
 
+  useEffect(() => {
+    if (!targetMessageId || loadingConversation) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      document.getElementById(`message-${targetMessageId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }, [loadingConversation, messages, targetMessageId]);
+
   const loadInbox = useCallback(async (nextSelectedId?: string, options: { silent?: boolean } = {}) => {
     if (!options.silent) {
       setLoadingInbox(true);
@@ -1165,6 +1180,11 @@ export function MessagesPage() {
     let cancelled = false;
 
     async function startConversationFromQuery() {
+      if (startConversationId) {
+        await loadInbox(startConversationId);
+        return;
+      }
+
       if (!startListId) {
         await loadInbox();
         return;
@@ -1200,7 +1220,7 @@ export function MessagesPage() {
     return () => {
       cancelled = true;
     };
-  }, [loadInbox, startListId]);
+  }, [loadInbox, startConversationId, startListId]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -1887,6 +1907,7 @@ export function MessagesPage() {
 
                         const message = timelineItem.item;
                         const outgoing = message.direction === "outgoing";
+                        const isRestricted = message.isRestricted || message.moderationStatus === "restricted";
                         const senderName = getMessageSenderName(
                           message,
                           selectedConversation,
@@ -1897,12 +1918,14 @@ export function MessagesPage() {
 
                         return (
                           <div
+                            id={`message-${message._id}`}
                             key={timelineItem.id}
                             className={cx(
                               "flex w-full max-w-[507px] min-w-0 flex-col justify-center gap-2 px-8 py-3 font-sans shadow-sm",
                               outgoing
                                 ? "ml-auto rounded-[40px_0px_40px_40px] border border-transparent bg-[#E7EAEE]"
                                 : "mr-auto rounded-[0px_40px_40px_40px] border border-[#777777] bg-white",
+                              targetMessageId === message._id && "ring-2 ring-[#ED6A06] ring-offset-2",
                             )}
                           >
                             {!outgoing ? (
@@ -1918,6 +1941,18 @@ export function MessagesPage() {
                             <p className="max-w-full whitespace-pre-wrap break-all font-sans text-base font-normal leading-6 text-[#111111] [overflow-wrap:anywhere]">
                               {message.message}
                             </p>
+                            {isRestricted ? (
+                              <div className="rounded-[10px] border border-[#F7C98B] bg-[#FFF7ED] px-3 py-2 text-xs font-medium leading-5 text-[#9A4B00]">
+                                {outgoing
+                                  ? "Restricted: this message was saved, but hidden from the receiver because it includes contact or off-platform communication details."
+                                  : "Restricted message visible to superadmin only."}
+                                {message.moderationReasons?.length ? (
+                                  <span className="mt-1 block font-normal text-[#B45309]">
+                                    {message.moderationReasons.join(", ")}
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : null}
                             <div className="flex h-5 items-center justify-between gap-8 font-sans text-xs uppercase leading-5 tracking-[0.05em] text-[#777777]">
                               <span>{formatMessageTime(message.sentAt)}</span>
                               {outgoing ? <MessageStatus seen={message.isSeen} /> : null}

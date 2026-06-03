@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getApiErrorMessage } from "@/lib/api";
 import {
@@ -144,6 +145,7 @@ function messageSenderLabel(message: SupportMessage) {
 }
 
 export function SuperadminSupportCenterClient() {
+  const router = useRouter();
   const [conversations, setConversations] = useState<SupportConversationListItem[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -184,6 +186,10 @@ export function SuperadminSupportCenterClient() {
       window.clearTimeout(timeoutId);
     };
   }, [query, status]);
+
+  const openConversationDetails = (conversationId: string) => {
+    router.push(`/superadmin/dashboard/support-center/${conversationId}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -230,7 +236,16 @@ export function SuperadminSupportCenterClient() {
               return (
                 <div
                   key={conversation._id}
-                  className="grid grid-cols-[1.2fr_1.4fr_0.7fr_0.7fr] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openConversationDetails(conversation._id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openConversationDetails(conversation._id);
+                    }
+                  }}
+                  className="grid cursor-pointer grid-cols-[1.2fr_1.4fr_0.7fr_0.7fr] gap-4 border-b border-[#F3F5F9] px-6 py-3 transition hover:bg-[#F8FAFC] focus:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#314B6B]/20 last:border-b-0"
                 >
                   <div className="flex items-center gap-3">
                     <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={initials} size={28} />
@@ -239,12 +254,9 @@ export function SuperadminSupportCenterClient() {
                       <p className="text-[11px] text-[#8A91AB]">{participant.email || "No email"}</p>
                     </div>
                   </div>
-                  <Link
-                    href={`/superadmin/dashboard/support-center/${conversation._id}`}
-                    className="text-[13px] font-medium text-[#202350]"
-                  >
+                  <p className="text-[13px] font-medium text-[#202350]">
                     {conversation.subject || "Support request"}
-                  </Link>
+                  </p>
                   <div>
                     <SuperadminStatusBadge status={normalizeSupportStatus(conversation.status)} />
                   </div>

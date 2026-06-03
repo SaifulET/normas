@@ -24,6 +24,8 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
   const safeDescription = useMemo(() => sanitizeHtml(item?.description ?? ""), [item?.description]);
   const bannerUrl = item?.banner?.kind === "path" ? item.banner.src : null;
   const isSuspended = item?.status === "suspended";
+  const isUnderReview = item?.status === "under_review";
+  const isModerationLocked = isSuspended || isUnderReview;
 
   useEffect(() => {
     let active = true;
@@ -237,17 +239,22 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
                 onClick={() => {
                   void handleStatusUpdate();
                 }}
-                disabled={isDeleting || isUpdatingStatus || isSuspended}
+                disabled={isDeleting || isUpdatingStatus || isModerationLocked}
                 className="inline-flex h-8 items-center rounded-[6px] bg-[#ED6A06] px-3 text-xs font-semibold text-white transition hover:bg-[#d35f05] disabled:cursor-wait disabled:opacity-60"
               >
-                {isSuspended ? "Suspended by admin" : isUpdatingStatus ? "Updating..." : item.active ? "Deactivate" : "Activate"}
+                {isSuspended ? "Suspended by admin" : isUnderReview ? "Under review" : isUpdatingStatus ? "Updating..." : item.active ? "Deactivate" : "Activate"}
               </button>
             </div>
           </div>
 
-          {isSuspended ? (
-            <p className="rounded-[8px] border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B42318]">
-              This pitch is suspended by admin. Please correct the reported issue and inform the support center to restore it.
+          {isModerationLocked ? (
+            <p className="rounded-[8px] border border-[#F7C98B] bg-[#FFF7ED] px-4 py-3 text-sm text-[#9A4B00]">
+              {isUnderReview
+                ? "This pitch is under superadmin review and is not public."
+                : "This pitch is suspended by admin. Please correct the reported issue and inform the support center to restore it."}
+              {item.moderationReasons?.length ? (
+                <span className="mt-1 block text-xs text-[#B45309]">{item.moderationReasons.join(", ")}</span>
+              ) : null}
             </p>
           ) : null}
 

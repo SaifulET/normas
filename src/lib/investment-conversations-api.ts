@@ -53,7 +53,10 @@ export type ConversationMessage = {
   fromId?: string;
   fromRole?: string;
   isSeen?: boolean;
+  isRestricted?: boolean;
   message: string;
+  moderationReasons?: string[];
+  moderationStatus?: "approved" | "restricted" | string;
   readAt?: string;
   readBy?: ConversationSeenByEntry[];
   receiver?: ConversationSeenByEntry;
