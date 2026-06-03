@@ -73,12 +73,6 @@ export interface SuperadminSupportRecord {
   reply: string;
 }
 
-export const superadminUser = {
-  email: "paul@ramsey.com",
-  name: "Tuval Ramsey",
-  role: "Super Admin",
-};
-
 export const superadminNavItems: SuperadminNavItem[] = [
   { label: "Dashboard", href: "/superadmin/dashboard", icon: "dashboard", section: "main" },
   { label: "Analytics", href: "/superadmin/dashboard/analytics", icon: "analytics", section: "main" },

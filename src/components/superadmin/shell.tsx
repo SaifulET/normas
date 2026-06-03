@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
-import { getSuperadminProfile, type SuperadminProfile } from "@/lib/superadmin-profile-api";
-import { superadminNavItems, superadminUser, type SuperadminNavIcon } from "./data";
+import { getCachedSuperadminProfile, getSuperadminProfile, type SuperadminProfile } from "@/lib/superadmin-profile-api";
+import { superadminNavItems, type SuperadminNavIcon } from "./data";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Logout03Icon, Notification01Icon, Settings01Icon, SidebarRightIcon, User02Icon } from "@hugeicons/core-free-icons";
 
@@ -133,7 +133,7 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function getInitials(name?: string, fallback = "SA") {
+function getInitials(name?: string, fallback = "") {
   return name
     ?.trim()
     .split(/\s+/)
@@ -254,14 +254,23 @@ export function SuperadminShell({
 
   const sidebarWidth = collapsed ? "w-[88px]" : "w-[300px]";
   const contentPadding = collapsed ? "pl-[88px]" : "pl-[300px]";
-  const sidebarName = profile?.name?.trim() || superadminUser.name;
-  const sidebarEmail = profile?.email?.trim() || superadminUser.email;
+  const sidebarName = profile?.name?.trim() || "";
+  const sidebarEmail = profile?.email?.trim() || "";
   const sidebarImage = profile?.profileImage?.trim() || "";
+  const profileHref = "/superadmin/dashboard/settings";
+  const profileActive = isActivePath(pathname, profileHref);
+  const hasSidebarProfile = Boolean(sidebarName || sidebarEmail || sidebarImage);
 
   useEffect(() => {
     let active = true;
 
     const loadProfile = async () => {
+      const cachedProfile = getCachedSuperadminProfile();
+
+      if (active && cachedProfile) {
+        setProfile(cachedProfile);
+      }
+
       try {
         const response = await getSuperadminProfile();
 
@@ -295,24 +304,43 @@ export function SuperadminShell({
         </div>
 
         <div className={cx("shrink-0 border-t border-white/8 py-4", collapsed ? "px-2" : "px-3")}>
-          <button type="button" className={cx("flex w-full text-left", collapsed ? "justify-center" : "items-center gap-3")}>
-            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs font-semibold text-[#111217]">
+          <Link
+            href={profileHref}
+            className={cx(
+              "flex w-full rounded-[10px] text-left transition hover:bg-white/8 focus:outline-none focus:ring-2 focus:ring-white/35",
+              collapsed ? "justify-center px-2 py-2" : "items-center gap-3 px-2 py-2",
+              profileActive ? "bg-white/10" : "",
+            )}
+            title={collapsed ? "Profile" : undefined}
+          >
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/14 text-xs font-semibold text-white">
               {sidebarImage ? (
                 <img src={sidebarImage} alt={`${sidebarName} profile`} className="h-full w-full object-cover" />
-              ) : (
+              ) : sidebarName ? (
                 getInitials(sidebarName)
+              ) : (
+                <span className="h-3.5 w-3.5 rounded-full bg-white/30" aria-hidden="true" />
               )}
             </span>
             {!collapsed ? (
               <>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">{sidebarName}</p>
-                  <p className="truncate text-[11px] text-white/42">{sidebarEmail}</p>
+                  {hasSidebarProfile ? (
+                    <>
+                      <p className="truncate text-sm font-medium text-white">{sidebarName || sidebarEmail}</p>
+                      {sidebarEmail && sidebarEmail !== sidebarName ? <p className="truncate text-[11px] text-white/42">{sidebarEmail}</p> : null}
+                    </>
+                  ) : (
+                    <span className="block space-y-1.5" aria-label="Loading profile">
+                      <span className="block h-3 w-20 rounded-full bg-white/14" />
+                      <span className="block h-2.5 w-28 rounded-full bg-white/10" />
+                    </span>
+                  )}
                 </div>
                 <SuperadminIcon name="chevronDown" className="h-4 w-4 text-white/55" />
               </>
             ) : null}
-          </button>
+          </Link>
 
           <LogoutButton
             redirectHref="/superadmin/auth/login"

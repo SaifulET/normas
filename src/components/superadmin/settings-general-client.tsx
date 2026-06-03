@@ -7,10 +7,12 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { getApiErrorMessage } from "@/lib/api";
 import {
+  getCachedSuperadminProfile,
   getSuperadminProfile,
   updateSuperadminProfile,
   type SuperadminProfile,
 } from "@/lib/superadmin-profile-api";
+import { SuperadminPageHeader } from "./shell";
 
 type SettingsTab = {
   href: string;
@@ -48,9 +50,9 @@ const tabs: SettingsTab[] = [
 ];
 
 const initialProfile: ProfileForm = {
-  name: "John Doe",
-  email: "example@gmail.com",
-  contact: "+1 265 665 2266",
+  name: "",
+  email: "",
+  contact: "",
 };
 
 const initialPassword: PasswordForm = {
@@ -60,7 +62,7 @@ const initialPassword: PasswordForm = {
 };
 
 const initialTax: TaxForm = {
-  tax: "5",
+  tax: "",
 };
 
 const initialPricingPlans = {
@@ -83,6 +85,16 @@ const initialPricingPlans = {
 
 function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
+}
+
+function getInitials(name?: string) {
+  return name
+    ?.trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || "";
 }
 
 function TabIcon({ label }: { label: string }) {
@@ -310,8 +322,8 @@ function PricingPlanCard({
 
 function mapProfileToForm(profile?: SuperadminProfile): ProfileForm {
   return {
-    name: profile?.name?.trim() || initialProfile.name,
-    email: profile?.email?.trim() || initialProfile.email,
+    name: profile?.name?.trim() || "",
+    email: profile?.email?.trim() || "",
     contact: profile?.mobile?.trim() || "",
   };
 }
@@ -377,12 +389,16 @@ export function SuperadminSettingsShell({
   );
 }
 
-export function SuperadminSettingsGeneralClient() {
+export function SuperadminSettingsGeneralClient({
+  standalone = false,
+}: {
+  standalone?: boolean;
+} = {}) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profile, setProfile] = useState(initialProfile);
   const [savedProfile, setSavedProfile] = useState(initialProfile);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarSrc, setAvatarSrc] = useState("/login.jpg");
+  const [avatarSrc, setAvatarSrc] = useState("");
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -396,7 +412,7 @@ export function SuperadminSettingsGeneralClient() {
   const [passwordForm, setPasswordForm] = useState(initialPassword);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
-  const [passwordUpdatedAt, setPasswordUpdatedAt] = useState("Last changed 4 months ago");
+  const [passwordUpdatedAt, setPasswordUpdatedAt] = useState("");
 
   const hasProfileChanges = useMemo(
     () =>
@@ -412,24 +428,34 @@ export function SuperadminSettingsGeneralClient() {
   useEffect(() => {
     let active = true;
 
+    const applyProfile = (profileData?: SuperadminProfile) => {
+      const nextProfile = mapProfileToForm(profileData);
+      const nextTaxForm = mapProfileToTaxForm(profileData);
+
+      setProfile(nextProfile);
+      setSavedProfile(nextProfile);
+      setTaxForm(nextTaxForm);
+      setSavedTaxForm(nextTaxForm);
+      setAvatarSrc(profileData?.profileImage?.trim() || "");
+    };
+
     const loadProfile = async () => {
-      setProfileLoading(true);
+      const cachedProfile = getCachedSuperadminProfile();
+
+      if (cachedProfile && active) {
+        applyProfile(cachedProfile);
+        setProfileLoading(false);
+      } else {
+        setProfileLoading(true);
+      }
+
       setProfileMessage(null);
 
       try {
         const response = await getSuperadminProfile();
-        const nextProfile = mapProfileToForm(response.data);
-        const nextTaxForm = mapProfileToTaxForm(response.data);
 
         if (active) {
-          setProfile(nextProfile);
-          setSavedProfile(nextProfile);
-          setTaxForm(nextTaxForm);
-          setSavedTaxForm(nextTaxForm);
-
-          if (response.data?.profileImage) {
-            setAvatarSrc(response.data.profileImage);
-          }
+          applyProfile(response.data);
         }
       } catch (error) {
         if (active) {
@@ -573,8 +599,7 @@ export function SuperadminSettingsGeneralClient() {
     setTaxMessage("Tax changes discarded.");
   }
 
-  return (
-    <SuperadminSettingsShell activeHref="/superadmin/dashboard/settings" title="General Settings" subtitle="Manage your profile">
+  const content = (
       <div className="space-y-6">
           <form onSubmit={handleProfileSubmit}>
             <SettingsCard
@@ -602,7 +627,13 @@ export function SuperadminSettingsGeneralClient() {
             >
               <div className="grid gap-5 lg:grid-cols-[84px_minmax(0,1fr)_minmax(0,1fr)]">
                 <div className="relative h-[84px] w-[84px]">
-                  <Image src={avatarSrc} alt="Profile" fill className="rounded-full object-cover" sizes="84px" />
+                  {avatarSrc ? (
+                    <Image src={avatarSrc} alt="Profile" fill className="rounded-full object-cover" sizes="84px" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-[#E9ECF3] text-[24px] font-semibold text-[#5E6684]">
+                      {profile.name ? getInitials(profile.name) : null}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -672,7 +703,7 @@ export function SuperadminSettingsGeneralClient() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-[14px] font-medium text-[#23275A]">Password</p>
-                    <p className="mt-1 text-[13px] text-[#7E84A3]">{passwordUpdatedAt}</p>
+                    {passwordUpdatedAt ? <p className="mt-1 text-[13px] text-[#7E84A3]">{passwordUpdatedAt}</p> : null}
                     {passwordMessage ? <p className="mt-2 text-[13px] text-[#5E568E]">{passwordMessage}</p> : null}
                   </div>
                   <button
@@ -793,6 +824,20 @@ export function SuperadminSettingsGeneralClient() {
             </SettingsCard>
           </form>
       </div>
+  );
+
+  if (standalone) {
+    return (
+      <div className="space-y-6">
+        <SuperadminPageHeader title="Profile" subtitle="Manage your superadmin account details" />
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <SuperadminSettingsShell activeHref="/superadmin/dashboard/settings" title="General Settings" subtitle="Manage your profile">
+      {content}
     </SuperadminSettingsShell>
   );
 }

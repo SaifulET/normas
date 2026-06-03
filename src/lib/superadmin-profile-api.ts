@@ -19,15 +19,63 @@ type SuperadminProfileResponse = {
   success?: boolean;
 };
 
-export function getSuperadminProfile() {
-  return apiRequest<SuperadminProfileResponse>({
-    method: "GET",
-    url: "auth/superadmin/profile",
-  });
+const SUPERADMIN_PROFILE_CACHE_KEY = "normas.superadmin.profile";
+
+let profileRequest: Promise<SuperadminProfileResponse> | null = null;
+
+export function getCachedSuperadminProfile() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const rawProfile = window.sessionStorage.getItem(SUPERADMIN_PROFILE_CACHE_KEY);
+
+    if (!rawProfile) {
+      return null;
+    }
+
+    return JSON.parse(rawProfile) as SuperadminProfile;
+  } catch {
+    return null;
+  }
 }
 
-export function updateSuperadminProfile(data: FormData) {
-  return apiRequest<SuperadminProfileResponse>({
+export function cacheSuperadminProfile(profile?: SuperadminProfile | null) {
+  if (typeof window === "undefined" || !profile) {
+    return;
+  }
+
+  try {
+    const cachedProfile = getCachedSuperadminProfile();
+    const nextProfile = cachedProfile ? { ...cachedProfile, ...profile } : profile;
+
+    window.sessionStorage.setItem(SUPERADMIN_PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
+  } catch {
+    // Ignore storage failures; the API response remains the source of truth.
+  }
+}
+
+export function getSuperadminProfile() {
+  if (!profileRequest) {
+    profileRequest = apiRequest<SuperadminProfileResponse>({
+      method: "GET",
+      url: "auth/superadmin/profile",
+    })
+      .then((response) => {
+        cacheSuperadminProfile(response.data);
+        return response;
+      })
+      .finally(() => {
+        profileRequest = null;
+      });
+  }
+
+  return profileRequest;
+}
+
+export async function updateSuperadminProfile(data: FormData) {
+  const response = await apiRequest<SuperadminProfileResponse>({
     data,
     headers: {
       "Content-Type": "multipart/form-data",
@@ -35,4 +83,8 @@ export function updateSuperadminProfile(data: FormData) {
     method: "PATCH",
     url: "auth/superadmin/profile",
   });
+
+  cacheSuperadminProfile(response.data);
+
+  return response;
 }
