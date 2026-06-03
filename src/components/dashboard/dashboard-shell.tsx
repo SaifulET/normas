@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { apiRequest } from "@/lib/api";
+import { getStoredAuthState } from "@/lib/auth-storage";
 import {
   dashboardNavItems,
   dashboardUser,
@@ -260,7 +261,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [authProfile, setAuthProfile] = useState<AuthProfileResponse["data"] | null>(null);
+  const [authProfile, setAuthProfile] = useState<AuthProfileResponse["data"] | null>(() => {
+    const storedUser = getStoredAuthState()?.state?.user;
+
+    return storedUser
+      ? {
+          email: storedUser.email,
+          id: storedUser.id,
+          name: storedUser.name,
+          role: storedUser.role,
+        }
+      : null;
+  });
   const desktopSidebarWidth = collapsed ? "lg:pl-[96px]" : "lg:pl-[276px]";
   const investeeDashboard = pathname.startsWith("/investee-dashboard");
   const fallbackSidebarUser = investeeDashboard ? investeeDashboardUser : dashboardUser;
@@ -274,6 +286,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const sidebarNavItems = investeeDashboard ? investeeDashboardNavItems : dashboardNavItems;
   const dashboardHomeHref = investeeDashboard ? "/investee-dashboard" : "/dashboard";
   const dashboardProfileHref = investeeDashboard ? "/investee-dashboard/profile" : "/dashboard/profile";
+  const roleRedirectHref = getRoleDashboardHref(pathname, authProfile?.role);
 
   useEffect(() => {
     let active = true;
@@ -303,12 +316,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const redirectHref = getRoleDashboardHref(pathname, authProfile?.role);
-
-    if (redirectHref) {
-      router.replace(redirectHref);
+    if (roleRedirectHref) {
+      router.replace(roleRedirectHref);
     }
-  }, [authProfile?.role, pathname, router]);
+  }, [roleRedirectHref, router]);
+
+  if (roleRedirectHref) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white text-sm font-medium text-[#6B7280]">
+        Loading dashboard...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white text-[#1E2746]">

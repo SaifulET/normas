@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Manrope, Poppins } from "next/font/google";
+import { PageTransitionProvider } from "@/components/page-transition-provider";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -36,7 +37,7 @@ export default function RootLayout({
       className={`${manrope.variable} ${poppins.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
-        {children}
+        <PageTransitionProvider>{children}</PageTransitionProvider>
       </body>
     </html>
   );

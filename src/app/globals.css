@@ -24,3 +24,189 @@ body {
   color: var(--foreground);
   font-family: var(--font-poppins), sans-serif;
 }
+
+.page-transition-content {
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+.page-transition-content-leaving {
+  animation: page-transition-content-leaving 760ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.page-transition-content-entering {
+  animation: page-transition-content-entering 1120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.page-transition-overlay {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: hidden;
+  color: #ffffff;
+}
+
+.page-transition-base {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(4px);
+}
+
+.page-transition-panel {
+  position: absolute;
+  inset: -18%;
+  border-radius: 44px;
+  will-change: transform, opacity;
+}
+
+.page-transition-panel-primary {
+  background: #ffffff;
+  box-shadow: 0 32px 90px rgba(15, 23, 42, 0.12);
+}
+
+.page-transition-panel-secondary {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.page-transition-accent {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: min(420px, 62vw);
+  width: min(760px, 92vw);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 28% 48%, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(circle at 68% 54%, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0) 64%);
+  filter: blur(16px);
+  transform: translate(-50%, -50%);
+}
+
+.page-transition-overlay-leaving .page-transition-base {
+  animation: page-transition-base-in 760ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.page-transition-overlay-leaving .page-transition-panel-primary {
+  animation: page-transition-panel-in 760ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.page-transition-overlay-leaving .page-transition-panel-secondary {
+  animation: page-transition-panel-in 760ms cubic-bezier(0.76, 0, 0.24, 1) 40ms both;
+}
+
+.page-transition-overlay-leaving .page-transition-accent {
+  animation: page-transition-accent-in 760ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.page-transition-overlay-entering .page-transition-base {
+  animation: page-transition-base-out 1120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.page-transition-overlay-entering .page-transition-panel-primary {
+  animation: page-transition-panel-out 1120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.page-transition-overlay-entering .page-transition-panel-secondary {
+  animation: page-transition-panel-out 1120ms cubic-bezier(0.22, 1, 0.36, 1) 35ms both;
+}
+
+.page-transition-overlay-entering .page-transition-accent {
+  animation: page-transition-accent-out 1120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes page-transition-content-leaving {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0.86;
+    transform: translateY(10px) scale(0.992);
+  }
+}
+
+@keyframes page-transition-content-entering {
+  0% {
+    opacity: 0.92;
+    transform: translateY(14px) scale(0.994);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes page-transition-base-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes page-transition-base-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-transition-panel-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(-118%, 22%, 0) rotate(-8deg) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes page-transition-panel-out {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(118%, -20%, 0) rotate(-7deg) scale(1.04);
+  }
+}
+
+@keyframes page-transition-accent-in {
+  0% {
+    opacity: 0;
+    transform: translate(-52%, -48%) scale(0.78);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes page-transition-accent-out {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-48%, -52%) scale(1.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition-content,
+  .page-transition-overlay {
+    animation: none !important;
+  }
+
+  .page-transition-overlay {
+    display: none;
+  }
+}
