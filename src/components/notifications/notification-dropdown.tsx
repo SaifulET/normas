@@ -7,7 +7,7 @@ import { io, type Socket } from "socket.io-client";
 import { API_BASE_URL, getApiErrorMessage } from "@/lib/api";
 import { getStoredAccessToken } from "@/lib/auth-storage";
 import {
-  getNotifications,
+  getNotificationTabs,
   markAllNotificationsAsRead,
   markNotificationAsRead,
   type NotificationItem,
@@ -211,6 +211,7 @@ export function NotificationDropdown({
   const [activeTab, setActiveTab] = useState<"unread" | "read">("unread");
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [notificationCounts, setNotificationCounts] = useState({ read: 0, unread: 0 });
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -222,14 +223,19 @@ export function NotificationDropdown({
     () => sortNotifications(notifications.filter((notification) => isRead(notification))),
     [notifications],
   );
-  const unreadCount = unreadNotifications.length;
+  const unreadCount = notificationCounts.unread;
+  const readCount = notificationCounts.read;
   const currentItems = activeTab === "unread" ? unreadNotifications : readNotifications;
 
   const loadNotifications = async () => {
     try {
       setErrorMessage("");
-      const response = await getNotifications();
+      const response = await getNotificationTabs();
       setNotifications(sortNotifications(response.data ?? []));
+      setNotificationCounts({
+        read: response.readCount,
+        unread: response.unreadCount,
+      });
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, "Notifications could not be loaded"));
     } finally {
@@ -238,7 +244,13 @@ export function NotificationDropdown({
   };
 
   useEffect(() => {
-    void loadNotifications();
+    const timeoutId = window.setTimeout(() => {
+      void loadNotifications();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, []);
 
   useEffect(() => {
@@ -254,10 +266,35 @@ export function NotificationDropdown({
     });
 
     socketRef.current = socket;
-    socket.emit("notification:join", { token });
+    socket.emit("notification:join", { token }, (response?: { unreadCount?: number }) => {
+      if (typeof response?.unreadCount === "number") {
+        setNotificationCounts((counts) => ({ ...counts, unread: response.unreadCount ?? counts.unread }));
+      }
+    });
     socket.on("notification:new", (notification: NotificationItem) => {
       setNotifications((items) => {
+        const existingNotification = items.find((item) => item._id === notification._id);
         const withoutDuplicate = items.filter((item) => item._id !== notification._id);
+
+        setNotificationCounts((counts) => {
+          if (!existingNotification) {
+            return isRead(notification)
+              ? { ...counts, read: counts.read + 1 }
+              : { ...counts, unread: counts.unread + 1 };
+          }
+
+          const wasRead = isRead(existingNotification);
+          const nowRead = isRead(notification);
+
+          if (wasRead === nowRead) {
+            return counts;
+          }
+
+          return nowRead
+            ? { read: counts.read + 1, unread: Math.max(counts.unread - 1, 0) }
+            : { read: Math.max(counts.read - 1, 0), unread: counts.unread + 1 };
+        });
+
         return sortNotifications([notification, ...withoutDuplicate]);
       });
     });
@@ -305,6 +342,10 @@ export function NotificationDropdown({
           : item,
       ),
     );
+    setNotificationCounts((counts) => ({
+      read: counts.read + 1,
+      unread: Math.max(counts.unread - 1, 0),
+    }));
 
     try {
       const response = await markNotificationAsRead(notification._id);
@@ -324,10 +365,15 @@ export function NotificationDropdown({
 
   const handleMarkAllRead = async () => {
     const readAt = new Date().toISOString();
+    const unreadToMove = unreadCount;
 
     setNotifications((items) =>
       items.map((item) => (isRead(item) ? item : { ...item, isRead: true, readAt })),
     );
+    setNotificationCounts((counts) => ({
+      read: counts.read + unreadToMove,
+      unread: 0,
+    }));
 
     try {
       await markAllNotificationsAsRead();
@@ -397,7 +443,7 @@ export function NotificationDropdown({
                   activeTab === tab ? "bg-white text-[#1E2746] shadow-sm" : "text-[#7B8499]",
                 )}
               >
-                {tab === "unread" ? `Unread (${unreadNotifications.length})` : `Read (${readNotifications.length})`}
+                {tab === "unread" ? `Unread (${unreadCount})` : `Read (${readCount})`}
               </button>
             ))}
           </div>

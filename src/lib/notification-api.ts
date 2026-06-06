@@ -22,7 +22,9 @@ type NotificationsResponse = {
     total: number;
     totalPages: number;
   };
+  readCount?: number;
   success?: boolean;
+  totalCount?: number;
   unreadCount?: number;
 };
 
@@ -33,40 +35,44 @@ type UnreadCountResponse = {
   success?: boolean;
 };
 
-export async function getNotifications() {
-  const firstPage = await apiRequest<NotificationsResponse>({
+type NotificationQuery = {
+  limit?: number;
+  page?: number;
+  read?: boolean;
+  unread?: boolean;
+};
+
+export async function getNotifications({
+  limit = 50,
+  page = 1,
+  read,
+  unread,
+}: NotificationQuery = {}) {
+  return apiRequest<NotificationsResponse>({
     method: "GET",
     url: "notifications",
     params: {
-      limit: 100,
-      page: 1,
+      limit,
+      page,
+      ...(read ? { read: "true" } : {}),
+      ...(unread ? { unread: "true" } : {}),
     },
   });
-  const totalPages = firstPage.pagination?.totalPages ?? 1;
+}
 
-  if (totalPages <= 1) {
-    return firstPage;
-  }
+export async function getNotificationTabs() {
+  const [unreadResponse, readResponse] = await Promise.all([
+    getNotifications({ unread: true }),
+    getNotifications({ read: true }),
+  ]);
 
-  const remainingPages = await Promise.all(
-    Array.from({ length: totalPages - 1 }, (_, index) =>
-      apiRequest<NotificationsResponse>({
-        method: "GET",
-        url: "notifications",
-        params: {
-          limit: 100,
-          page: index + 2,
-        },
-      }),
-    ),
-  );
+  const unreadData = unreadResponse.data ?? [];
+  const readData = readResponse.data ?? [];
 
   return {
-    ...firstPage,
-    data: [
-      ...(firstPage.data ?? []),
-      ...remainingPages.flatMap((page) => page.data ?? []),
-    ],
+    data: [...unreadData, ...readData],
+    readCount: readResponse.readCount ?? readResponse.pagination?.total ?? readData.length,
+    unreadCount: unreadResponse.unreadCount ?? unreadResponse.pagination?.total ?? unreadData.length,
   };
 }
 
