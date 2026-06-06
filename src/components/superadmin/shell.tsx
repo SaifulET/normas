@@ -33,6 +33,15 @@ function SuperadminIcon({
       return (
         <HugeiconsIcon icon={DashboardSquare01Icon} className="w-[24px] h-[24px]"/>
       );
+    case "lists":
+      return (
+        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <path d="M7 4.75h10A2.25 2.25 0 0 1 19.25 7v10A2.25 2.25 0 0 1 17 19.25H7A2.25 2.25 0 0 1 4.75 17V7A2.25 2.25 0 0 1 7 4.75Z" />
+          <path d="M8.5 9h7" />
+          <path d="M8.5 12h7" />
+          <path d="M8.5 15h4.5" />
+        </svg>
+      );
     case "payment":
       return (
        <HugeiconsIcon icon={CreditCardPosIcon} className="w-[24px] h-[24px]" />

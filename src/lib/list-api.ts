@@ -6,12 +6,12 @@ export type ListMutationResponse = {
   success?: boolean;
 };
 
-export type ListStatus = "activated" | "deactivated" | "suspended" | "under_review";
+export type ListStatus = "pending" | "activated" | "deactivated" | "suspended" | "under_review";
+export type ListStatusAction = ListStatus | "rejected";
+export type ListApprovalStatus = "pending_create" | "pending_update" | "approved" | "rejected_create" | "rejected_update";
 
 export type ListStatusResponse = {
-  data?: {
-    status?: ListStatus | string;
-  };
+  data?: ListItemResponse;
   message?: string;
   status?: ListStatus | string;
   success?: boolean;
@@ -66,9 +66,12 @@ export type ListItemResponse = {
   createdAt?: string;
   description?: string;
   fundingTarget?: number;
+  approvalStatus?: ListApprovalStatus | string;
+  hasPendingDraft?: boolean;
   keyword?: string;
   moderationReasons?: string[];
   moderationStatus?: "approved" | "suspended" | "manual_review" | string;
+  publishedContent?: Partial<ListItemResponse>;
   sector?: string;
   stage?: string;
   status?: ListStatus | string;
@@ -76,6 +79,18 @@ export type ListItemResponse = {
   updatedAt?: string;
   user?: ListUser;
   viewCount?: number;
+};
+
+export type ListAiReview = {
+  decision?: string;
+  isRelevant?: boolean;
+  label?: string;
+  reasons?: string[];
+  summary?: string;
+};
+
+export type ReviewListItemResponse = ListItemResponse & {
+  aiReview?: ListAiReview;
 };
 
 export type ListsResponse = {
@@ -101,6 +116,27 @@ export type ListSectorsResponse = {
     totalLists?: number;
     totalSectors?: number;
   };
+  message?: string;
+  success?: boolean;
+};
+
+export type ReviewListsResponse = {
+  data?: {
+    lists?: ReviewListItemResponse[];
+    pagination?: {
+      limit?: number;
+      page?: number;
+      total?: number;
+      totalPages?: number;
+    };
+    pendingCount?: number;
+  };
+  message?: string;
+  success?: boolean;
+};
+
+export type ReviewListResponse = {
+  data?: ReviewListItemResponse;
   message?: string;
   success?: boolean;
 };
@@ -205,7 +241,28 @@ export function getListSectors() {
   });
 }
 
-export function updateListStatus(listId: string, status: ListStatus) {
+export function getSuperadminReviewLists(params: {
+  approvalStatus?: string;
+  limit?: number;
+  page?: number;
+  search?: string;
+  status?: string;
+} = {}) {
+  return apiRequest<ReviewListsResponse>({
+    method: "GET",
+    params,
+    url: "lists/admin/review",
+  });
+}
+
+export function getSuperadminReviewList(listId: string) {
+  return apiRequest<ReviewListResponse>({
+    method: "GET",
+    url: `lists/admin/review/${listId}`,
+  });
+}
+
+export function updateListStatus(listId: string, status: ListStatusAction) {
   return apiRequest<ListStatusResponse>({
     data: { status },
     method: "PATCH",

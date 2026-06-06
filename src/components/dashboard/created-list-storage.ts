@@ -16,6 +16,18 @@ export type CreatedListAdditionalDetail = {
   value: string;
 };
 
+export type CreatedListPublishedContent = {
+  additionalDetails?: CreatedListAdditionalDetail[];
+  bannerImage?: string | null;
+  country?: string;
+  description?: string;
+  fundingTarget?: number;
+  keyword?: string;
+  sector?: string;
+  stage?: string;
+  title?: string;
+};
+
 export type CreatedListItem = {
   active: boolean;
   additionalDetails: CreatedListAdditionalDetail[];
@@ -26,11 +38,14 @@ export type CreatedListItem = {
   fundingTarget: string;
   id: string;
   keyword: string;
+  approvalStatus?: "pending_create" | "pending_update" | "approved" | "rejected_create" | "rejected_update" | string;
+  hasPendingDraft?: boolean;
   moderationReasons?: string[];
   moderationStatus?: "approved" | "suspended" | "manual_review" | string;
+  publishedContent?: CreatedListPublishedContent;
   sector: string;
   stage: string;
-  status?: "activated" | "deactivated" | "suspended" | string;
+  status?: "pending" | "activated" | "deactivated" | "suspended" | "under_review" | string;
   title: string;
   viewCount?: number;
 };
@@ -150,6 +165,28 @@ function isCreatedListAdditionalDetail(value: unknown): value is CreatedListAddi
   return typeof candidate.label === "string" && typeof candidate.value === "string";
 }
 
+function hydratePublishedContent(value: unknown): CreatedListPublishedContent | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const source = value as Record<string, unknown>;
+
+  return {
+    additionalDetails: Array.isArray(source.additionalDetails)
+      ? source.additionalDetails.filter(isCreatedListAdditionalDetail)
+      : undefined,
+    bannerImage: typeof source.bannerImage === "string" || source.bannerImage === null ? source.bannerImage : undefined,
+    country: typeof source.country === "string" ? source.country : undefined,
+    description: typeof source.description === "string" ? source.description : undefined,
+    fundingTarget: typeof source.fundingTarget === "number" ? source.fundingTarget : undefined,
+    keyword: typeof source.keyword === "string" ? source.keyword : undefined,
+    sector: typeof source.sector === "string" ? source.sector : undefined,
+    stage: typeof source.stage === "string" ? source.stage : undefined,
+    title: typeof source.title === "string" ? source.title : undefined,
+  };
+}
+
 function hydrateCreatedList(raw: unknown): CreatedListItem | null {
   if (!raw || typeof raw !== "object") {
     return null;
@@ -184,10 +221,13 @@ function hydrateCreatedList(raw: unknown): CreatedListItem | null {
     sector: source.sector,
     fundingTarget: source.fundingTarget,
     keyword: source.keyword,
+    approvalStatus: typeof source.approvalStatus === "string" ? source.approvalStatus : "approved",
+    hasPendingDraft: typeof source.hasPendingDraft === "boolean" ? source.hasPendingDraft : false,
     moderationReasons: Array.isArray(source.moderationReasons)
       ? source.moderationReasons.filter((value): value is string => typeof value === "string")
       : [],
     moderationStatus: typeof source.moderationStatus === "string" ? source.moderationStatus : "approved",
+    publishedContent: hydratePublishedContent(source.publishedContent),
     description: source.description,
     createdAt: source.createdAt,
     active: source.active,
@@ -214,6 +254,13 @@ function normalizeActiveState(items: CreatedListItem[]) {
   let activeCount = 0;
 
   return items.map((item) => {
+    if (["pending", "suspended", "under_review"].includes(item.status || "")) {
+      return {
+        ...item,
+        active: false,
+      };
+    }
+
     if (item.active && activeCount < MAX_ACTIVE_CREATED_LISTS) {
       activeCount += 1;
       return {
@@ -225,7 +272,9 @@ function normalizeActiveState(items: CreatedListItem[]) {
     return {
       ...item,
       active: false,
-      status: item.status === "suspended" ? "suspended" : "deactivated",
+      status: ["pending", "suspended", "under_review"].includes(item.status || "")
+        ? item.status
+        : "deactivated",
     };
   });
 }

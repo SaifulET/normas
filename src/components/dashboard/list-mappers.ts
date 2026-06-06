@@ -23,8 +23,26 @@ export function mapApiListToCreatedListItem(item: ListItemResponse): CreatedList
     fundingTarget: formatFundingTarget(item.fundingTarget),
     id: item._id,
     keyword: item.keyword ?? "",
+    approvalStatus: item.approvalStatus ?? "approved",
+    hasPendingDraft: item.hasPendingDraft ?? false,
     moderationReasons: item.moderationReasons ?? [],
     moderationStatus: item.moderationStatus ?? "approved",
+    publishedContent: item.publishedContent
+      ? {
+          additionalDetails: item.publishedContent.additionalDetails?.map((detail) => ({
+            label: detail.key ?? "",
+            value: detail.value ?? "",
+          })),
+          bannerImage: item.publishedContent.bannerImage,
+          country: item.publishedContent.country,
+          description: item.publishedContent.description,
+          fundingTarget: item.publishedContent.fundingTarget,
+          keyword: item.publishedContent.keyword,
+          sector: item.publishedContent.sector,
+          stage: item.publishedContent.stage,
+          title: item.publishedContent.title,
+        }
+      : undefined,
     sector: item.sector ?? "",
     stage: item.stage ?? "",
     status: item.status ?? "deactivated",

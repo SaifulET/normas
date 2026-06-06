@@ -21,11 +21,33 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [loading, setLoading] = useState(true);
-  const safeDescription = useMemo(() => sanitizeHtml(item?.description ?? ""), [item?.description]);
-  const bannerUrl = item?.banner?.kind === "path" ? item.banner.src : null;
+  const [viewMode, setViewMode] = useState<"updated" | "previous">("updated");
   const isSuspended = item?.status === "suspended";
   const isUnderReview = item?.status === "under_review";
+  const isPendingCreate = item?.status === "pending" || item?.approvalStatus === "pending_create";
+  const isPendingUpdate = item?.approvalStatus === "pending_update";
+  const isPendingApproval = isPendingCreate || isPendingUpdate;
+  const isRejectedCreate = item?.approvalStatus === "rejected_create";
+  const isRejectedUpdate = item?.approvalStatus === "rejected_update";
+  const isRejected = isRejectedCreate || isRejectedUpdate;
   const isModerationLocked = isSuspended || isUnderReview;
+  const hasComparableVersion = Boolean(item?.publishedContent && (isPendingUpdate || isRejectedUpdate));
+  const mainContent = viewMode === "previous" && item?.publishedContent ? item.publishedContent : item;
+  const comparisonContent = viewMode === "previous" ? item : item?.publishedContent;
+  const mainFundingTarget = typeof mainContent?.fundingTarget === "number"
+    ? `£${mainContent.fundingTarget.toLocaleString("en-US")}`
+    : mainContent?.fundingTarget || "£0";
+  const mainAdditionalDetails = mainContent?.additionalDetails ?? [];
+  const safeDescription = useMemo(() => sanitizeHtml(mainContent?.description ?? ""), [mainContent?.description]);
+  const safeComparisonDescription = useMemo(
+    () => sanitizeHtml(comparisonContent?.description ?? ""),
+    [comparisonContent?.description],
+  );
+  const bannerUrl = viewMode === "previous"
+    ? item?.publishedContent?.bannerImage || null
+    : item?.banner?.kind === "path"
+      ? item.banner.src
+      : null;
 
   useEffect(() => {
     let active = true;
@@ -45,6 +67,7 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
         }
 
         setItem(mapApiListToCreatedListItem(response.data));
+        setViewMode("updated");
         setError("");
       } catch (loadError) {
         if (active) {
@@ -85,6 +108,8 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
         ...item,
         active: nextStatus === "activated",
         status: nextStatus,
+        approvalStatus: response.data?.approvalStatus ?? item.approvalStatus,
+        hasPendingDraft: response.data?.hasPendingDraft ?? item.hasPendingDraft,
       };
 
       setItem(nextItem);
@@ -175,9 +200,9 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
         <div className="overflow-hidden rounded-[8px] border border-[#E6EBF3] bg-[#F3F6FA]">
           {bannerUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={bannerUrl} alt={item.title} className="h-[50vh] w-full object-fit md:h-[60vh] lg:h-[70vh]" />
+            <img src={bannerUrl} alt={mainContent?.title || item.title} className="h-[50vh] w-full object-fit sm:h-[50vh] md:h-[60vh] lg:h-[70vh]" />
           ) : (
-            <div className="flex h-[240px] items-center justify-center text-sm text-[#98A2B3] sm:h-[320px]">
+            <div className="flex h-[50vh] items-center justify-center text-sm text-[#98A2B3] sm:h-[50vh] md:h-[60vh] lg:h-[70vh]">
               No banner uploaded
             </div>
           )}
@@ -189,23 +214,28 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
               <div className="flex flex-wrap items-center gap-4 text-xs text-[#667085]">
                 <span className="inline-flex items-center gap-1.5">
                   <DashboardIcon name="website" className="h-3.5 w-3.5" />
-                  {item.country || "Unknown location"}
+                  {mainContent?.country || "Unknown location"}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <DashboardIcon name="views" className="h-3.5 w-3.5" />
                   {item.viewCount ?? 0} views
                 </span>
                 <span>{statusLabel(item)}</span>
+                {hasComparableVersion ? (
+                  <span className="font-semibold text-[#314B6B]">
+                    {viewMode === "previous" ? "Previous public version" : "Updated submission"}
+                  </span>
+                ) : null}
               </div>
 
-              <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-[#1E2746]">{item.title}</h2>
+              <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-[#1E2746]">{mainContent?.title || "Untitled pitch"}</h2>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-[#D8E0EC] px-3 py-1 text-xs font-medium text-[#314B6B]">
-                  {item.stage}
+                  {mainContent?.stage || "No stage"}
                 </span>
                 <span className="rounded-full bg-[#EDF2F7] px-3 py-1 text-xs font-medium text-[#586274]">
-                  {item.sector}
+                  {mainContent?.sector || "No sector"}
                 </span>
               </div>
 
@@ -213,7 +243,7 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#98A2B3]">
                   Funding target
                 </p>
-                <p className="mt-1 text-sm font-semibold text-[#243B5A]">{item.fundingTarget}</p>
+                <p className="mt-1 text-sm font-semibold text-[#243B5A]">{mainFundingTarget}</p>
               </div>
             </div>
 
@@ -239,23 +269,70 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
                 onClick={() => {
                   void handleStatusUpdate();
                 }}
-                disabled={isDeleting || isUpdatingStatus || isModerationLocked}
+                disabled={isDeleting || isUpdatingStatus || isModerationLocked || isPendingCreate}
                 className="inline-flex h-8 items-center rounded-[6px] bg-[#ED6A06] px-3 text-xs font-semibold text-white transition hover:bg-[#d35f05] disabled:cursor-wait disabled:opacity-60"
               >
-                {isSuspended ? "Suspended by admin" : isUnderReview ? "Under review" : isUpdatingStatus ? "Updating..." : item.active ? "Deactivate" : "Activate"}
+                {isSuspended
+                  ? "Suspended by admin"
+                  : isUnderReview
+                    ? "Under review"
+                    : isPendingCreate
+                      ? "Pending approval"
+                      : isRejectedCreate
+                        ? "Not approved"
+                      : isUpdatingStatus
+                        ? "Updating..."
+                        : item.active
+                          ? "Deactivate"
+                          : "Activate"}
               </button>
             </div>
           </div>
 
-          {isModerationLocked ? (
+          {isModerationLocked || isPendingApproval || isRejected ? (
             <p className="rounded-[8px] border border-[#F7C98B] bg-[#FFF7ED] px-4 py-3 text-sm text-[#9A4B00]">
-              {isUnderReview
-                ? "This pitch is under superadmin review and is not public."
-                : "This pitch is suspended by admin. Please correct the reported issue and inform the support center to restore it."}
+              {isRejected
+                ? isRejectedUpdate
+                  ? "Your latest edits were not approved. Until you submit a new approved version, investors continue seeing the previously activated content."
+                  : "This pitch was not approved for publication. You can edit it and submit again."
+                : isPendingApproval
+                ? isPendingUpdate
+                  ? "Your latest edits are pending superadmin activation. Until approval, the previously activated content is what investors see."
+                  : "This pitch is pending superadmin activation and is not public yet."
+                : isUnderReview
+                  ? "This pitch is under superadmin review and is not public."
+                  : "This pitch is suspended by admin. Please correct the reported issue and inform the support center to restore it."}
               {item.moderationReasons?.length ? (
                 <span className="mt-1 block text-xs text-[#B45309]">{item.moderationReasons.join(", ")}</span>
               ) : null}
             </p>
+          ) : null}
+
+          {hasComparableVersion && comparisonContent ? (
+            <section className="rounded-[8px] border border-[#D8E0EC] bg-[#F8FAFC] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-[#1E2746]">
+                  {viewMode === "previous" ? "Updated submission" : "Previous public version"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setViewMode((current) => (current === "previous" ? "updated" : "previous"))}
+                  className="rounded-[6px] border border-[#D8E0EC] px-2.5 py-1 text-[11px] font-semibold text-[#314B6B] transition hover:bg-white"
+                >
+                  {viewMode === "previous" ? "View updated" : "View previous"}
+                </button>
+              </div>
+              <p className="mt-2 text-base font-semibold text-[#243B5A]">
+                {comparisonContent.title || "Untitled pitch"}
+              </p>
+              <p className="mt-1 text-xs text-[#667085]">
+                {comparisonContent.country || "Unknown location"} · {comparisonContent.stage || "No stage"} · {comparisonContent.sector || "No sector"}
+              </p>
+              <div
+                className="mt-3 space-y-3 text-sm leading-6 text-[#5F6B7A] [&_a]:text-[#314B6B]"
+                dangerouslySetInnerHTML={{ __html: safeComparisonDescription || "<p>No description.</p>" }}
+              />
+            </section>
           ) : null}
 
           <section className="space-y-4">
@@ -271,8 +348,8 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
               <h3 className="text-xs font-semibold text-[#1E2746]">Additional Details</h3>
             </div>
             <div className="divide-y divide-[#E9EEF5]">
-              {item.additionalDetails.length ? (
-                item.additionalDetails.map((row) => (
+              {mainAdditionalDetails.length ? (
+                mainAdditionalDetails.map((row) => (
                   <div key={`${row.label}-${row.value}`} className="flex items-center justify-between gap-6 px-4 py-3 text-sm">
                     <span className="text-[#586274]">{row.label}</span>
                     <span className="text-right font-medium text-[#1E2746]">{row.value}</span>

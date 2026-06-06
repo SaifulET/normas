@@ -64,11 +64,13 @@ export type AdminPitchAdditionalDetail = {
 export type AdminPitch = {
   _id: string;
   additionalDetails?: AdminPitchAdditionalDetail[];
-  bannerImage?: string;
+  approvalStatus?: string;
+  bannerImage?: string | null;
   country?: string;
   createdAt?: string;
   description?: string;
   fundingTarget?: number;
+  hasPendingDraft?: boolean;
   keyword?: string;
   sector?: string;
   stage?: string;

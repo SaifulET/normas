@@ -10,6 +10,7 @@ import {
   type AdminUserDetailsData,
 } from "@/lib/admin-users-api";
 import { getApiErrorMessage } from "@/lib/api";
+import { updateListStatus, type ListStatus } from "@/lib/list-api";
 import { SuperadminAvatar, SuperadminStatusBadge } from "./shell";
 
 type UserDetailTab = "profile" | "kyc" | "pitch" | "viewPitch";
@@ -274,6 +275,7 @@ function PitchCard({
   pitch: AdminPitch;
 }) {
   const descriptionText = getDescriptionText(pitch.description) || "No description submitted.";
+  const isPendingApproval = pitch.status === "pending" || pitch.approvalStatus === "pending_create" || pitch.approvalStatus === "pending_update";
 
   return (
     <div className="overflow-hidden rounded-[10px] border border-[#DCE2EC] bg-white shadow-[0_8px_24px_rgba(31,35,61,0.05)]">
@@ -285,6 +287,7 @@ function PitchCard({
         <div className="flex gap-2 text-[9px]">
           {pitch.stage ? <span className="rounded-full bg-[#5D6B86] px-2 py-1 text-white">{pitch.stage}</span> : null}
           {pitch.sector ? <span className="rounded-full bg-[#EAF0F6] px-2 py-1 text-[#4B5563]">{pitch.sector}</span> : null}
+          {isPendingApproval ? <span className="rounded-full bg-[#FFF1D6] px-2 py-1 text-[#9A4B00]">Pending approval</span> : null}
         </div>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -310,12 +313,18 @@ function PitchCard({
 
 function PitchDetails({
   onBack,
+  onStatusChange,
   pitch,
+  statusSaving,
 }: {
   onBack: () => void;
+  onStatusChange: (pitchId: string, status: ListStatus) => void;
   pitch: AdminPitch;
+  statusSaving: boolean;
 }) {
   const safeDescriptionHtml = useMemo(() => sanitizeDescriptionHtml(pitch.description), [pitch.description]);
+  const isActivated = pitch.status === "activated";
+  const isPendingApproval = pitch.status === "pending" || pitch.approvalStatus === "pending_create" || pitch.approvalStatus === "pending_update";
 
   return (
     <div className="space-y-6">
@@ -338,10 +347,27 @@ function PitchDetails({
             {pitch.sector ? <span className="rounded-full bg-[#E5E9F0] px-3 py-1 text-[11px] text-[#4B5563]">{pitch.sector}</span> : null}
           </div>
         </div>
-        <button type="button" onClick={onBack} className="rounded-[8px] border border-[#8EA0BB] px-4 py-2 text-[12px] text-[#324B6B]">
-          Back to Pitches
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onStatusChange(pitch._id, isActivated ? "deactivated" : "activated")}
+            disabled={statusSaving}
+            className="rounded-[8px] bg-[#EF7A1A] px-4 py-2 text-[12px] font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+          >
+            {statusSaving ? "Updating..." : isActivated ? "Deactivate" : isPendingApproval ? "Activate pending pitch" : "Activate"}
+          </button>
+          <button type="button" onClick={onBack} className="rounded-[8px] border border-[#8EA0BB] px-4 py-2 text-[12px] text-[#324B6B]">
+            Back to Pitches
+          </button>
+        </div>
       </div>
+      {isPendingApproval ? (
+        <p className="rounded-[8px] border border-[#F7C98B] bg-[#FFF7ED] px-4 py-3 text-[13px] text-[#9A4B00]">
+          {pitch.approvalStatus === "pending_update"
+            ? "This pitch has edited content awaiting activation. The old approved content remains public until you activate this version."
+            : "This pitch is not public yet. Activate it to publish it on the website."}
+        </p>
+      ) : null}
       <div className="text-[13px] text-[#7B84A0]">
         <span>Funding target</span>
         <span className="ml-3 text-[22px] font-semibold text-[#27324A]">{formatCurrency(pitch.fundingTarget)}</span>
@@ -375,6 +401,7 @@ export function SuperadminUserDetailClient({ userId }: { userId: string }) {
   const [details, setDetails] = useState<AdminUserDetailsData | null>(null);
   const [selectedPitchId, setSelectedPitchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [updatingPitchStatus, setUpdatingPitchStatus] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [error, setError] = useState("");
 
@@ -430,6 +457,45 @@ export function SuperadminUserDetailClient({ userId }: { userId: string }) {
       setError(getApiErrorMessage(caughtError, "Unable to update account status"));
     } finally {
       setUpdatingStatus(false);
+    }
+  }
+
+  async function handlePitchStatusChange(pitchId: string, status: ListStatus) {
+    if (updatingPitchStatus) return;
+
+    setUpdatingPitchStatus(true);
+    setError("");
+
+    try {
+      const response = await updateListStatus(pitchId, status);
+      const updatedPitch = response.data;
+
+      if (!updatedPitch) {
+        throw new Error(response.message ?? "Unable to update pitch status");
+      }
+
+      setDetails((current) => {
+        if (!current) return current;
+
+        const updatePitch = (pitch: AdminPitch) =>
+          pitch._id === pitchId
+            ? {
+                ...pitch,
+                ...updatedPitch,
+              }
+            : pitch;
+
+        return {
+          ...current,
+          features: current.features?.map(updatePitch),
+          pitches: current.pitches?.map(updatePitch),
+        };
+      });
+      setSelectedPitchId(updatedPitch._id);
+    } catch (caughtError) {
+      setError(getApiErrorMessage(caughtError, "Unable to update pitch status"));
+    } finally {
+      setUpdatingPitchStatus(false);
     }
   }
 
@@ -551,7 +617,14 @@ export function SuperadminUserDetailClient({ userId }: { userId: string }) {
         ) : null}
 
         {!isInvestor && activeTab === "viewPitch" && selectedPitch ? (
-          <PitchDetails pitch={selectedPitch} onBack={() => setActiveTab("pitch")} />
+          <PitchDetails
+            pitch={selectedPitch}
+            statusSaving={updatingPitchStatus}
+            onStatusChange={(pitchId, status) => {
+              void handlePitchStatusChange(pitchId, status);
+            }}
+            onBack={() => setActiveTab("pitch")}
+          />
         ) : null}
       </section>
     </>

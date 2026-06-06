@@ -8,6 +8,7 @@ import { API_BASE_URL, getApiErrorMessage } from "@/lib/api";
 import { getStoredAccessToken } from "@/lib/auth-storage";
 import {
   getNotificationTabs,
+  getUnreadNotificationCount,
   markAllNotificationsAsRead,
   markNotificationAsRead,
   type NotificationItem,
@@ -99,7 +100,7 @@ function getNotificationHref(notification: NotificationItem, pathname: string) {
       return `/pitch/${encodeURIComponent(referenceId)}`;
     }
 
-    return isSuperadmin ? "/superadmin/dashboard" : dashboardPrefix;
+    return isSuperadmin ? `/superadmin/dashboard/lists/${encodeURIComponent(referenceId)}` : dashboardPrefix;
   }
 
   if (isSuperadmin && referenceType === "payment") {
@@ -243,6 +244,19 @@ export function NotificationDropdown({
     }
   };
 
+  const refreshUnreadCount = async () => {
+    try {
+      const response = await getUnreadNotificationCount();
+      const unread = response.data?.unreadCount;
+
+      if (typeof unread === "number") {
+        setNotificationCounts((counts) => ({ ...counts, unread }));
+      }
+    } catch {
+      // Keep the current count if the lightweight refresh fails.
+    }
+  };
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void loadNotifications();
@@ -273,30 +287,13 @@ export function NotificationDropdown({
     });
     socket.on("notification:new", (notification: NotificationItem) => {
       setNotifications((items) => {
-        const existingNotification = items.find((item) => item._id === notification._id);
         const withoutDuplicate = items.filter((item) => item._id !== notification._id);
-
-        setNotificationCounts((counts) => {
-          if (!existingNotification) {
-            return isRead(notification)
-              ? { ...counts, read: counts.read + 1 }
-              : { ...counts, unread: counts.unread + 1 };
-          }
-
-          const wasRead = isRead(existingNotification);
-          const nowRead = isRead(notification);
-
-          if (wasRead === nowRead) {
-            return counts;
-          }
-
-          return nowRead
-            ? { read: counts.read + 1, unread: Math.max(counts.unread - 1, 0) }
-            : { read: Math.max(counts.read - 1, 0), unread: counts.unread + 1 };
-        });
-
         return sortNotifications([notification, ...withoutDuplicate]);
       });
+
+      if (!isRead(notification)) {
+        void refreshUnreadCount();
+      }
     });
 
     return () => {

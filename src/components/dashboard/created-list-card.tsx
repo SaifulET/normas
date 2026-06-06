@@ -64,6 +64,9 @@ export function CreatedListCard({ item }: { item: CreatedListItem }) {
   const bannerUrl = useCreatedListBannerUrl(item.banner);
   const safeDescription = useMemo(() => sanitizeHtml(item.description), [item.description]);
   const status = item.status || (item.active ? "activated" : "deactivated");
+  const approvalStatus = item.approvalStatus || "approved";
+  const isPendingApproval = status === "pending" || approvalStatus === "pending_create" || approvalStatus === "pending_update";
+  const isRejected = approvalStatus === "rejected_create" || approvalStatus === "rejected_update";
   const moderationReasons = item.moderationReasons ?? [];
 
   return (
@@ -91,6 +94,16 @@ export function CreatedListCard({ item }: { item: CreatedListItem }) {
           {status === "under_review" ? (
             <span className="rounded-full bg-[#B45309]/95 px-3 py-1 text-[11px] font-medium text-white shadow-sm">
               Under review
+            </span>
+          ) : null}
+          {isPendingApproval ? (
+            <span className="rounded-full bg-[#B45309]/95 px-3 py-1 text-[11px] font-medium text-white shadow-sm">
+              Pending approval
+            </span>
+          ) : null}
+          {isRejected ? (
+            <span className="rounded-full bg-[#B42318]/95 px-3 py-1 text-[11px] font-medium text-white shadow-sm">
+              Not approved
             </span>
           ) : null}
         </div>
@@ -136,11 +149,19 @@ export function CreatedListCard({ item }: { item: CreatedListItem }) {
           dangerouslySetInnerHTML={{ __html: safeDescription }}
         />
 
-        {status === "suspended" || status === "under_review" ? (
+        {status === "suspended" || status === "under_review" || isPendingApproval || isRejected ? (
           <div className="mt-3 rounded-[10px] border border-[#F7C98B] bg-[#FFF7ED] px-3 py-2 text-xs leading-5 text-[#9A4B00]">
-            {status === "under_review"
-              ? "This pitch is under superadmin review and is not public."
-              : "This pitch is suspended and is not public."}
+            {isRejected
+              ? approvalStatus === "rejected_update"
+                ? "Your latest edits were not approved. Investors still see the previously approved version."
+                : "This pitch was not approved for publication. You can edit and submit it again."
+              : isPendingApproval
+              ? approvalStatus === "pending_update"
+                ? "Your edits are pending superadmin activation. The currently approved pitch remains public until then."
+                : "This pitch is pending superadmin activation and is not public yet."
+              : status === "under_review"
+                ? "This pitch is under superadmin review and is not public."
+                : "This pitch is suspended and is not public."}
             {moderationReasons.length ? (
               <span className="mt-1 block text-[#B45309]">{moderationReasons.join(", ")}</span>
             ) : null}
