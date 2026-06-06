@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
 import { apiRequest } from "@/lib/api";
 import { getStoredAuthState } from "@/lib/auth-storage";
 import {
@@ -36,6 +37,21 @@ type AuthProfileResponse = {
 type SidebarUser = typeof dashboardUser & {
   profileImage?: string;
 };
+
+function getInitialAuthProfile(): AuthProfileResponse["data"] | null {
+  const storedUser = getStoredAuthState()?.state?.user;
+
+  if (!storedUser) {
+    return null;
+  }
+
+  return {
+    email: storedUser.email,
+    id: storedUser.id,
+    name: storedUser.name,
+    role: storedUser.role,
+  };
+}
 
 function getInitials(name?: string, fallback = "U") {
   const initials = name
@@ -261,7 +277,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [authProfile, setAuthProfile] = useState<AuthProfileResponse["data"] | null>(null);
+  const [authProfile, setAuthProfile] = useState<AuthProfileResponse["data"] | null>(getInitialAuthProfile);
   const desktopSidebarWidth = collapsed ? "lg:pl-[96px]" : "lg:pl-[276px]";
   const investeeDashboard = pathname.startsWith("/investee-dashboard");
   const fallbackSidebarUser = investeeDashboard ? investeeDashboardUser : dashboardUser;
@@ -279,16 +295,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    const storedUser = getStoredAuthState()?.state?.user;
-
-    if (storedUser) {
-      setAuthProfile({
-        email: storedUser.email,
-        id: storedUser.id,
-        name: storedUser.name,
-        role: storedUser.role,
-      });
-    }
 
     const loadProfile = async () => {
       try {
@@ -349,6 +355,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           />
         </aside>
 
+        <div className="fixed right-4 top-[84px] z-40 lg:right-6 lg:top-6">
+          <NotificationDropdown />
+        </div>
+
         {mobileOpen ? (
           <div className="fixed inset-0 z-40 bg-[#0F172A]/35 lg:hidden" onClick={() => setMobileOpen(false)}>
             <aside
@@ -395,7 +405,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <main className="min-w-0 p-4 sm:p-6 xl:p-8">{children}</main>
+          <main className="min-w-0 p-4 pr-20 sm:p-6 sm:pr-24 xl:p-8 xl:pr-24">{children}</main>
         </div>
       </div>
     </div>

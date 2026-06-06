@@ -385,8 +385,8 @@ export function NotificationDropdown({
   const buttonClassName =
     className ??
     (variant === "superadmin"
-      ? "relative inline-flex h-7 w-7 items-center justify-center rounded-[6px] border border-[#E2E4ED] bg-white text-[#4D5572]"
-      : "relative inline-flex items-center justify-center rounded-[8px] border border-[#E5EAF2] bg-white p-[13px] text-[#314B6B] shadow-[0_14px_35px_-28px_rgba(36,59,90,0.55)]");
+      ? "relative inline-flex shrink-0 items-center justify-center rounded-[16px] border border-[#E2E4ED] bg-white p-[13px] text-[#5A576B] shadow-[0_10px_26px_-20px_rgba(31,35,61,0.45)]"
+      : "relative inline-flex shrink-0 items-center justify-center rounded-[16px] border border-[#E2E4ED] bg-white p-[13px] text-[#5A576B] shadow-[0_10px_26px_-20px_rgba(31,35,61,0.45)]");
 
   return (
     <div ref={rootRef} className="relative">
@@ -403,12 +403,10 @@ export function NotificationDropdown({
           width={20}
           height={20}
           aria-hidden="true"
-          className={iconClassName}
+          className={cx("h-5 w-5", iconClassName)}
         />
         {unreadCount > 0 ? (
-          <span className="absolute right-[7px] top-[7px] flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-[#EF4444] px-1 text-[9px] font-semibold leading-none text-white">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
+          <span className="absolute right-[7px] top-[7px] h-[14px] w-[14px] rounded-full bg-[#E8434D]" />
         ) : null}
       </button>
 

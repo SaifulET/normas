@@ -461,8 +461,12 @@ export function SuperadminShell({
         </div>
       </aside>
 
+      <div className="fixed right-4 top-4 z-40 sm:right-6 sm:top-6">
+        <NotificationDropdown variant="superadmin" />
+      </div>
+
       <div className={cx("transition-all duration-200", contentPadding)}>
-        <main className="min-h-screen p-4 sm:p-6">{children}</main>
+        <main className="min-h-screen p-4 pr-20 sm:p-6 sm:pr-24">{children}</main>
       </div>
     </div>
   );
@@ -484,16 +488,13 @@ export function SuperadminPageHeader({
         <p className="mt-1 text-[13px] text-[#69729A]">{subtitle}</p>
       </div>
 
-      <div className="flex items-center gap-3">
-        {actionArea}
-        <NotificationDropdown />
-      </div>
+      {actionArea ? <div className="flex items-center gap-3">{actionArea}</div> : null}
     </div>
   );
 }
 
 export function SuperadminNotificationButton() {
-  return <NotificationDropdown />;
+  return null;
 }
 
 export function SuperadminSearch({

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   FilterHorizontalIcon,
-  Notification01Icon,
   PencilEdit02Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -163,20 +162,6 @@ const dashboardData: Record<RangeKey, AnalyticsSet> = {
 
 const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"];
-
-function NotificationButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="relative inline-flex h-9 w-9 items-center justify-center rounded-[8px] border border-[#E3E8F2] bg-white text-[#68718D] shadow-[0_6px_20px_rgba(31,35,61,0.05)]"
-      aria-label="Notifications"
-    >
-      <HugeiconsIcon icon={Notification01Icon} className="h-4 w-4" />
-      <span className="absolute right-[9px] top-[8px] h-[5px] w-[5px] rounded-full bg-[#FF4D4F]" />
-    </button>
-  );
-}
 
 function RangeTabs({ active, onChange }: { active: RangeKey; onChange: (range: RangeKey) => void }) {
   return (
@@ -418,13 +403,11 @@ function CustomRangeModal({
 
 function DashboardHeader({
   activeRange,
-  onNotification,
   onRangeChange,
   subtitle,
   title,
 }: {
   activeRange: RangeKey;
-  onNotification: () => void;
   onRangeChange: (range: RangeKey) => void;
   subtitle: string;
   title: string;
@@ -436,7 +419,6 @@ function DashboardHeader({
         <p className="mt-1 text-[13px] text-[#7E86A4]">{subtitle}</p>
       </div>
       <div className="flex flex-col items-start gap-4 lg:items-end">
-        <NotificationButton onClick={onNotification} />
         <RangeTabs active={activeRange} onChange={onRangeChange} />
       </div>
     </div>
@@ -619,7 +601,6 @@ function BarChart({ values }: { values: number[] }) {
 
 export function SuperadminDashboardOverviewClient() {
   const [range, setRange] = useState<RangeKey>("today");
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
   const [showRevenueModal, setShowRevenueModal] = useState(false);
@@ -677,7 +658,6 @@ export function SuperadminDashboardOverviewClient() {
         subtitle="Here's what's happened recently"
         activeRange={range}
         onRangeChange={handleRangeChange}
-        onNotification={() => setShowNotifications((value) => !value)}
       />
 
       <div className="grid gap-4 xl:grid-cols-4">
@@ -758,15 +738,6 @@ export function SuperadminDashboardOverviewClient() {
         ))}
       </div>
 
-      {showNotifications ? (
-        <Modal title="Notifications" onClose={() => setShowNotifications(false)}>
-          <div className="space-y-3 text-[13px] text-[#5F6786]">
-            <p>2 new subscriber payments were recorded in the selected period.</p>
-            <p>1 onboarding entry needs review before approval.</p>
-          </div>
-        </Modal>
-      ) : null}
-
       {showFilter ? (
         <FilterModal
           payment={paymentFilter}
@@ -807,7 +778,6 @@ export function SuperadminDashboardOverviewClient() {
 
 export function SuperadminAnalyticsClient() {
   const [range, setRange] = useState<RangeKey>("today");
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("2025-10-24");
@@ -830,7 +800,6 @@ export function SuperadminAnalyticsClient() {
         subtitle="Here's what's happened recently"
         activeRange={range}
         onRangeChange={handleRangeChange}
-        onNotification={() => setShowNotifications((value) => !value)}
       />
 
       <div className="grid gap-4 xl:grid-cols-4">
@@ -845,15 +814,6 @@ export function SuperadminAnalyticsClient() {
       </div>
 
       <BarChart values={data.bars} />
-
-      {showNotifications ? (
-        <Modal title="Notifications" onClose={() => setShowNotifications(false)}>
-          <div className="space-y-3 text-[13px] text-[#5F6786]">
-            <p>Revenue metrics have been refreshed for the selected range.</p>
-            <p>Package distribution changed after new subscriber purchases today.</p>
-          </div>
-        </Modal>
-      ) : null}
 
       {showRevenueModal ? (
         <Modal title="Revenue Insight" onClose={() => setShowRevenueModal(false)}>

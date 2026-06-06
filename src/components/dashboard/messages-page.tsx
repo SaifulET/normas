@@ -23,7 +23,6 @@ import {
 import { getList, type ListItemResponse } from "@/lib/list-api";
 import { createSchedule, getSchedule, getSchedules, type Schedule } from "@/lib/schedule-api";
 import { disconnectSocket, getSocket } from "@/lib/socket";
-import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
 import { DashboardIcon } from "./icons";
 
 type InboxFilter = "all" | ConversationStatus;
@@ -1684,7 +1683,6 @@ export function MessagesPage() {
           </p>
         </div>
 
-        <NotificationDropdown className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-[#E5E7EB] bg-white text-[#5A576B]" />
       </div>
 
       {error ? (

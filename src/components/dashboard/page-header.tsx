@@ -1,5 +1,3 @@
-import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
-
 export function DashboardPageHeader({
   title,
   subtitle,
@@ -18,10 +16,7 @@ export function DashboardPageHeader({
         <p className="mt-2 text-sm text-[#6B7280]">{subtitle}</p>
       </div>
 
-      <div className="flex items-center gap-3 self-start">
-        {children}
-        <NotificationDropdown />
-      </div>
+      {children ? <div className="flex items-center gap-3 self-start">{children}</div> : null}
     </div>
   );
 }
