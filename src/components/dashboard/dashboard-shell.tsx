@@ -261,18 +261,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [authProfile, setAuthProfile] = useState<AuthProfileResponse["data"] | null>(() => {
-    const storedUser = getStoredAuthState()?.state?.user;
-
-    return storedUser
-      ? {
-          email: storedUser.email,
-          id: storedUser.id,
-          name: storedUser.name,
-          role: storedUser.role,
-        }
-      : null;
-  });
+  const [authProfile, setAuthProfile] = useState<AuthProfileResponse["data"] | null>(null);
   const desktopSidebarWidth = collapsed ? "lg:pl-[96px]" : "lg:pl-[276px]";
   const investeeDashboard = pathname.startsWith("/investee-dashboard");
   const fallbackSidebarUser = investeeDashboard ? investeeDashboardUser : dashboardUser;
@@ -290,6 +279,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    const storedUser = getStoredAuthState()?.state?.user;
+
+    if (storedUser) {
+      setAuthProfile({
+        email: storedUser.email,
+        id: storedUser.id,
+        name: storedUser.name,
+        role: storedUser.role,
+      });
+    }
 
     const loadProfile = async () => {
       try {

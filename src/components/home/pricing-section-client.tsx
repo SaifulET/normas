@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { AppIcon } from "./icons";
 import type { PricingPlan } from "./types";
+import { useAuthStore } from "@/store";
 
 type BillingCycle = "monthly" | "annual";
 
@@ -20,6 +21,23 @@ function getBillingHref(href: string, billing: BillingCycle) {
   }
 }
 
+function getAuthenticatedCheckoutHref(plan: PricingPlan, billing: BillingCycle, userRole?: string) {
+  const planRole = plan.audienceRole === "investee" ? "investee" : "investor";
+  const role = userRole === "investee" ? "investee" : planRole;
+  const dashboardBase = role === "investee" ? "/investee-dashboard" : "/dashboard";
+  let planType = plan.id || "";
+
+  if (planType === "investor-basic") {
+    planType = "investor_basic";
+  } else if (planType === "investor-pro") {
+    planType = "investor_pro";
+  } else if (planType === "investee-basic" || planType === "investee-pro") {
+    planType = "investee";
+  }
+
+  return `${dashboardBase}/upgrade-plan/checkout?planType=${encodeURIComponent(planType)}&billingCycle=${billing}`;
+}
+
 export function PricingCardsClient({
   annualDiscount,
   emptyMessage,
@@ -30,6 +48,8 @@ export function PricingCardsClient({
   pricingPlans: PricingPlan[];
 }) {
   const [billing, setBilling] = useState<BillingCycle>("monthly");
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userRole = useAuthStore((state) => state.user?.role);
 
   const showAnnualPrices = billing === "annual";
   const toggleOptions = useMemo(
@@ -80,6 +100,9 @@ export function PricingCardsClient({
           const annualAvailable = Boolean(plan.annualPrice);
           const displayPrice = showAnnualPrices && annualAvailable ? plan.annualPrice : plan.price;
           const displaySuffix = showAnnualPrices && annualAvailable ? "/yr" : plan.suffix;
+          const href = isAuthenticated
+            ? getAuthenticatedCheckoutHref(plan, billing, userRole)
+            : getBillingHref(plan.href, billing);
 
           return (
             <article
@@ -124,7 +147,7 @@ export function PricingCardsClient({
                 ))}
               </ul>
               <a
-                href={getBillingHref(plan.href, billing)}
+                href={href}
                 className={`mt-7 flex h-12 items-center justify-center rounded-md px-5 text-center text-sm font-black transition ${
                   plan.featured
                     ? "bg-[#2B425D] text-white hover:bg-[#21344b]"
