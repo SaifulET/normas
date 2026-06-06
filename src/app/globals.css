@@ -25,6 +25,15 @@ body {
   font-family: var(--font-poppins), sans-serif;
 }
 
+.superadmin-sidebar-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.superadmin-sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .page-transition-content {
   transform-origin: center;
   will-change: opacity, transform;

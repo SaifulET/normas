@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
 import { getCachedSuperadminProfile, getSuperadminProfile, type SuperadminProfile } from "@/lib/superadmin-profile-api";
@@ -260,6 +260,14 @@ export function SuperadminShell({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [profile, setProfile] = useState<SuperadminProfile | null>(null);
+  const [sidebarScrollIndicator, setSidebarScrollIndicator] = useState({
+    hasOverflow: false,
+    thumbHeight: 0,
+    thumbTop: 0,
+    visible: false,
+  });
+  const sidebarScrollAreaRef = useRef<HTMLDivElement | null>(null);
+  const sidebarScrollTimeoutRef = useRef<number | null>(null);
 
   const sidebarWidth = collapsed ? "w-[88px]" : "w-[300px]";
   const contentPadding = collapsed ? "pl-[88px]" : "pl-[300px]";
@@ -300,6 +308,70 @@ export function SuperadminShell({
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (sidebarScrollTimeoutRef.current) {
+        window.clearTimeout(sidebarScrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const updateSidebarScrollIndicator = (visible: boolean) => {
+    const scrollArea = sidebarScrollAreaRef.current;
+
+    if (!scrollArea) {
+      return;
+    }
+
+    const { clientHeight, scrollHeight, scrollTop } = scrollArea;
+    const maxScrollTop = scrollHeight - clientHeight;
+
+    if (maxScrollTop <= 0) {
+      setSidebarScrollIndicator({ hasOverflow: false, thumbHeight: 0, thumbTop: 0, visible: false });
+      return;
+    }
+
+    const thumbHeight = Math.max(36, (clientHeight / scrollHeight) * clientHeight);
+    const thumbTop = (scrollTop / maxScrollTop) * (clientHeight - thumbHeight);
+
+    setSidebarScrollIndicator({
+      hasOverflow: true,
+      thumbHeight,
+      thumbTop,
+      visible,
+    });
+  };
+
+  useEffect(() => {
+    updateSidebarScrollIndicator(false);
+
+    const scrollArea = sidebarScrollAreaRef.current;
+
+    if (!scrollArea || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver(() => updateSidebarScrollIndicator(false));
+    resizeObserver.observe(scrollArea);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [collapsed, pathname]);
+
+  const handleSidebarScroll = () => {
+    updateSidebarScrollIndicator(true);
+
+    if (sidebarScrollTimeoutRef.current) {
+      window.clearTimeout(sidebarScrollTimeoutRef.current);
+    }
+
+    sidebarScrollTimeoutRef.current = window.setTimeout(() => {
+      setSidebarScrollIndicator((current) => ({ ...current, visible: false }));
+      sidebarScrollTimeoutRef.current = null;
+    }, 900);
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F4F7] text-[#212443]">
       <aside className={cx("fixed inset-y-0 left-0 z-30 flex min-h-0 flex-col overflow-hidden border-r border-[#D4D7E2] bg-[#2B425D] text-white transition-all duration-200", sidebarWidth)}>
@@ -307,9 +379,33 @@ export function SuperadminShell({
           <SidebarLogo collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
         </div>
 
-        <div className={cx("min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain py-5", collapsed ? "px-2" : "px-2.5")}>
-          <SidebarSection collapsed={collapsed} pathname={pathname} section="main" />
-          <SidebarSection collapsed={collapsed} pathname={pathname} section="core" />
+        <div className="relative min-h-0 flex-1">
+          <div
+            ref={sidebarScrollAreaRef}
+            className={cx("superadmin-sidebar-scroll h-full space-y-5 overflow-y-auto overscroll-contain py-5", collapsed ? "px-2" : "px-2.5")}
+            onScroll={handleSidebarScroll}
+          >
+            <SidebarSection collapsed={collapsed} pathname={pathname} section="main" />
+            <SidebarSection collapsed={collapsed} pathname={pathname} section="core" />
+          </div>
+
+          {sidebarScrollIndicator.hasOverflow ? (
+            <div
+              aria-hidden="true"
+              className={cx(
+                "pointer-events-none absolute inset-y-0 right-0 w-2 bg-[#2B425D] transition-opacity duration-150",
+                sidebarScrollIndicator.visible ? "opacity-100" : "opacity-0",
+              )}
+            >
+              <span
+                className="absolute right-1 top-0 w-1 rounded-full bg-white/45"
+                style={{
+                  height: sidebarScrollIndicator.thumbHeight,
+                  transform: `translateY(${sidebarScrollIndicator.thumbTop}px)`,
+                }}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className={cx("shrink-0 border-t border-white/8 py-4", collapsed ? "px-2" : "px-3")}>
