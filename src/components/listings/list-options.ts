@@ -15,4 +15,4 @@ export const listSectorOptions = [
   "Cross-Sector",
 ];
 
-export const listStageOptions = ["Pre-seed", "Seed", "Series A", "Growth"];
+export const listStageOptions = ["HNWI", "Seed", "Series A", "Growth"];

@@ -4,10 +4,10 @@ import type { PitchDetail } from "./data";
 
 function formatFundingTarget(value?: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    return "\u00A30";
+    return "$0";
   }
 
-  return `\u00A3${value.toLocaleString("en-US")}`;
+  return `$${value.toLocaleString("en-US")}`;
 }
 
 function summarize(value: string, maxLength = 132) {

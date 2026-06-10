@@ -11,11 +11,11 @@ const sectorOptions = ["All Sectors", ...listSectorOptions];
 
 const fundingOptions = [
   "All Funding",
-  "\u00A3100K - \u00A3500K",
-  "\u00A3500K - \u00A31M",
-  "\u00A31M - \u00A35M",
-  "\u00A35M - \u00A310M",
-  "\u00A310M+",
+  "$100K - $500K",
+  "$500K - $1M",
+  "$1M - $5M",
+  "$5M - $10M",
+  "$10M+",
 ];
 
 const stageOptions = ["All Stage", ...listStageOptions];
@@ -77,14 +77,14 @@ export const homePageContent: HomePageContent = {
     { value: "127+", label: "Active Listings" },
     { value: "420+", label: "Ethical Investors" },
     { value: "23", label: "Deals Facilitated" },
-    { value: "\u00A348.5M", label: "Total Capital Raised" },
+    { value: "$48.5M", label: "Total Capital Raised" },
   ],
   listings: Array.from({ length: 4 }, (_, index) => ({
     id: index,
     title: "CarbonLedger AI",
     location: "United Kingdom",
     description: "AI-powered carbon accounting for SMEs at enterprise accuracy",
-    target: "\u00A34.0M",
+    target: "$4.0M",
     stage: "Series A",
     sector: "Climate Tech",
     views: 412,
@@ -227,7 +227,7 @@ export const homePageContent: HomePageContent = {
   pricingPlans: [
     {
       title: "Investor Basic",
-      price: "\u00A349",
+      price: "$49",
       suffix: "/mo",
       features: [
         "Browse pitch listings (limited)",
@@ -242,7 +242,7 @@ export const homePageContent: HomePageContent = {
     },
     {
       title: "Investor Pro",
-      price: "\u00A399",
+      price: "$99",
       suffix: "/mo",
       features: [
         "Full pitch listing access",
@@ -258,7 +258,7 @@ export const homePageContent: HomePageContent = {
     },
     {
       title: "Investee",
-      price: "\u00A379",
+      price: "$79",
       suffix: "/mo",
       features: [
         "1 active pitch deck",

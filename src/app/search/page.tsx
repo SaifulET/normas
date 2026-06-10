@@ -63,7 +63,7 @@ function parseFundingToken(value: string) {
 function parseFundingRange(value: string) {
   const normalizedValue = value
     .toLowerCase()
-    .replace(/£|\$|,/g, "")
+    .replace(/\$|,/g, "")
     .replace(/\s+/g, "");
 
   if (!normalizedValue || normalizedValue === "allfunding") {

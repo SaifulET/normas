@@ -13,7 +13,7 @@ const stats = [
   { value: "127+", label: "Active Listings" },
   { value: "420+", label: "Ethical Investors" },
   { value: "23", label: "Deals Facilitated" },
-  { value: "\u00A348.5M", label: "Total Capital Raised" },
+  { value: "$48.5M", label: "Total Capital Raised" },
 ];
 
 const pillars = [

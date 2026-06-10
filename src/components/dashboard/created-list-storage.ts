@@ -63,7 +63,7 @@ const seededCreatedLists: CreatedListItem[] = [
     country: "United Kingdom",
     stage: "Series A",
     sector: "Climate Tech",
-    fundingTarget: "£4.0M",
+    fundingTarget: "$4.0M",
     keyword: "carbon analytics",
     description:
       "AI-powered carbon accounting for SMEs with investor-ready reporting, automated emissions workflows, and audit-friendly summaries.",
@@ -83,7 +83,7 @@ const seededCreatedLists: CreatedListItem[] = [
     country: "United Kingdom",
     stage: "Seed",
     sector: "Clean Energy",
-    fundingTarget: "£2.5M",
+    fundingTarget: "$2.5M",
     keyword: "solar financing",
     description:
       "Distributed solar infrastructure financing platform for industrial estates with visibility, performance tracking, and blended capital workflows.",
@@ -103,7 +103,7 @@ const seededCreatedLists: CreatedListItem[] = [
     country: "Kenya",
     stage: "Seed",
     sector: "Sustainable Agriculture",
-    fundingTarget: "£1.8M",
+    fundingTarget: "$1.8M",
     keyword: "climate supply chain",
     description:
       "Climate-smart supply network connecting growers and buyers with traceability, logistics coordination, and fair-value market access.",

@@ -22,7 +22,7 @@ export async function SiteHeader({ navItems, primaryCta }: SiteHeaderProps) {
   return (
     <header className="flex h-[67px] items-center justify-between rounded-full bg-[#F2F2F280] px-4 shadow-sm backdrop-blur">
       <Link href="/" aria-label="EARLY-N home">
-        <Image src="/logo.svg" alt="EARLY-N" width={55} height={50} priority />
+        <Image src="/logo.svg" alt="EARLY-N" width={112} height={52} priority />
       </Link>
 
       <nav

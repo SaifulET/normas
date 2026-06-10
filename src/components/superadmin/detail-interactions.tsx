@@ -644,7 +644,7 @@ export function UserDetailTabsClient({
                   <div className="flex items-end justify-between">
                     <div>
                       <p className="text-[9px] uppercase tracking-[0.16em] text-[#8A91AB]">Funding Target</p>
-                      <p className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-[#27324A]">£4.0M</p>
+                      <p className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-[#27324A]">$4.0M</p>
                     </div>
                     <button
                       type="button"
@@ -690,7 +690,7 @@ export function UserDetailTabsClient({
 
             <div className="text-[13px] text-[#7B84A0]">
               <span>Funding target</span>
-              <span className="ml-3 text-[22px] font-semibold text-[#27324A]">£4.0M</span>
+                  <span className="ml-3 text-[22px] font-semibold text-[#27324A]">$4.0M</span>
             </div>
 
             <div className="space-y-5 text-[14px] leading-7 text-[#6B748F]">

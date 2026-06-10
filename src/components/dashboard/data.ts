@@ -233,8 +233,8 @@ export const dashboardMessageThreads: DashboardMessageThread[] = [
 export const dashboardPlans: DashboardPlan[] = [
   {
     name: "Investor Basic",
-    monthlyPrice: "£49",
-    yearlyPrice: "£470",
+      monthlyPrice: "$49",
+      yearlyPrice: "$470",
     cta: "Current Plan",
     current: true,
     features: [
@@ -247,8 +247,8 @@ export const dashboardPlans: DashboardPlan[] = [
   },
   {
     name: "Investor Pro",
-    monthlyPrice: "£99",
-    yearlyPrice: "£950",
+      monthlyPrice: "$99",
+      yearlyPrice: "$950",
     cta: "Upgrade to Pro",
     featured: true,
     features: [
@@ -297,7 +297,7 @@ export const dashboardProfileSections = [
     title: "Investment Preferences",
     items: [
       { label: "Preferred sectors", value: "Climate Tech, Clean Energy, FinTech" },
-      { label: "Cheque size", value: "£150k - £1.2M" },
+  { label: "Cheque size", value: "$150k - $1.2M" },
       { label: "Stage focus", value: "Seed to Series A" },
       { label: "Preferred markets", value: "United Kingdom, Kenya, Nigeria" },
     ],

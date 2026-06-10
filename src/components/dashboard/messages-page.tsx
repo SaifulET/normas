@@ -223,7 +223,7 @@ function formatFundingTarget(value?: number) {
     return "";
   }
 
-  return `£${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}`;
+  return `$${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}`;
 }
 
 function normalizeParticipantRole(role?: string | null) {

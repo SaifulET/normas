@@ -774,8 +774,8 @@ export function CreateListPage({ listId }: { listId?: string }) {
       stage: savedList?.stage ?? trimmedStage,
       sector: savedList?.sector ?? trimmedSector,
       fundingTarget: typeof savedList?.fundingTarget === "number"
-        ? `£${savedList.fundingTarget.toLocaleString("en-US")}`
-        : trimmedFundingTarget ? `£${trimmedFundingTarget}` : "£0.00",
+      ? `$${savedList.fundingTarget.toLocaleString("en-US")}`
+      : trimmedFundingTarget ? `$${trimmedFundingTarget}` : "$0.00",
       keyword: savedList?.keyword ?? (trimmedKeyword || "project listing"),
       description: savedList?.description ?? (trimmedDescription || "Project description will appear here once added."),
       createdAt: savedList?.createdAt ?? initialItem?.createdAt ?? new Date().toISOString(),
@@ -966,7 +966,7 @@ export function CreateListPage({ listId }: { listId?: string }) {
             <div>
               <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#667085]">Funding Target</label>
               <div className="flex h-11 items-center rounded-[10px] border border-[#E4E7EC] bg-white px-4">
-                <span className="mr-3 text-xl text-[#475467]">£</span>
+                    <span className="mr-3 text-xl text-[#475467]">$</span>
                 <input
                   type="text"
                   value={form.fundingTarget}

@@ -47,7 +47,7 @@ function formatFundingTarget(value?: number) {
     return "Not available";
   }
 
-  return `\u00A3${value.toLocaleString("en-US")}`;
+  return `$${value.toLocaleString("en-US")}`;
 }
 
 function getReporterName(report?: Report | null) {

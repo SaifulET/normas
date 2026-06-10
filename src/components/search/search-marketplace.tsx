@@ -454,9 +454,9 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
                 className="w-full accent-[#243B5A]"
               />
               <div className="mt-2 flex justify-between text-xs text-[#98A2B3]">
-                <span>{"\u00A30"}</span>
+                    <span>{"$0"}</span>
                 <span>
-                  {"\u00A3"}
+                        {"$"}
                   {(fundingRangeMax / 1000000).toLocaleString("en-US", { maximumFractionDigits: 1 })}M+
                 </span>
               </div>

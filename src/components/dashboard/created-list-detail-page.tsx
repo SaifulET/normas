@@ -35,8 +35,8 @@ export function CreatedListDetailPage({ listId }: { listId: string }) {
   const mainContent = viewMode === "previous" && item?.publishedContent ? item.publishedContent : item;
   const comparisonContent = viewMode === "previous" ? item : item?.publishedContent;
   const mainFundingTarget = typeof mainContent?.fundingTarget === "number"
-    ? `£${mainContent.fundingTarget.toLocaleString("en-US")}`
-    : mainContent?.fundingTarget || "£0";
+    ? `$${mainContent.fundingTarget.toLocaleString("en-US")}`
+    : mainContent?.fundingTarget || "$0";
   const mainAdditionalDetails = mainContent?.additionalDetails ?? [];
   const safeDescription = useMemo(() => sanitizeHtml(mainContent?.description ?? ""), [mainContent?.description]);
   const safeComparisonDescription = useMemo(

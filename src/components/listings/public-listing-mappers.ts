@@ -31,10 +31,10 @@ function truncate(value: string, maxLength = 138) {
 
 function formatFundingTarget(value?: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    return "\u00A30";
+    return "$0";
   }
 
-  return `\u00A3${value.toLocaleString("en-US")}`;
+  return `$${value.toLocaleString("en-US")}`;
 }
 
 export function isPublicList(item: ListItemResponse) {

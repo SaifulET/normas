@@ -3,10 +3,10 @@ import type { CreatedListItem } from "./created-list-storage";
 
 function formatFundingTarget(value?: number) {
   if (typeof value !== "number" || Number.isNaN(value)) {
-    return "£0";
+    return "$0";
   }
 
-  return `£${value.toLocaleString("en-US")}`;
+  return `$${value.toLocaleString("en-US")}`;
 }
 
 export function mapApiListToCreatedListItem(item: ListItemResponse): CreatedListItem {

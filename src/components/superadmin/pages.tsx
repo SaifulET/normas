@@ -516,7 +516,7 @@ export function SuperadminReportDetailPage({
             <div className="flex flex-wrap gap-x-10 gap-y-3 text-[13px] text-[#7B84A0]">
               <div>
                 <span className="text-[#95A0BA]">Funding target</span>
-                <span className="ml-3 text-[24px] font-semibold tracking-[-0.03em] text-[#27324A]">£4.0M</span>
+                  <span className="ml-3 text-[24px] font-semibold tracking-[-0.03em] text-[#27324A]">$4.0M</span>
               </div>
               <div>
                 <span className="text-[#95A0BA]">Report ID</span>
