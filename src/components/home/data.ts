@@ -130,7 +130,7 @@ export const homePageContent: HomePageContent = {
     },
     {
       title: "Non-Discrimination Policy",
-      text: "A strictly meritocratic yet deeply human approach that guarantees equal visibility for founders across all BRICS territories.",
+      text: "A strictly meritocratic yet deeply human approach that guarantees equal visibility for founders across the EURO ZONE, AFRICA and all BRICS territories.",
       icon: "shield",
     },
     {

@@ -198,7 +198,7 @@ export function ValuesSection({
         <div className="max-w-[480px] pt-1">
           <SectionHeading
             eyebrow="Philosophy & Core Values"
-            title="The Ubuntu Standard:"
+            title="Ubuntu Philosophy:"
             accentTitle="Unified Humanity"
             description='At the heart of EARLY-N lies the ancient African wisdom of Ubuntu: "I am because we are." We believe that true growth is only possible when it is shared, inclusive, and ethical.'
             align="left"
