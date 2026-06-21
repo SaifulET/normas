@@ -10,6 +10,7 @@ import {
   type AdminUserDetailsData,
 } from "@/lib/admin-users-api";
 import { getApiErrorMessage } from "@/lib/api";
+import { KycDataReviewCard, type KycRecord } from "@/components/kyc/kyc-data-review-card";
 import { updateListStatus, type ListStatus } from "@/lib/list-api";
 import { SuperadminAvatar, SuperadminStatusBadge } from "./shell";
 
@@ -134,15 +135,6 @@ function getGradientSeed(value: string) {
   return palettes[Math.abs(hash) % palettes.length];
 }
 
-function getFileName(url: string) {
-  try {
-    const parsedUrl = new URL(url);
-    return decodeURIComponent(parsedUrl.pathname.split("/").filter(Boolean).pop() || "Document");
-  } catch {
-    return url.split("/").filter(Boolean).pop() || "Document";
-  }
-}
-
 function InfoField({ label, value }: { label: string; value?: string | number | null }) {
   return (
     <div>
@@ -180,49 +172,13 @@ function StatusSelect({
   );
 }
 
-function DocumentRow({ label, url }: { label: string; url?: string | null }) {
-  return (
-    <div>
-      <p className="mb-3 text-[12px] text-[#27324A]">{label}</p>
-      <div className="rounded-[12px] border border-dashed border-[#D8DEE8] px-4 py-5">
-        {url ? (
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="mx-auto flex max-w-[320px] items-center justify-between gap-4 rounded-[10px] bg-[#F2F4F8] px-4 py-3 text-[12px] text-[#475066] transition hover:bg-[#E9EDF4]"
-          >
-            <span className="truncate font-medium">{getFileName(url)}</span>
-            <span className="shrink-0 text-[#324B6B]">View</span>
-          </a>
-        ) : (
-          <div className="mx-auto max-w-[320px] rounded-[10px] bg-[#F2F4F8] px-4 py-3 text-center text-[12px] text-[#9AA3B7]">
-            Not submitted
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function KycSection({
-  children,
-  title,
+function KycDetails({
+  kyc,
+  onChange,
 }: {
-  children: React.ReactNode;
-  title: string;
+  kyc: AdminKyc;
+  onChange: (kyc: KycRecord) => void;
 }) {
-  return (
-    <div className="overflow-hidden rounded-[12px] border border-[#D7DEE8] bg-white">
-      <div className="border-b border-[#DCE2EC] px-5 py-4">
-        <h3 className="text-[14px] font-semibold text-[#223555]">{title}</h3>
-      </div>
-      <div className="space-y-4 px-5 py-4">{children}</div>
-    </div>
-  );
-}
-
-function KycDetails({ kyc }: { kyc: AdminKyc }) {
   if (!kyc) {
     return (
       <div className="rounded-[12px] border border-[#D7DEE8] bg-white px-5 py-8 text-center text-[13px] text-[#66708D]">
@@ -231,40 +187,7 @@ function KycDetails({ kyc }: { kyc: AdminKyc }) {
     );
   }
 
-  const identity = kyc.personalIdentity ?? {};
-  const address = kyc.addressVerification ?? {};
-  const face = kyc.faceVerification ?? {};
-  const funds = kyc.sourceOfFunds ?? {};
-
-  return (
-    <div className="mx-auto max-w-[680px] space-y-4">
-      <KycSection title="Personal Identity">
-        <div className="grid gap-4 md:grid-cols-2">
-          <InfoField label="Full Legal Name" value={identity.fullLegalName} />
-          <InfoField label="Date of Birth" value={formatDate(identity.dateOfBirth as string | undefined)} />
-          <InfoField label="Country of Residence" value={identity.countryOfResidence} />
-          <InfoField label="Identification Type" value={identity.identificationType} />
-        </div>
-        <DocumentRow label="Identity Document Upload" url={identity.identityDocument as string | undefined} />
-      </KycSection>
-
-      <KycSection title="Face Verification">
-        <DocumentRow label="Face Photo" url={face.facePhoto} />
-        <DocumentRow label="Verification Video" url={face.verificationVideo} />
-      </KycSection>
-
-      <KycSection title="Address Verification">
-        <DocumentRow label="Utility Bill Upload" url={address.utilityBill} />
-        <DocumentRow label="Bank Statement Upload" url={address.bankStatement} />
-      </KycSection>
-
-      <KycSection title="Source of Funds">
-        <DocumentRow label="Salary Slip" url={funds.salarySlip} />
-        <DocumentRow label="Business Document" url={funds.businessDocument} />
-        <DocumentRow label="Tax Returns" url={funds.taxReturns} />
-      </KycSection>
-    </div>
-  );
+  return <KycDataReviewCard kyc={kyc as KycRecord} mode="admin" onChange={onChange} />;
 }
 
 function PitchCard({
@@ -593,7 +516,14 @@ export function SuperadminUserDetailClient({ userId }: { userId: string }) {
           </div>
         ) : null}
 
-        {activeTab === "kyc" ? <KycDetails kyc={details.kyc} /> : null}
+        {activeTab === "kyc" ? (
+          <KycDetails
+            kyc={details.kyc}
+            onChange={(kyc) => {
+              setDetails((current) => current ? { ...current, kyc: kyc as AdminKyc } : current);
+            }}
+          />
+        ) : null}
 
         {!isInvestor && activeTab === "pitch" ? (
           pitches.length ? (

@@ -41,14 +41,34 @@ export type AdminProfileKyc = {
 
 export type AdminKycFileGroup = Record<string, string | null | undefined>;
 
+export type AdminKycFieldReview = {
+  declineReason?: string;
+  label?: string;
+  path: string;
+  reviewedAt?: string | null;
+  reviewedBy?: unknown;
+  status?: "pending" | "approved" | "declined" | string;
+  updatedAt?: string | null;
+  value?: unknown;
+};
+
 export type AdminKyc = {
   _id?: string;
+  additionalDocuments?: Record<string, unknown>;
   addressVerification?: AdminKycFileGroup;
+  applicantInfo?: Record<string, unknown>;
   approval?: Record<string, unknown>;
+  beneficialOwners?: Array<Record<string, unknown>>;
+  companyInformation?: Record<string, unknown>;
   createdAt?: string;
   currentStep?: number;
+  declarations?: Record<string, unknown>;
   faceVerification?: AdminKycFileGroup;
+  fieldReviews?: AdminKycFieldReview[];
+  financialInformation?: Record<string, unknown>;
+  investorProfile?: Record<string, unknown>;
   personalIdentity?: Record<string, string | number | null | undefined>;
+  pepSanctions?: Record<string, unknown>;
   role?: AdminUserRole | string;
   sourceOfFunds?: AdminKycFileGroup;
   status?: string;

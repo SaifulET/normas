@@ -119,6 +119,15 @@ function getNotificationHref(notification: NotificationItem, pathname: string) {
     return `/superadmin/dashboard/moderation/${encodeURIComponent(referenceId)}`;
   }
 
+  if (referenceType === "kyc") {
+    if (isSuperadmin) {
+      const userId = getMetadataString(notification, "userId");
+      return userId ? `/superadmin/dashboard/user-management/${encodeURIComponent(userId)}` : "/superadmin/dashboard/user-management";
+    }
+
+    return `${dashboardPrefix}/profile`;
+  }
+
   if (referenceType === "report") {
     const listId = getMetadataString(notification, "listId");
 

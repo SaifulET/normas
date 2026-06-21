@@ -2,6 +2,7 @@
 
 import { startTransition, useEffect, useId, useState } from "react";
 import { apiRequest, getApiErrorMessage } from "@/lib/api";
+import { KycDataReviewCard, type KycRecord } from "@/components/kyc/kyc-data-review-card";
 import { useAuthStore } from "@/store";
 import { DashboardIcon } from "./icons";
 import { DashboardPageHeader } from "./page-header";
@@ -73,23 +74,36 @@ type KycUpdateStatus = {
 
 type KycDetails = {
   _id?: string;
+  additionalDocuments?: Record<string, unknown>;
   addressVerification?: {
     bankStatement?: string;
+    proofOfAddress?: string;
     utilityBill?: string;
   };
+  applicantInfo?: Record<string, unknown>;
+  beneficialOwners?: Array<Record<string, unknown>>;
+  companyInformation?: Record<string, unknown>;
   createdAt?: string;
   currentStep?: number;
+  declarations?: Record<string, unknown>;
   faceVerification?: {
     facePhoto?: string;
     verificationVideo?: string;
   };
+  fieldReviews?: Array<Record<string, unknown>>;
+  financialInformation?: Record<string, unknown>;
+  investorProfile?: Record<string, unknown>;
   personalIdentity?: {
     countryOfResidence?: string;
     dateOfBirth?: string;
     fullLegalName?: string;
     identificationType?: string;
     identityDocument?: string;
+    nationality?: string;
+    sourceOfWealth?: string[];
+    sourceOfWealthExplanation?: string;
   };
+  pepSanctions?: Record<string, unknown>;
   role?: string;
   sourceOfFunds?: {
     businessDocument?: string;
@@ -1496,6 +1510,27 @@ export function ProfilePage() {
           </div>
         ) : null}
 
+        <KycDataReviewCard
+          kyc={latestKyc as KycRecord | null}
+          mode="user"
+          onChange={(kyc) => {
+            setProfileDetails((current) => {
+              if (!current) return current;
+
+              const existingKycs = current.kyc ?? [];
+              const nextKycs = existingKycs.some((item) => item._id === kyc._id)
+                ? existingKycs.map((item) => (item._id === kyc._id ? (kyc as KycDetails) : item))
+                : [kyc as KycDetails, ...existingKycs];
+
+              return {
+                ...current,
+                kyc: nextKycs,
+              };
+            });
+          }}
+        />
+
+        <div className="hidden">
         <VerificationCard
           title="Personal Identity"
           error={kycUpdateStatuses.identity.error}
@@ -1644,6 +1679,7 @@ export function ProfilePage() {
             onSelect={(file) => handleFileSelect("taxReturns", file)}
           />
         </VerificationCard>
+        </div>
       </div>
 
       {loaded && previewState ? (
