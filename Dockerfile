@@ -1,28 +1,43 @@
 # syntax=docker/dockerfile:1
 
+########################
+# DEPENDENCIES
+########################
 FROM node:24-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
 
+
+########################
+# BUILDER
+########################
 FROM node:24-alpine AS builder
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-ARG NEXT_PUBLIC_API_BASE_URL=https://api.early-n.com/api/v1/
-ARG NEXT_PUBLIC_SOCKET_URL=https://api.early-n.com
-ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+# ✅ Build-time arguments (NO DEFAULT VALUES)
+ARG NEXT_PUBLIC_API_BASE_URL
+ARG NEXT_PUBLIC_SOCKET_URL
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
-ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
-ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
-ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+# ✅ Inject into Next.js build
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL}
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Build Next.js app (env is now correctly injected)
 RUN npm run build
 
+
+########################
+# RUNNER
+########################
 FROM node:24-alpine AS runner
 WORKDIR /app
 
