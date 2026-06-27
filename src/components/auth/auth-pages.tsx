@@ -8,14 +8,44 @@ import { useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { getApiErrorMessage } from "@/lib/api";
 import { clearStoredUserSession } from "@/lib/auth-storage";
-import { getAuthSessionFromResponse, getAuthUserFromResponse, signinUser, signupUser } from "@/lib/auth-api";
-import { useAuthStore } from "@/store";
 import {
-  setLoginSession,
-  submitForgotPassword,
-  submitResetPassword,
-  submitVerifyOtp,
-} from "./actions";
+  forgotPassword,
+  getAuthSessionFromResponse,
+  getAuthUserFromResponse,
+  resendPasswordOtp,
+  setNewPassword,
+  signinUser,
+  signupUser,
+  verifyPasswordOtp,
+} from "@/lib/auth-api";
+import { useAuthStore } from "@/store";
+import { setLoginSession } from "./actions";
+
+const PASSWORD_RESET_EMAIL_STORAGE_KEY = "earlyn_password_reset_email";
+
+function getStoredPasswordResetEmail() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.sessionStorage.getItem(PASSWORD_RESET_EMAIL_STORAGE_KEY) ?? "";
+}
+
+function setStoredPasswordResetEmail(email: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.setItem(PASSWORD_RESET_EMAIL_STORAGE_KEY, email);
+}
+
+function clearStoredPasswordResetEmail() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.removeItem(PASSWORD_RESET_EMAIL_STORAGE_KEY);
+}
 
 function SecurityBadge() {
   return (
@@ -485,6 +515,33 @@ export function SignupPageView() {
 }
 
 export function ForgotPasswordPageView() {
+  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleForgotPassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
+
+    try {
+      if (!email) {
+        throw new Error("Email is required");
+      }
+
+      await forgotPassword({ email });
+      setStoredPasswordResetEmail(email);
+      router.push("/verify-otp");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to send OTP. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <AuthShell>
       <AuthCard className="mx-auto text-center">
@@ -493,9 +550,10 @@ export function ForgotPasswordPageView() {
           Enter your email to reset your password.
         </p>
 
-        <form action={submitForgotPassword} className="mt-6 space-y-4 text-left">
-          <Field label="Email Address" name="email" placeholder="name@institution.edu" type="email" />
-          <SubmitButton idleLabel="Next" pendingLabel="Please wait..." />
+        <form onSubmit={handleForgotPassword} className="mt-6 space-y-4 text-left">
+          <Field label="Email Address" name="email" placeholder="name@institution.edu" required type="email" />
+          {errorMessage ? <p className="text-sm font-medium text-red-600">{errorMessage}</p> : null}
+          <SubmitButton idleLabel="Next" isPending={isSubmitting} pendingLabel="Please wait..." />
         </form>
 
         <SecurityBadge />
@@ -507,11 +565,13 @@ export function ForgotPasswordPageView() {
 function OtpBox({
   inputRef,
   onChange,
+  onPaste,
   value,
 }: {
   value: string;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   onChange?: (value: string) => void;
+  onPaste?: (value: string) => void;
 }) {
   return (
     <input
@@ -520,13 +580,22 @@ function OtpBox({
       maxLength={1}
       value={value}
       onChange={(event) => onChange?.(event.target.value)}
+      onPaste={(event) => {
+        event.preventDefault();
+        onPaste?.(event.clipboardData.getData("text"));
+      }}
       className="h-[42px] w-[44px] rounded-[6px] border border-[#6B8AB7] bg-white text-center text-[26px] font-semibold text-[#20232D] outline-none"
     />
   );
 }
 
 export function VerifyOtpPageView() {
-  const [otp, setOtp] = useState(["8", "0", "", ""]);
+  const router = useRouter();
+  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isResending, setIsResending] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRefs = [
     useRef<HTMLInputElement | null>(null),
     useRef<HTMLInputElement | null>(null),
@@ -545,15 +614,76 @@ export function VerifyOtpPageView() {
     }
   };
 
+  const pasteOtpValue = (rawValue: string) => {
+    const nextOtp = rawValue.replace(/\D/g, "").slice(0, 4).split("");
+
+    if (!nextOtp.length) {
+      return;
+    }
+
+    setOtp((current) => current.map((item, index) => nextOtp[index] ?? item));
+    inputRefs[Math.min(nextOtp.length, inputRefs.length) - 1]?.current?.focus();
+  };
+
+  const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsSubmitting(true);
+
+    try {
+      const resetEmail = getStoredPasswordResetEmail();
+      const code = otp.join("");
+
+      if (!resetEmail) {
+        throw new Error("Please request a password reset OTP first.");
+      }
+
+      if (!/^\d{4}$/.test(code)) {
+        throw new Error("Enter the 4 digit OTP from your email.");
+      }
+
+      await verifyPasswordOtp({ email: resetEmail, otp: code });
+      setStoredPasswordResetEmail(resetEmail);
+      router.push("/reset-password");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to verify OTP. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsResending(true);
+
+    try {
+      const resetEmail = getStoredPasswordResetEmail();
+
+      if (!resetEmail) {
+        throw new Error("Please enter your email on the forgot password page first.");
+      }
+
+      await resendPasswordOtp({ email: resetEmail });
+      setStoredPasswordResetEmail(resetEmail);
+      setSuccessMessage("A new OTP has been sent to your email.");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to resend OTP. Please try again."));
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   return (
     <AuthShell>
       <AuthCard className="mx-auto flex flex-col items-center text-center">
         <h2 className="text-[24px] font-semibold tracking-[-0.03em] text-[#20232D]">Verify OTP</h2>
         <p className="mt-2 max-w-[245px] text-[13px] leading-5 text-[#707A88]">
-          Please check your email, we have sent a code to contact
+          Please check your email, we have sent a code to your inbox.
         </p>
 
-        <form action={submitVerifyOtp} className="mt-5 w-full">
+        <form onSubmit={handleVerifyOtp} className="mt-5 w-full">
           <div className="flex items-center justify-center gap-3">
             {otp.map((value, index) => (
               <OtpBox
@@ -561,18 +691,26 @@ export function VerifyOtpPageView() {
                 inputRef={inputRefs[index]}
                 value={value}
                 onChange={(nextValue) => updateOtpValue(index, nextValue)}
+                onPaste={pasteOtpValue}
               />
             ))}
           </div>
 
           <div className="mt-4 flex items-center justify-between text-[13px] text-[#4B5563]">
             <span>Didn’t receive code?</span>
-            <button type="button" className="font-medium text-[#2563EB] hover:text-[#1D4ED8]">
-              Resend
+            <button
+              type="button"
+              onClick={handleResendOtp}
+              disabled={isResending}
+              className="font-medium text-[#2563EB] hover:text-[#1D4ED8] disabled:cursor-wait disabled:opacity-70"
+            >
+              {isResending ? "Sending..." : "Resend"}
             </button>
           </div>
 
-          <SubmitButton idleLabel="Verify" pendingLabel="Verifying..." className="mt-3" />
+          {successMessage ? <p className="mt-3 text-sm font-medium text-green-700">{successMessage}</p> : null}
+          {errorMessage ? <p className="mt-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
+          <SubmitButton idleLabel="Verify" isPending={isSubmitting} pendingLabel="Verifying..." className="mt-3" />
         </form>
 
         <SecurityBadge />
@@ -582,18 +720,57 @@ export function VerifyOtpPageView() {
 }
 
 export function ResetPasswordPageView() {
+  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleResetPassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const password = String(formData.get("password") ?? "");
+    const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+    try {
+      const resetEmail = getStoredPasswordResetEmail();
+
+      if (!resetEmail) {
+        throw new Error("Please verify your OTP before setting a new password.");
+      }
+
+      if (!password) {
+        throw new Error("Password is required");
+      }
+
+      if (password !== confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      await setNewPassword({ email: resetEmail, password });
+      clearStoredPasswordResetEmail();
+      router.push("/login");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to update password. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <AuthShell>
       <AuthCard className="mx-auto text-center">
         <h2 className="text-[24px] font-semibold tracking-[-0.03em] text-[#20232D]">Set New Password</h2>
         <p className="mx-auto mt-2 max-w-[250px] text-[13px] leading-5 text-[#707A88]">
-          Please set a new password to of your account, to secure your account
+          Please set a new password to secure your account.
         </p>
 
-        <form action={submitResetPassword} className="mt-6 space-y-4 text-left">
+        <form onSubmit={handleResetPassword} className="mt-6 space-y-4 text-left">
           <PasswordField label="New Password" name="password" placeholder="••••••••" />
           <PasswordField label="Confirm Password" name="confirmPassword" placeholder="••••••••" />
-          <SubmitButton idleLabel="Done" pendingLabel="Saving..." className="mt-2" />
+          {errorMessage ? <p className="text-sm font-medium text-red-600">{errorMessage}</p> : null}
+          <SubmitButton idleLabel="Done" isPending={isSubmitting} pendingLabel="Saving..." className="mt-2" />
         </form>
       </AuthCard>
     </AuthShell>

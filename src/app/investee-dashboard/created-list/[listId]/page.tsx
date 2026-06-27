@@ -1,4 +1,5 @@
 import { CreatedListDetailPage } from "@/components/dashboard/created-list-detail-page";
+import { InvesteeSubscriptionGate } from "@/components/dashboard/investee-subscription-gate";
 
 export default async function InvesteeCreatedListDetailPage({
   params,
@@ -7,5 +8,9 @@ export default async function InvesteeCreatedListDetailPage({
 }) {
   const { listId } = await params;
 
-  return <CreatedListDetailPage listId={listId} />;
+  return (
+    <InvesteeSubscriptionGate feature="listings">
+      <CreatedListDetailPage listId={listId} />
+    </InvesteeSubscriptionGate>
+  );
 }

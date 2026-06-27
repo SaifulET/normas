@@ -7,10 +7,14 @@ import { AppIcon } from "@/components/home/icons";
 import { mapApiListsToSearchListings } from "@/components/listings/public-listing-mappers";
 import { getApiErrorMessage } from "@/lib/api";
 import { getFilteredLists, type FilteredListsResponse, type ListItemResponse } from "@/lib/list-api";
+import { getCurrentSubscription } from "@/lib/subscription-api";
+import { isActiveSubscription } from "@/lib/subscription-status";
+import { useAuthStore } from "@/store";
 import { searchCountries, searchSectors, searchStages } from "./data";
 import type { SearchFilters, SearchListing } from "./types";
 
 type ViewMode = "grid" | "list";
+type InvestorAccessStatus = "checking" | "subscribed" | "unsubscribed";
 
 const RESULTS_PER_PAGE = 12;
 const DEFAULT_MAX_RANGE = 32500000;
@@ -53,14 +57,17 @@ function parsePositiveNumber(value: unknown) {
 }
 
 function parseFilteredMeta(response: FilteredListsResponse, itemCount: number) {
+  const pagination = getRecordValue(response.data, "pagination");
   const total =
     parsePositiveNumber(getRecordValue(response.data, "totalLists")) ??
     parsePositiveNumber(getRecordValue(response.data, "total")) ??
+    parsePositiveNumber(getRecordValue(pagination, "total")) ??
     parsePositiveNumber(getRecordValue(response, "totalLists")) ??
     parsePositiveNumber(getRecordValue(response, "total")) ??
     itemCount;
   const totalPages =
     parsePositiveNumber(getRecordValue(response.data, "totalPages")) ??
+    parsePositiveNumber(getRecordValue(pagination, "totalPages")) ??
     parsePositiveNumber(getRecordValue(response, "totalPages")) ??
     Math.max(1, Math.ceil(total / RESULTS_PER_PAGE));
 
@@ -115,14 +122,34 @@ function ListGlyph({ active }: { active: boolean }) {
 }
 
 interface ResultCardProps {
+  locked: boolean;
   viewMode: ViewMode;
   listing: SearchListing;
 }
 
-function ResultCard({ viewMode, listing }: ResultCardProps) {
+function LockedListingOverlay() {
+  return (
+    <div className="absolute inset-x-0 bottom-0 top-1/2 z-10 flex items-end bg-gradient-to-b from-white/25 via-white/88 to-white p-5 backdrop-blur-[2px]">
+      <div className="w-full rounded-xl border border-[#E2E8F0] bg-white/95 p-4 shadow-[0_18px_40px_-28px_rgba(31,41,55,0.7)]">
+        <p className="text-sm font-semibold text-[#1F2937]">Subscribe to unlock full listing details</p>
+        <p className="mt-1 text-xs leading-5 text-[#667085]">
+          Investor subscriptions unlock full pitch details, funding data, and direct deal actions.
+        </p>
+        <Link
+          href="/dashboard/upgrade-plan/change-plan"
+          className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-[#ED6A06] px-4 text-xs font-semibold text-white transition hover:bg-[#d35f05]"
+        >
+          Subscribe Now
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function ResultCard({ locked, viewMode, listing }: ResultCardProps) {
   if (viewMode === "list") {
     return (
-      <article className="grid overflow-hidden rounded-2xl border border-[#D7DFEA] bg-white shadow-[0_14px_32px_-28px_rgba(31,41,55,0.55)] md:grid-cols-[260px_1fr]">
+      <article className="relative grid overflow-hidden rounded-2xl border border-[#D7DFEA] bg-white shadow-[0_14px_32px_-28px_rgba(31,41,55,0.55)] md:grid-cols-[260px_1fr]">
         <div className="relative min-h-[200px]">
           <Image
             src={listing.image.src}
@@ -170,19 +197,20 @@ function ResultCard({ viewMode, listing }: ResultCardProps) {
             </div>
 
             <Link
-              href={listing.href}
+              href={locked ? "/dashboard/upgrade-plan/change-plan" : listing.href}
               className="inline-flex h-10 items-center justify-center rounded-lg bg-[#ED6A06] px-5 text-sm font-semibold text-white transition hover:bg-[#d35f05]"
             >
-              View Pitch
+              {locked ? "Subscribe to Unlock" : "View Pitch"}
             </Link>
           </div>
         </div>
+        {locked ? <LockedListingOverlay /> : null}
       </article>
     );
   }
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-[#D7DFEA] bg-white shadow-[0_14px_32px_-28px_rgba(31,41,55,0.55)]">
+    <article className="relative overflow-hidden rounded-2xl border border-[#D7DFEA] bg-white shadow-[0_14px_32px_-28px_rgba(31,41,55,0.55)]">
       <div className="relative h-44">
         <Image
           src={listing.image.src}
@@ -226,18 +254,20 @@ function ResultCard({ viewMode, listing }: ResultCardProps) {
           </div>
 
           <Link
-            href={listing.href}
+            href={locked ? "/dashboard/upgrade-plan/change-plan" : listing.href}
             className="inline-flex h-10 items-center justify-center rounded-lg bg-[#ED6A06] px-5 text-sm font-semibold text-white transition hover:bg-[#d35f05]"
           >
-            View Pitch
+            {locked ? "Subscribe to Unlock" : "View Pitch"}
           </Link>
         </div>
       </div>
+      {locked ? <LockedListingOverlay /> : null}
     </article>
   );
 }
 
 export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFilters }) {
+  const user = useAuthStore((state) => state.user);
   const [listings, setListings] = useState<SearchListing[]>([]);
   const [query, setQuery] = useState(initialFilters.search);
   const [selectedSector, setSelectedSector] = useState(initialFilters.sector);
@@ -253,6 +283,8 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [showAllSectors, setShowAllSectors] = useState(false);
+  const [investorAccessStatus, setInvestorAccessStatus] = useState<InvestorAccessStatus>("checking");
+  const isInvestor = user?.role === "investor";
 
   const requestParams = useMemo(
     () => ({
@@ -310,6 +342,43 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
     };
   }, [requestParams]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInvestorSubscription() {
+      await Promise.resolve();
+
+      if (cancelled) {
+        return;
+      }
+
+      if (!isInvestor) {
+        setInvestorAccessStatus("subscribed");
+        return;
+      }
+
+      setInvestorAccessStatus("checking");
+
+      try {
+        const response = await getCurrentSubscription();
+
+        if (!cancelled) {
+          setInvestorAccessStatus(isActiveSubscription(response.data) ? "subscribed" : "unsubscribed");
+        }
+      } catch {
+        if (!cancelled) {
+          setInvestorAccessStatus("unsubscribed");
+        }
+      }
+    }
+
+    void loadInvestorSubscription();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isInvestor]);
+
   const availableSectors = useMemo(() => {
     return mergeOptions(searchSectors, [selectedSector], listings.map((listing) => listing.sector));
   }, [listings, selectedSector]);
@@ -333,6 +402,7 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
   const currentPage = Math.min(page, totalPages);
   const paginationStart = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
   const pageNumbers = Array.from({ length: Math.min(totalPages, 3) }, (_, index) => paginationStart + index);
+  const lockInvestorListings = isInvestor && investorAccessStatus !== "subscribed";
 
   function toggleSector(sector: string) {
     setPage(1);
@@ -543,7 +613,7 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
 
           <div className={`mt-5 ${viewMode === "grid" ? "grid gap-5 xl:grid-cols-2" : "space-y-4"}`}>
             {listings.map((listing) => (
-              <ResultCard key={listing.id} viewMode={viewMode} listing={listing} />
+              <ResultCard key={listing.id} locked={lockInvestorListings} viewMode={viewMode} listing={listing} />
             ))}
           </div>
 

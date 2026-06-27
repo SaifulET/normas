@@ -8,6 +8,8 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
 import { apiRequest } from "@/lib/api";
 import { getStoredAuthState } from "@/lib/auth-storage";
+import { getCurrentSubscription } from "@/lib/subscription-api";
+import { isActiveSubscription } from "@/lib/subscription-status";
 import {
   dashboardNavItems,
   dashboardUser,
@@ -37,6 +39,15 @@ type AuthProfileResponse = {
 type SidebarUser = typeof dashboardUser & {
   profileImage?: string;
 };
+
+type SubscriptionAccess = "checking" | "subscribed" | "unsubscribed";
+
+const investeeSubscriptionOnlyHrefs = new Set([
+  "/investee-dashboard/create-list",
+  "/investee-dashboard/created-list",
+  "/investee-dashboard/messages",
+  "/investee-dashboard/schedule",
+]);
 
 function getInitialAuthProfile(): AuthProfileResponse["data"] | null {
   const storedUser = getStoredAuthState()?.state?.user;
@@ -148,6 +159,7 @@ function SidebarContent({
   homeHref,
   navItems,
   pathname,
+  lockedHrefs = new Set(),
   onCollapseToggle,
   onNavigate,
   profileHref,
@@ -157,6 +169,7 @@ function SidebarContent({
   homeHref: string;
   navItems: DashboardNavItem[];
   pathname: string;
+  lockedHrefs?: Set<string>;
   onCollapseToggle: () => void;
   onNavigate: () => void;
   profileHref: string;
@@ -206,19 +219,45 @@ function SidebarContent({
       <nav className="flex-1 space-y-1 px-3 py-5">
         {navItems.map((item) => {
           const active = isActivePath(pathname, item);
+          const locked = lockedHrefs.has(item.href);
+          const navClassName = cx(
+            "group flex items-center rounded-2xl text-sm font-medium transition",
+            collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
+            locked
+              ? "cursor-not-allowed text-white/35"
+              : active
+                ? "bg-white/18 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+                : "text-white/72 hover:bg-white/8 hover:text-white",
+          );
+
+          if (locked) {
+            return (
+              <button
+                key={item.href}
+                type="button"
+                disabled
+                className={cx("w-full", navClassName)}
+                title={collapsed ? `${item.label} requires subscription` : "Subscription required"}
+              >
+                <DashboardIcon name={item.icon} className="h-5 w-5 shrink-0" />
+                {!collapsed ? (
+                  <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                    <span>{item.label}</span>
+                    <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-semibold text-white/45">
+                      Locked
+                    </span>
+                  </span>
+                ) : null}
+              </button>
+            );
+          }
 
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={onNavigate}
-              className={cx(
-                "group flex items-center rounded-2xl text-sm font-medium transition",
-                collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3",
-                active
-                  ? "bg-white/18 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-                  : "text-white/72 hover:bg-white/8 hover:text-white",
-              )}
+              className={navClassName}
               title={collapsed ? item.label : undefined}
             >
               <DashboardIcon name={item.icon} className="h-5 w-5 shrink-0" />
@@ -278,6 +317,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authProfile, setAuthProfile] = useState<AuthProfileResponse["data"] | null>(getInitialAuthProfile);
+  const [subscriptionAccess, setSubscriptionAccess] = useState<SubscriptionAccess>("checking");
   const desktopSidebarWidth = collapsed ? "lg:pl-[96px]" : "lg:pl-[276px]";
   const investeeDashboard = pathname.startsWith("/investee-dashboard");
   const fallbackSidebarUser = investeeDashboard ? investeeDashboardUser : dashboardUser;
@@ -292,6 +332,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const dashboardHomeHref = investeeDashboard ? "/investee-dashboard" : "/dashboard";
   const dashboardProfileHref = investeeDashboard ? "/investee-dashboard/profile" : "/dashboard/profile";
   const roleRedirectHref = getRoleDashboardHref(pathname, authProfile?.role);
+  const lockInvesteeSubscriptionTabs = investeeDashboard && subscriptionAccess !== "subscribed";
+  const lockedHrefs = lockInvesteeSubscriptionTabs ? investeeSubscriptionOnlyHrefs : new Set<string>();
 
   useEffect(() => {
     let active = true;
@@ -326,6 +368,43 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   }, [roleRedirectHref, router]);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadSubscriptionAccess() {
+      await Promise.resolve();
+
+      if (!active) {
+        return;
+      }
+
+      if (!investeeDashboard) {
+        setSubscriptionAccess("subscribed");
+        return;
+      }
+
+      setSubscriptionAccess("checking");
+
+      try {
+        const response = await getCurrentSubscription();
+
+        if (active) {
+          setSubscriptionAccess(isActiveSubscription(response.data) ? "subscribed" : "unsubscribed");
+        }
+      } catch {
+        if (active) {
+          setSubscriptionAccess("unsubscribed");
+        }
+      }
+    }
+
+    void loadSubscriptionAccess();
+
+    return () => {
+      active = false;
+    };
+  }, [investeeDashboard]);
+
   if (roleRedirectHref) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white text-sm font-medium text-[#6B7280]">
@@ -346,6 +425,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <SidebarContent
             collapsed={collapsed}
             homeHref={dashboardHomeHref}
+            lockedHrefs={lockedHrefs}
             navItems={sidebarNavItems}
             pathname={pathname}
             onCollapseToggle={() => setCollapsed((value) => !value)}
@@ -368,6 +448,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <SidebarContent
                 collapsed={false}
                 homeHref={dashboardHomeHref}
+                lockedHrefs={lockedHrefs}
                 navItems={sidebarNavItems}
                 pathname={pathname}
                 onCollapseToggle={() => setMobileOpen(false)}

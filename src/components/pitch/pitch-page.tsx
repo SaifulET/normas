@@ -12,6 +12,7 @@ import { isAuthenticated } from "@/lib/auth";
 import { CollapsibleDetailHtml } from "./collapsible-detail-html";
 import type { PitchDetail } from "./data";
 import { PitchActions } from "./pitch-actions";
+import { PitchSubscriptionGate } from "./pitch-subscription-gate";
 
 function RelatedPitchCard({ pitch }: { pitch: PitchDetail }) {
   return (
@@ -171,7 +172,9 @@ export async function PitchPage({
             </div>
           </div>
 
-          <UnlockedPitchDetails pitch={pitch} />
+          <PitchSubscriptionGate preview={pitch.description || pitch.overview || "Pitch details are available with an active investor subscription."}>
+            <UnlockedPitchDetails pitch={pitch} />
+          </PitchSubscriptionGate>
         </div>
       </section>
 

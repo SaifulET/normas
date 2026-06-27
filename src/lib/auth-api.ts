@@ -54,6 +54,15 @@ export type SignupRequest = {
   role: SignupRole;
 };
 
+export type PasswordResetResponse = {
+  data?: {
+    email?: string;
+    message?: string;
+  };
+  message?: string;
+  success?: boolean;
+};
+
 export function signupUser(payload: SignupRequest) {
   return apiRequest<SignupResponse>({
     data: payload,
@@ -67,6 +76,38 @@ export function signinUser(payload: SigninRequest) {
     data: payload,
     method: "POST",
     url: "auth/signin",
+  });
+}
+
+export function forgotPassword(payload: { email: string }) {
+  return apiRequest<PasswordResetResponse>({
+    data: payload,
+    method: "POST",
+    url: "auth/forgot-password",
+  });
+}
+
+export function resendPasswordOtp(payload: { email: string }) {
+  return apiRequest<PasswordResetResponse>({
+    data: payload,
+    method: "POST",
+    url: "auth/resend-password-otp",
+  });
+}
+
+export function verifyPasswordOtp(payload: { email: string; otp: string }) {
+  return apiRequest<PasswordResetResponse>({
+    data: payload,
+    method: "POST",
+    url: "auth/verify-password-otp",
+  });
+}
+
+export function setNewPassword(payload: { email: string; password: string }) {
+  return apiRequest<PasswordResetResponse>({
+    data: payload,
+    method: "POST",
+    url: "auth/set-new-password",
   });
 }
 

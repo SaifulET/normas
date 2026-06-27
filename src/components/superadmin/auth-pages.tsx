@@ -4,13 +4,48 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { getApiErrorMessage } from "@/lib/api";
 import { clearStoredUserSession } from "@/lib/auth-storage";
-import { getAuthSessionFromResponse, getAuthUserFromResponse, signinUser, signupUser } from "@/lib/auth-api";
+import {
+  forgotPassword,
+  getAuthSessionFromResponse,
+  getAuthUserFromResponse,
+  resendPasswordOtp,
+  setNewPassword,
+  signinUser,
+  signupUser,
+  verifyPasswordOtp,
+} from "@/lib/auth-api";
 import { useAuthStore } from "@/store";
 import { setSuperadminLoginSession } from "./auth-actions";
+
+const SUPERADMIN_PASSWORD_RESET_EMAIL_STORAGE_KEY = "earlyn_superadmin_password_reset_email";
+
+function getStoredSuperadminPasswordResetEmail() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.sessionStorage.getItem(SUPERADMIN_PASSWORD_RESET_EMAIL_STORAGE_KEY) ?? "";
+}
+
+function setStoredSuperadminPasswordResetEmail(email: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.setItem(SUPERADMIN_PASSWORD_RESET_EMAIL_STORAGE_KEY, email);
+}
+
+function clearStoredSuperadminPasswordResetEmail() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.removeItem(SUPERADMIN_PASSWORD_RESET_EMAIL_STORAGE_KEY);
+}
 
 function SubmitButton({
   idleLabel,
@@ -233,6 +268,12 @@ export function SuperadminLoginPage() {
           <Field label="Email Address" name="email" placeholder="admin@mooment.com" required type="email" />
           <PasswordField placeholder="••••••••" required />
 
+          <div className="text-right">
+            <Link href="/superadmin/auth/forgot-password" className="text-[11px] font-medium text-[#4E4A86] hover:text-[#3F3B73]">
+              Forgot Password?
+            </Link>
+          </div>
+
           <div className="pt-2">
             {errorMessage ? <p className="mb-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
             <SubmitButton idleLabel="Login" isPending={isSubmitting} pendingLabel="Logging in..." />
@@ -245,6 +286,275 @@ export function SuperadminLoginPage() {
             Signup
           </Link>
         </p>
+      </AuthCard>
+    </AuthShell>
+  );
+}
+
+function SuperadminOtpBox({
+  inputRef,
+  onChange,
+  onPaste,
+  value,
+}: {
+  value: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+  onChange?: (value: string) => void;
+  onPaste?: (value: string) => void;
+}) {
+  return (
+    <input
+      ref={inputRef}
+      inputMode="numeric"
+      maxLength={1}
+      value={value}
+      onChange={(event) => onChange?.(event.target.value)}
+      onPaste={(event) => {
+        event.preventDefault();
+        onPaste?.(event.clipboardData.getData("text"));
+      }}
+      className="h-11 w-12 rounded-[8px] border border-[#8F8AC3] bg-white text-center text-[26px] font-semibold text-[#1F2340] outline-none transition focus:border-[#4E4A86]"
+    />
+  );
+}
+
+export function SuperadminForgotPasswordPage() {
+  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleForgotPassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
+
+    try {
+      if (!email) {
+        throw new Error("Email is required");
+      }
+
+      await forgotPassword({ email });
+      setStoredSuperadminPasswordResetEmail(email);
+      router.push("/superadmin/auth/verify-otp");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to send OTP. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <AuthShell>
+      <AuthCard>
+        <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#7D84A0]">Superadmin Auth</p>
+        <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.04em] text-[#1F2340]">Forget Password</h2>
+        <p className="mt-2 text-sm text-[#6F768B]">Enter your superadmin email to receive a password reset OTP.</p>
+
+        <form onSubmit={handleForgotPassword} className="mt-8 space-y-4">
+          <Field label="Email Address" name="email" placeholder="admin@mooment.com" required type="email" />
+          <div className="pt-2">
+            {errorMessage ? <p className="mb-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
+            <SubmitButton idleLabel="Next" isPending={isSubmitting} pendingLabel="Please wait..." />
+          </div>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-[#6F768B]">
+          Remembered it?{" "}
+          <Link href="/superadmin/auth/login" className="font-semibold text-[#4E4A86]">
+            Login
+          </Link>
+        </p>
+      </AuthCard>
+    </AuthShell>
+  );
+}
+
+export function SuperadminVerifyOtpPage() {
+  const router = useRouter();
+  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isResending, setIsResending] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const inputRefs = [
+    useRef<HTMLInputElement | null>(null),
+    useRef<HTMLInputElement | null>(null),
+    useRef<HTMLInputElement | null>(null),
+    useRef<HTMLInputElement | null>(null),
+  ];
+
+  const updateOtpValue = (index: number, rawValue: string) => {
+    const nextCharacter = rawValue.slice(-1);
+    const nextValue = /^[0-9]$/.test(nextCharacter) ? nextCharacter : "";
+
+    setOtp((current) => current.map((item, currentIndex) => (currentIndex === index ? nextValue : item)));
+
+    if (nextValue && index < inputRefs.length - 1) {
+      inputRefs[index + 1].current?.focus();
+    }
+  };
+
+  const pasteOtpValue = (rawValue: string) => {
+    const nextOtp = rawValue.replace(/\D/g, "").slice(0, 4).split("");
+
+    if (!nextOtp.length) {
+      return;
+    }
+
+    setOtp((current) => current.map((item, index) => nextOtp[index] ?? item));
+    inputRefs[Math.min(nextOtp.length, inputRefs.length) - 1]?.current?.focus();
+  };
+
+  const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsSubmitting(true);
+
+    try {
+      const resetEmail = getStoredSuperadminPasswordResetEmail();
+      const code = otp.join("");
+
+      if (!resetEmail) {
+        throw new Error("Please request a password reset OTP first.");
+      }
+
+      if (!/^\d{4}$/.test(code)) {
+        throw new Error("Enter the 4 digit OTP from your email.");
+      }
+
+      await verifyPasswordOtp({ email: resetEmail, otp: code });
+      setStoredSuperadminPasswordResetEmail(resetEmail);
+      router.push("/superadmin/auth/reset-password");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to verify OTP. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsResending(true);
+
+    try {
+      const resetEmail = getStoredSuperadminPasswordResetEmail();
+
+      if (!resetEmail) {
+        throw new Error("Please enter your email on the forgot password page first.");
+      }
+
+      await resendPasswordOtp({ email: resetEmail });
+      setStoredSuperadminPasswordResetEmail(resetEmail);
+      setSuccessMessage("A new OTP has been sent to your email.");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to resend OTP. Please try again."));
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  return (
+    <AuthShell>
+      <AuthCard>
+        <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#7D84A0]">Superadmin Auth</p>
+        <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.04em] text-[#1F2340]">Verify OTP</h2>
+        <p className="mt-2 text-sm text-[#6F768B]">Enter the 4 digit code sent to your email.</p>
+
+        <form onSubmit={handleVerifyOtp} className="mt-8">
+          <div className="flex items-center justify-center gap-3">
+            {otp.map((value, index) => (
+              <SuperadminOtpBox
+                key={index}
+                inputRef={inputRefs[index]}
+                value={value}
+                onChange={(nextValue) => updateOtpValue(index, nextValue)}
+                onPaste={pasteOtpValue}
+              />
+            ))}
+          </div>
+
+          <div className="mt-4 flex items-center justify-between text-[13px] text-[#4D5572]">
+            <span>Didn&apos;t receive code?</span>
+            <button
+              type="button"
+              onClick={handleResendOtp}
+              disabled={isResending}
+              className="font-medium text-[#4E4A86] hover:text-[#3F3B73] disabled:cursor-wait disabled:opacity-70"
+            >
+              {isResending ? "Sending..." : "Resend"}
+            </button>
+          </div>
+
+          <div className="pt-4">
+            {successMessage ? <p className="mb-3 text-sm font-medium text-green-700">{successMessage}</p> : null}
+            {errorMessage ? <p className="mb-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
+            <SubmitButton idleLabel="Verify" isPending={isSubmitting} pendingLabel="Verifying..." />
+          </div>
+        </form>
+      </AuthCard>
+    </AuthShell>
+  );
+}
+
+export function SuperadminResetPasswordPage() {
+  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleResetPassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const password = String(formData.get("password") ?? "");
+    const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+    try {
+      const resetEmail = getStoredSuperadminPasswordResetEmail();
+
+      if (!resetEmail) {
+        throw new Error("Please verify your OTP before setting a new password.");
+      }
+
+      if (!password) {
+        throw new Error("Password is required");
+      }
+
+      if (password !== confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      await setNewPassword({ email: resetEmail, password });
+      clearStoredSuperadminPasswordResetEmail();
+      router.push("/superadmin/auth/login");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to update password. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <AuthShell>
+      <AuthCard>
+        <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#7D84A0]">Superadmin Auth</p>
+        <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.04em] text-[#1F2340]">Set New Password</h2>
+        <p className="mt-2 text-sm text-[#6F768B]">Choose a new password for your superadmin account.</p>
+
+        <form onSubmit={handleResetPassword} className="mt-8 space-y-4">
+          <PasswordField label="New Password" name="password" placeholder="New password" required />
+          <PasswordField label="Confirm Password" name="confirmPassword" placeholder="Confirm password" required />
+          <div className="pt-2">
+            {errorMessage ? <p className="mb-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
+            <SubmitButton idleLabel="Done" isPending={isSubmitting} pendingLabel="Saving..." />
+          </div>
+        </form>
       </AuthCard>
     </AuthShell>
   );

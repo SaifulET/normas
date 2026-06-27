@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { DashboardPitchDetailPage } from "@/components/dashboard/pitch-detail-page";
+import { InvesteeSubscriptionGate } from "@/components/dashboard/investee-subscription-gate";
 import { getPitchBySlug, getPitchSlugs, getRelatedPitches } from "@/components/pitch/data";
 import { mapApiListToPitchDetail } from "@/components/pitch/list-mappers";
 import { getList, getLists } from "@/lib/list-api";
@@ -43,8 +44,16 @@ export default async function InvesteeDashboardPitchPage({
       notFound();
     }
 
-    return <DashboardPitchDetailPage pitch={apiPitch} relatedPitches={relatedPitches} showActions={false} />;
+    return (
+      <InvesteeSubscriptionGate feature="pitch">
+        <DashboardPitchDetailPage pitch={apiPitch} relatedPitches={relatedPitches} showActions={false} />
+      </InvesteeSubscriptionGate>
+    );
   }
 
-  return <DashboardPitchDetailPage pitch={pitch} relatedPitches={getRelatedPitches(slug).slice(0, 4)} showActions={false} />;
+  return (
+    <InvesteeSubscriptionGate feature="pitch">
+      <DashboardPitchDetailPage pitch={pitch} relatedPitches={getRelatedPitches(slug).slice(0, 4)} showActions={false} />
+    </InvesteeSubscriptionGate>
+  );
 }

@@ -20,7 +20,15 @@ type RetryableAxiosRequestConfig = AxiosRequestConfig & {
 };
 
 function isAuthEndpoint(url?: string) {
-  return Boolean(url?.includes("auth/signin") || url?.includes("auth/signup") || url?.includes("auth/refresh-token"));
+  return Boolean(
+    url?.includes("auth/signin") ||
+      url?.includes("auth/signup") ||
+      url?.includes("auth/refresh-token") ||
+      url?.includes("auth/forgot-password") ||
+      url?.includes("auth/resend-password-otp") ||
+      url?.includes("auth/verify-password-otp") ||
+      url?.includes("auth/set-new-password"),
+  );
 }
 
 function redirectToLogin() {
