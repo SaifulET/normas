@@ -114,7 +114,10 @@ const sourceOfFundsOptions = [
 ];
 
 const sourceOfWealthOptions = ["Employment Income", "Pension", "Savings", "Sale of Assets", "Inheritance", "Other"];
-const applicantTypeOptions = ["Individual", "Company / Organization"];
+const applicantTypeOptions = [
+  { label: "Individual", value: "individual" },
+  { label: "Company / Organization", value: "company" },
+];
 const countryOptions = ["Select a country", "Bangladesh", "United Kingdom", "United States", "United Arab Emirates", "Singapore", "Kenya"];
 const idTypeOptions = ["Passport", "National ID", "Driving License"];
 const investorClassificationOptions = ["Retail Investor", "High-Net-Worth Individual", "Sophisticated Investor", "Institutional Investor"];
@@ -193,6 +196,11 @@ function formatValue(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (!isPresent(value)) return "";
   return String(value);
+}
+
+function normalizeApplicantType(value: unknown) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized === "company" || normalized.includes("company") ? "company" : "individual";
 }
 
 function getFileName(url: string) {
@@ -1092,8 +1100,10 @@ export function KycDataReviewCard({ kyc, mode, onChange }: KycDataReviewCardProp
     const companyFields = applicantFields.slice(14, 21);
     const companyFileFields = applicantFields.slice(21);
     const editableFields = applicantFields.filter((field) => field.type !== "file" && field.path !== emailField.path);
-    const applicantType = String(draftValues[applicantTypeField.path] ?? getFieldReview(currentKyc, applicantTypeField).value ?? "Individual");
-    const isCompany = applicantType.toLowerCase().includes("company");
+    const applicantType = normalizeApplicantType(
+      draftValues[applicantTypeField.path] ?? getFieldReview(currentKyc, applicantTypeField).value,
+    );
+    const isCompany = applicantType === "company";
 
     return (
       <div className="mx-auto flex w-full max-w-[830px] flex-col items-start gap-8 py-8">
@@ -1106,15 +1116,15 @@ export function KycDataReviewCard({ kyc, mode, onChange }: KycDataReviewCardProp
             <p className="mb-3 text-[12px] font-semibold text-[#101828]">Applicant Type</p>
             <div className="flex flex-wrap gap-6">
               {applicantTypeOptions.map((option) => (
-                <label key={option} className="flex items-center gap-2 text-[12px] font-medium text-[#101828]">
+                <label key={option.value} className="flex items-center gap-2 text-[12px] font-medium text-[#101828]">
                   <input
                     type="radio"
-                    checked={applicantType === option}
+                    checked={applicantType === option.value}
                     disabled={mode !== "user"}
-                    onChange={() => setDraftValues((current) => ({ ...current, [applicantTypeField.path]: option }))}
+                    onChange={() => setDraftValues((current) => ({ ...current, [applicantTypeField.path]: option.value }))}
                     className="h-[14px] w-[14px] accent-[#9CC9F5]"
                   />
-                  {option}
+                  {option.label}
                 </label>
               ))}
             </div>

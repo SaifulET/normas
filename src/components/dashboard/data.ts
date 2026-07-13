@@ -6,12 +6,6 @@ export interface DashboardNavItem {
   icon: "website" | "dashboard" | "plus" | "save" | "messages" | "schedule" | "support" | "upgrade";
 }
 
-export interface DashboardScheduleHighlight {
-  day: string;
-  time: string;
-  note: string;
-}
-
 export interface DashboardMessageItem {
   id: string;
   sender: "investor" | "team" | "admin";
@@ -96,19 +90,6 @@ export const dashboardSavedPitches: PitchDetail[] = [
 ];
 
 export const dashboardOverviewPitches = dashboardSavedPitches.slice(0, 4);
-
-export const dashboardScheduleHighlights: DashboardScheduleHighlight[] = [
-  {
-    day: "Monday",
-    time: "09:00 AM - 05:00 PM",
-    note: "Weekly founder review and pipeline shortlist.",
-  },
-  {
-    day: "Saturday",
-    time: "10:00 AM - 02:00 PM",
-    note: "Investor office hours for saved listings and due diligence.",
-  },
-];
 
 export const dashboardCalendarColumns = ["13", "14", "15", "16", "17", "18", "19"];
 

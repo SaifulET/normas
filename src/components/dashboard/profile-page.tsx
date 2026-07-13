@@ -114,6 +114,8 @@ type KycDetails = {
   updatedAt?: string;
 };
 
+type ProfileApplicantType = "company" | "individual";
+
 const defaultKycUpdateStatus: KycUpdateStatus = {
   error: "",
   isSaving: false,
@@ -251,8 +253,29 @@ function formatDisplayValue(value?: string | number | null, fallback = "Not prov
   return String(value);
 }
 
-function getUserPhone(user?: UserDetails | null) {
-  return user?.phone ?? user?.mobile ?? "";
+function getRecordString(source: Record<string, unknown> | null | undefined, key: string) {
+  const value = source?.[key];
+  return typeof value === "string" ? value : "";
+}
+
+function getKycPhone(kyc?: KycDetails | null) {
+  return getRecordString(kyc?.applicantInfo, "phoneNumber");
+}
+
+function getUserPhone(user?: UserDetails | null, kyc?: KycDetails | null) {
+  return user?.phone || user?.mobile || getKycPhone(kyc);
+}
+
+function normalizeApplicantType(value?: string): ProfileApplicantType {
+  return value?.trim().toLowerCase() === "company" ? "company" : "individual";
+}
+
+function getApplicantType(kyc?: KycDetails | null): ProfileApplicantType {
+  return normalizeApplicantType(getRecordString(kyc?.applicantInfo, "applicantType"));
+}
+
+function formatApplicantType(value: ProfileApplicantType) {
+  return value === "company" ? "Company / Organisation" : "Individual";
 }
 
 function toTitleCase(value?: string) {
@@ -1064,6 +1087,7 @@ function ProfileSummary({
   user?: UserDetails;
 }) {
   const status = kyc?.status ?? "not submitted";
+  const applicantType = getApplicantType(kyc);
 
   return (
     <article className="rounded-[8px] border border-[#D0D5DD] bg-white p-4 shadow-[0_8px_24px_-18px_rgba(16,24,40,0.18)] sm:p-5">
@@ -1085,10 +1109,14 @@ function ProfileSummary({
         </span>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+      <div className="mt-5 grid gap-3 sm:grid-cols-4">
         <div className="rounded-[8px] bg-[#F8FAFC] px-3 py-3">
           <p className="text-[11px] font-medium text-[#98A2B3]">Role</p>
           <p className="mt-1 text-sm font-semibold capitalize text-[#344054]">{formatDisplayValue(user?.role)}</p>
+        </div>
+        <div className="rounded-[8px] bg-[#F8FAFC] px-3 py-3">
+          <p className="text-[11px] font-medium text-[#98A2B3]">Business Type</p>
+          <p className="mt-1 text-sm font-semibold text-[#344054]">{formatApplicantType(applicantType)}</p>
         </div>
         <div className="rounded-[8px] bg-[#F8FAFC] px-3 py-3">
           <p className="text-[11px] font-medium text-[#98A2B3]">Phone</p>
@@ -1183,7 +1211,7 @@ export function ProfilePage() {
           setProfileDetails(nextDetails);
           setAccountForm({
             name: nextDetails?.user?.name ?? "",
-            phone: getUserPhone(nextDetails?.user),
+            phone: getUserPhone(nextDetails?.user, getLatestKyc(nextDetails?.kyc)),
           });
           setProfileError("");
         });

@@ -5,7 +5,7 @@ import { startTransition, useEffect, useState } from "react";
 import { getLists } from "@/lib/list-api";
 import { CreatedListCard } from "./created-list-card";
 import { type CreatedListItem, loadCreatedLists } from "./created-list-storage";
-import { dashboardScheduleHighlights } from "./data";
+import { DashboardSchedulePreview } from "./dashboard-schedule-preview";
 import { mapApiListToCreatedListItem } from "./list-mappers";
 import { DashboardPageHeader } from "./page-header";
 
@@ -72,22 +72,7 @@ export function DashboardOverviewPage() {
           </Link>
         </div>
 
-        <div className="mt-6 space-y-3">
-          {dashboardScheduleHighlights.map((item) => (
-            <Link
-              key={item.day}
-              href="/investee-dashboard/schedule"
-              className="flex items-center justify-between gap-4 rounded-[22px] bg-[#F8FAFC] px-4 py-4 transition hover:bg-[#F2F6FB]"
-            >
-              <div>
-                <p className="text-sm font-semibold text-[#1E2746]">{item.day}</p>
-                <p className="mt-1 text-sm text-[#6B7280]">{item.time}</p>
-                <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#98A2B3]">{item.note}</p>
-              </div>
-              <span className="text-xl text-[#314B6B]">→</span>
-            </Link>
-          ))}
-        </div>
+        <DashboardSchedulePreview href="/investee-dashboard/schedule" />
       </section>
     </section>
   );
