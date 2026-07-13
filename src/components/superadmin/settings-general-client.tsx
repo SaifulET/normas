@@ -9,6 +9,8 @@ import { getApiErrorMessage } from "@/lib/api";
 import {
   getCachedSuperadminProfile,
   getSuperadminProfile,
+  SUPERADMIN_DISPLAY_EMAILS,
+  SUPERADMIN_PRIMARY_DISPLAY_EMAIL,
   updateSuperadminProfile,
   type SuperadminProfile,
 } from "@/lib/superadmin-profile-api";
@@ -323,7 +325,7 @@ function PricingPlanCard({
 function mapProfileToForm(profile?: SuperadminProfile): ProfileForm {
   return {
     name: profile?.name?.trim() || "",
-    email: profile?.email?.trim() || "",
+    email: SUPERADMIN_PRIMARY_DISPLAY_EMAIL,
     contact: profile?.mobile?.trim() || "",
   };
 }
@@ -417,7 +419,6 @@ export function SuperadminSettingsGeneralClient({
   const hasProfileChanges = useMemo(
     () =>
       profile.name !== savedProfile.name ||
-      profile.email !== savedProfile.email ||
       profile.contact !== savedProfile.contact ||
       Boolean(avatarFile),
     [avatarFile, profile, savedProfile],
@@ -492,7 +493,6 @@ export function SuperadminSettingsGeneralClient({
 
     const data = new FormData();
     data.set("name", profile.name.trim());
-    data.set("email", profile.email.trim());
     data.set("mobile", profile.contact.trim());
 
     if (avatarFile) {
@@ -663,15 +663,17 @@ export function SuperadminSettingsGeneralClient({
                   />
                 </label>
 
-                <label className="block">
-                  <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-[#4F5676]">Email</span>
-                  <ProfileInput
-                    type="email"
-                    icon="email"
-                    value={profile.email}
-                    onChange={(value) => setProfile((current) => ({ ...current, email: value }))}
-                  />
-                </label>
+                <div className="block">
+                  <span className="mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-[#4F5676]">Emails</span>
+                  <div className="space-y-2">
+                    {SUPERADMIN_DISPLAY_EMAILS.map((email) => (
+                      <div key={email} className="flex h-11 items-center gap-3 rounded-[12px] border border-[#D8DEEA] bg-[#F7F8FB] px-3 text-[13px] text-[#38405F]">
+                        <ProfileFieldIcon type="email" />
+                        <span className="truncate font-medium">{email}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <label className="mt-5 block">

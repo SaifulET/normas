@@ -19,6 +19,9 @@ type SuperadminProfileResponse = {
   success?: boolean;
 };
 
+export const SUPERADMIN_DISPLAY_EMAILS = ["info@early-n.com", "normie@early-n.com"] as const;
+export const SUPERADMIN_PRIMARY_DISPLAY_EMAIL = SUPERADMIN_DISPLAY_EMAILS[0];
+
 const SUPERADMIN_PROFILE_CACHE_KEY = "normas.superadmin.profile";
 
 let profileRequest: Promise<SuperadminProfileResponse> | null = null;

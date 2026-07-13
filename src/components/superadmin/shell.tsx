@@ -6,7 +6,12 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown";
-import { getCachedSuperadminProfile, getSuperadminProfile, type SuperadminProfile } from "@/lib/superadmin-profile-api";
+import {
+  getCachedSuperadminProfile,
+  getSuperadminProfile,
+  SUPERADMIN_DISPLAY_EMAILS,
+  type SuperadminProfile,
+} from "@/lib/superadmin-profile-api";
 import { superadminNavItems, type SuperadminNavIcon } from "./data";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Logout03Icon, Notification01Icon, Settings01Icon, SidebarRightIcon, User02Icon } from "@hugeicons/core-free-icons";
@@ -273,11 +278,10 @@ export function SuperadminShell({
   const sidebarWidth = collapsed ? "w-[88px]" : "w-[300px]";
   const contentPadding = collapsed ? "lg:pl-[88px]" : "lg:pl-[300px]";
   const sidebarName = profile?.name?.trim() || "";
-  const sidebarEmail = profile?.email?.trim() || "";
   const sidebarImage = profile?.profileImage?.trim() || "";
   const profileHref = "/superadmin/dashboard/settings";
   const profileActive = isActivePath(pathname, profileHref);
-  const hasSidebarProfile = Boolean(sidebarName || sidebarEmail || sidebarImage);
+  const hasSidebarProfile = Boolean(sidebarName || sidebarImage || SUPERADMIN_DISPLAY_EMAILS.length);
 
   useEffect(() => {
     let active = true;
@@ -433,8 +437,12 @@ export function SuperadminShell({
                 <div className="min-w-0 flex-1">
                   {hasSidebarProfile ? (
                     <>
-                      <p className="truncate text-sm font-medium text-white">{sidebarName || sidebarEmail}</p>
-                      {sidebarEmail && sidebarEmail !== sidebarName ? <p className="truncate text-[11px] text-white/42">{sidebarEmail}</p> : null}
+                      <p className="truncate text-sm font-medium text-white">{sidebarName || "Super Admin"}</p>
+                      <span className="mt-1 block space-y-0.5">
+                        {SUPERADMIN_DISPLAY_EMAILS.map((email) => (
+                          <p key={email} className="truncate text-[11px] text-white/42">{email}</p>
+                        ))}
+                      </span>
                     </>
                   ) : (
                     <span className="block space-y-1.5" aria-label="Loading profile">
@@ -515,7 +523,12 @@ export function SuperadminShell({
                   )}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">{sidebarName || sidebarEmail}</p>
+                  <p className="truncate text-sm font-medium text-white">{sidebarName || "Super Admin"}</p>
+                  <span className="mt-1 block space-y-0.5">
+                    {SUPERADMIN_DISPLAY_EMAILS.map((email) => (
+                      <p key={email} className="truncate text-[11px] text-white/42">{email}</p>
+                    ))}
+                  </span>
                 </div>
               </Link>
               <LogoutButton
