@@ -127,41 +127,43 @@ export function SuperadminListsClient() {
       {error ? <div className="rounded-[8px] border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B42318]">{error}</div> : null}
 
       <div className="overflow-hidden rounded-[8px] border border-[#DDE3EE] bg-white">
-        <div className="grid grid-cols-[1.4fr_0.75fr_0.75fr_0.75fr_0.45fr] gap-4 border-b border-[#E7ECF3] bg-[#F8FAFC] px-4 py-3 text-xs font-semibold text-[#667085]">
-          <span>List</span>
-          <span>Status</span>
-          <span>Approval</span>
-          <span>AI review</span>
-          <span className="text-right">Action</span>
-        </div>
+        <div className="overflow-x-auto">
+          <div className="grid min-w-[800px] grid-cols-[1.4fr_0.75fr_0.75fr_0.75fr_0.45fr] gap-4 border-b border-[#E7ECF3] bg-[#F8FAFC] px-4 py-3 text-xs font-semibold text-[#667085]">
+            <span>List</span>
+            <span>Status</span>
+            <span>Approval</span>
+            <span>AI review</span>
+            <span className="text-right">Action</span>
+          </div>
 
-        {loading ? (
-          <div className="px-4 py-10 text-center text-sm text-[#667085]">Loading lists...</div>
-        ) : lists.length ? (
-          lists.map((list) => (
-            <div key={list._id} className="grid grid-cols-[1.4fr_0.75fr_0.75fr_0.75fr_0.45fr] gap-4 border-b border-[#EEF2F7] px-4 py-4 text-sm last:border-b-0">
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-[#202350]">{list.title || "Untitled list"}</p>
-                <p className="mt-1 line-clamp-1 text-xs text-[#7B8499]">{stripHtml(list.description) || list.keyword || "No description"}</p>
-                <p className="mt-1 text-[11px] text-[#98A2B3]">{formatDate(list.updatedAt || list.createdAt)}</p>
+          {loading ? (
+            <div className="px-4 py-10 text-center text-sm text-[#667085]">Loading lists...</div>
+          ) : lists.length ? (
+            lists.map((list) => (
+              <div key={list._id} className="grid min-w-[800px] grid-cols-[1.4fr_0.75fr_0.75fr_0.75fr_0.45fr] gap-4 border-b border-[#EEF2F7] px-4 py-4 text-sm last:border-b-0">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-[#202350]">{list.title || "Untitled list"}</p>
+                  <p className="mt-1 line-clamp-1 text-xs text-[#7B8499]">{stripHtml(list.description) || list.keyword || "No description"}</p>
+                  <p className="mt-1 text-[11px] text-[#98A2B3]">{formatDate(list.updatedAt || list.createdAt)}</p>
+                </div>
+                <div><SuperadminStatusBadge status={list.status || "unknown"} /></div>
+                <div className="text-xs text-[#5F6B7A]">{approvalLabel(list.approvalStatus)}</div>
+                <div>
+                  <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold ${aiTone(list)}`}>
+                    {list.aiReview?.label || "Not checked"}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <Link href={`/superadmin/dashboard/lists/${list._id}`} className="text-xs font-semibold text-[#314B6B] hover:underline">
+                    Review
+                  </Link>
+                </div>
               </div>
-              <div><SuperadminStatusBadge status={list.status || "unknown"} /></div>
-              <div className="text-xs text-[#5F6B7A]">{approvalLabel(list.approvalStatus)}</div>
-              <div>
-                <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold ${aiTone(list)}`}>
-                  {list.aiReview?.label || "Not checked"}
-                </span>
-              </div>
-              <div className="text-right">
-                <Link href={`/superadmin/dashboard/lists/${list._id}`} className="text-xs font-semibold text-[#314B6B] hover:underline">
-                  Review
-                </Link>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="px-4 py-10 text-center text-sm text-[#667085]">No lists found.</div>
-        )}
+            ))
+          ) : (
+            <div className="px-4 py-10 text-center text-sm text-[#667085]">No lists found.</div>
+          )}
+        </div>
       </div>
     </section>
   );

@@ -35,7 +35,7 @@ function SuperadminIcon({
       );
     case "lists":
       return (
-        <svg viewBox="0 0 24 24" className={classes} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <svg viewBox="0 0 24 24" className="w-[24px] h-[24px] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <path d="M7 4.75h10A2.25 2.25 0 0 1 19.25 7v10A2.25 2.25 0 0 1 17 19.25H7A2.25 2.25 0 0 1 4.75 17V7A2.25 2.25 0 0 1 7 4.75Z" />
           <path d="M8.5 9h7" />
           <path d="M8.5 12h7" />
@@ -259,6 +259,7 @@ export function SuperadminShell({
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [profile, setProfile] = useState<SuperadminProfile | null>(null);
   const [sidebarScrollIndicator, setSidebarScrollIndicator] = useState({
     hasOverflow: false,
@@ -270,7 +271,7 @@ export function SuperadminShell({
   const sidebarScrollTimeoutRef = useRef<number | null>(null);
 
   const sidebarWidth = collapsed ? "w-[88px]" : "w-[300px]";
-  const contentPadding = collapsed ? "pl-[88px]" : "pl-[300px]";
+  const contentPadding = collapsed ? "lg:pl-[88px]" : "lg:pl-[300px]";
   const sidebarName = profile?.name?.trim() || "";
   const sidebarEmail = profile?.email?.trim() || "";
   const sidebarImage = profile?.profileImage?.trim() || "";
@@ -374,7 +375,7 @@ export function SuperadminShell({
 
   return (
     <div className="min-h-screen bg-[#F4F4F7] text-[#212443]">
-      <aside className={cx("fixed inset-y-0 left-0 z-30 flex min-h-0 flex-col overflow-hidden border-r border-[#D4D7E2] bg-[#2B425D] text-white transition-all duration-200", sidebarWidth)}>
+      <aside className={cx("fixed inset-y-0 left-0 z-30 hidden lg:flex min-h-0 flex-col overflow-hidden border-r border-[#D4D7E2] bg-[#2B425D] text-white transition-all duration-200", sidebarWidth)}>
         <div className="relative shrink-0">
           <SidebarLogo collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
         </div>
@@ -461,12 +462,105 @@ export function SuperadminShell({
         </div>
       </aside>
 
+      {mobileOpen ? (
+        <div className="fixed inset-0 z-40 bg-[#0F172A]/35 lg:hidden" onClick={() => setMobileOpen(false)}>
+          <aside
+            className="flex h-full w-[288px] flex-col overflow-hidden bg-[#2B425D] text-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="relative shrink-0 border-b border-white/8 px-4 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative h-[28px] w-[62px] shrink-0 overflow-hidden">
+                  <Image
+                    src="/footer-logo.svg"
+                    alt="EARLY-N"
+                    fill
+                    priority
+                    sizes="62px"
+                    className="object-left object-contain"
+                  />
+                </div>
+                <div>
+                  <p className="text-[1.08rem] font-semibold text-white">Early-N</p>
+                  <p className="text-xs text-white/65">Super Admin</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-white/10 bg-white/6 text-white/70 hover:bg-white/10"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="relative min-h-0 flex-1 px-2.5 py-5 overflow-y-auto superadmin-sidebar-scroll space-y-5">
+              <SidebarSection collapsed={false} pathname={pathname} section="main" />
+              <SidebarSection collapsed={false} pathname={pathname} section="core" />
+            </div>
+
+            <div className="shrink-0 border-t border-white/8 px-3 py-4">
+              <Link
+                href={profileHref}
+                onClick={() => setMobileOpen(false)}
+                className="flex w-full items-center gap-3 rounded-[10px] px-2 py-2 text-left hover:bg-white/8"
+              >
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/14 text-xs font-semibold text-white">
+                  {sidebarImage ? (
+                    <img src={sidebarImage} alt="profile" className="h-full w-full object-cover" />
+                  ) : (
+                    getInitials(sidebarName) || "A"
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-white">{sidebarName || sidebarEmail}</p>
+                </div>
+              </Link>
+              <LogoutButton
+                redirectHref="/superadmin/auth/login"
+                className="mt-3 flex w-full items-center gap-3 rounded-[10px] px-4 py-3 text-[13px] font-medium text-white/70 hover:bg-white/8 hover:text-white"
+              >
+                <SuperadminIcon name="logout" className="h-4 w-4 shrink-0" />
+                <span>Logout</span>
+              </LogoutButton>
+            </div>
+          </aside>
+        </div>
+      ) : null}
+
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-[#D4D7E2] bg-white px-4 py-4 lg:hidden">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-[8px] border border-[#DEE6F1] bg-white text-[#2B425D]"
+            aria-label="Open menu"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div className="relative h-[28px] w-[62px] shrink-0 overflow-hidden">
+            <Image
+              src="/logo.svg"
+              alt="EARLY-N"
+              fill
+              priority
+              sizes="62px"
+              className="object-left object-contain"
+            />
+          </div>
+        </div>
+      </header>
+
       <div className="fixed right-4 top-4 z-40 sm:right-6 sm:top-6">
         <NotificationDropdown variant="superadmin" />
       </div>
 
       <div className={cx("transition-all duration-200", contentPadding)}>
-        <main className="min-h-screen p-4 pr-20 sm:p-6 sm:pr-24">{children}</main>
+        <main className="min-h-screen p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );
@@ -482,9 +576,9 @@ export function SuperadminPageHeader({
   title: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-[-0.04em] text-[#202350]">{title}</h1>
+        <h1 className="text-[20px] sm:text-[22px] font-semibold tracking-[-0.04em] text-[#202350]">{title}</h1>
         <p className="mt-1 text-[13px] text-[#69729A]">{subtitle}</p>
       </div>
 

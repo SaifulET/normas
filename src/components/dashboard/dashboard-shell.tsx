@@ -435,7 +435,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           />
         </aside>
 
-        <div className="fixed right-4 top-[84px] z-40 lg:right-6 lg:top-6">
+        <div className="hidden lg:block fixed right-6 top-6 z-40">
           <NotificationDropdown />
         </div>
 
@@ -476,17 +476,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <SidebarBrand light role={sidebarUser.role} />
               </Link>
 
-              <Link
-                href="/"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#DEE6F1] bg-white text-[#243B5A]"
-                aria-label="Open website"
-              >
-                <DashboardIcon name="external" className="h-5 w-5" />
-              </Link>
+              <div className="flex items-center gap-2">
+                <NotificationDropdown />
+                <Link
+                  href="/"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#DEE6F1] bg-white text-[#243B5A]"
+                  aria-label="Open website"
+                >
+                  <DashboardIcon name="external" className="h-5 w-5" />
+                </Link>
+              </div>
             </div>
           </header>
 
-          <main className="min-w-0 p-4 pr-20 sm:p-6 sm:pr-24 xl:p-8 xl:pr-24">{children}</main>
+          <main className="min-w-0 p-4 sm:p-6 lg:pr-24 xl:p-8 xl:pr-24">{children}</main>
         </div>
       </div>
     </div>

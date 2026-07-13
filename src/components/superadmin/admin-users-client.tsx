@@ -192,8 +192,8 @@ export function SuperadminUserManagementClient() {
         </div>
       </section>
 
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <label className="flex h-9 min-w-[260px] items-center gap-2 rounded-full border border-[#E3E6EF] bg-white px-3 text-[#8C93A8]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <label className="flex h-9 w-full sm:w-auto sm:min-w-[260px] items-center gap-2 rounded-full border border-[#E3E6EF] bg-white px-3 text-[#8C93A8]">
           <HugeiconsIcon icon={Search01Icon} className="h-4 w-4" />
           <input
             type="search"
@@ -209,7 +209,7 @@ export function SuperadminUserManagementClient() {
             setPage(1);
             setRole(event.target.value as AdminUserRole | "");
           }}
-          className="h-9 rounded-[8px] border border-[#DDE2EC] bg-white px-3 text-[12px] text-[#525B79] outline-none"
+          className="h-9 w-full sm:w-auto rounded-[8px] border border-[#DDE2EC] bg-white px-3 text-[12px] text-[#525B79] outline-none"
           aria-label="Filter account type"
         >
           <option value="">All account types</option>
@@ -222,7 +222,7 @@ export function SuperadminUserManagementClient() {
             setPage(1);
             setAccountStatus(event.target.value as AdminAccountStatus | "");
           }}
-          className="h-9 rounded-[8px] border border-[#DDE2EC] bg-white px-3 text-[12px] text-[#525B79] outline-none"
+          className="h-9 w-full sm:w-auto rounded-[8px] border border-[#DDE2EC] bg-white px-3 text-[12px] text-[#525B79] outline-none"
           aria-label="Filter account status"
         >
           <option value="">All statuses</option>
@@ -241,15 +241,15 @@ export function SuperadminUserManagementClient() {
       ) : null}
 
       <section className="overflow-hidden rounded-[14px] border border-[#E6E9F0] bg-white">
-        <div className="grid min-w-[840px] grid-cols-[2fr_1fr_1fr_1.2fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
-          <p>Name</p>
-          <p>Account Type</p>
-          <p>Joining Date</p>
-          <p>Account Status</p>
-          <p className="text-right">Actions</p>
-        </div>
-
         <div className="overflow-x-auto">
+          <div className="grid min-w-[840px] grid-cols-[2fr_1fr_1fr_1.2fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
+            <p>Name</p>
+            <p>Account Type</p>
+            <p>Joining Date</p>
+            <p>Account Status</p>
+            <p className="text-right">Actions</p>
+          </div>
+
           {loading ? (
             <div className="px-6 py-8 text-center text-[13px] text-[#69729A]">Loading users...</div>
           ) : users.length === 0 ? (

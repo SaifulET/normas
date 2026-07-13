@@ -246,54 +246,56 @@ export function SuperadminSupportCenterClient() {
         ) : null}
 
         <div className="overflow-hidden rounded-[14px] border border-[#E6E9F0] bg-white">
-          <div className="grid grid-cols-[1.2fr_1.4fr_0.7fr_0.7fr] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
-            <p>Buyer & Email</p>
-            <p>Topic</p>
-            <p>Status</p>
-            <p>Date</p>
-          </div>
+          <div className="overflow-x-auto">
+            <div className="grid min-w-[760px] grid-cols-[1.2fr_1.4fr_0.7fr_0.7fr] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
+              <p>Buyer & Email</p>
+              <p>Topic</p>
+              <p>Status</p>
+              <p>Date</p>
+            </div>
 
-          {loading ? (
-            <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">Loading support conversations...</div>
-          ) : conversations.length === 0 ? (
-            <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">No support conversations found.</div>
-          ) : (
-            conversations.map((conversation) => {
-              const participant = conversation.participant ?? {};
-              const initials = getInitials(participant.name, participant.email);
+            {loading ? (
+              <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">Loading support conversations...</div>
+            ) : conversations.length === 0 ? (
+              <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">No support conversations found.</div>
+            ) : (
+              conversations.map((conversation) => {
+                const participant = conversation.participant ?? {};
+                const initials = getInitials(participant.name, participant.email);
 
-              return (
-                <div
-                  key={conversation._id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openConversationDetails(conversation._id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      openConversationDetails(conversation._id);
-                    }
-                  }}
-                  className="grid cursor-pointer grid-cols-[1.2fr_1.4fr_0.7fr_0.7fr] gap-4 border-b border-[#F3F5F9] px-6 py-3 transition hover:bg-[#F8FAFC] focus:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#314B6B]/20 last:border-b-0"
-                >
-                  <div className="flex items-center gap-3">
-                    <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={initials} size={28} />
-                    <div>
-                      <p className="text-[13px] font-medium text-[#202350]">{participant.name || "Support user"}</p>
-                      <p className="text-[11px] text-[#8A91AB]">{participant.email || "No email"}</p>
+                return (
+                  <div
+                    key={conversation._id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openConversationDetails(conversation._id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openConversationDetails(conversation._id);
+                      }
+                    }}
+                    className="grid cursor-pointer grid-cols-[1.2fr_1.4fr_0.7fr_0.7fr] gap-4 border-b border-[#F3F5F9] px-6 py-3 transition hover:bg-[#F8FAFC] focus:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#314B6B]/20 last:border-b-0 min-w-[760px]"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={initials} size={28} />
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-[#202350] truncate">{participant.name || "Support user"}</p>
+                        <p className="text-[11px] text-[#8A91AB] truncate">{participant.email || "No email"}</p>
+                      </div>
                     </div>
+                    <p className="text-[13px] font-medium text-[#202350] truncate min-w-0">
+                      {conversation.subject || "Support request"}
+                    </p>
+                    <div>
+                      <SuperadminStatusBadge status={normalizeSupportStatus(conversation.status)} />
+                    </div>
+                    <p className="text-[13px] text-[#34395B]">{formatDate(conversation.lastMessageAt || conversation.createdAt)}</p>
                   </div>
-                  <p className="text-[13px] font-medium text-[#202350]">
-                    {conversation.subject || "Support request"}
-                  </p>
-                  <div>
-                    <SuperadminStatusBadge status={normalizeSupportStatus(conversation.status)} />
-                  </div>
-                  <p className="text-[13px] text-[#34395B]">{formatDate(conversation.lastMessageAt || conversation.createdAt)}</p>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
 
           {!loading && conversations.length > 0 ? (
             <div className="flex items-center justify-between border-t border-[#EEF1F6] px-4 py-3 text-[10px] text-[#727A96]">

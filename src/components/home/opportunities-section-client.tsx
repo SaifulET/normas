@@ -92,7 +92,7 @@ export function HomeOpportunitiesSection({ fallbackListings }: { fallbackListing
   }, [fallbackDisplayListings, fallbackListings.length]);
 
   return (
-    <SectionShell className="bg-[#FFF] mx-[32px] my-[72px]">
+    <SectionShell className="bg-[#FFF] mx-4 sm:mx-8 md:mx-[32px] my-[72px]">
       <div id="opportunities">
         <SectionHeading
           title="Ethical Investment Opportunities"

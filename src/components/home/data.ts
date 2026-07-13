@@ -226,8 +226,11 @@ export const homePageContent: HomePageContent = {
   })),
   pricingPlans: [
     {
+      id: "investor-basic",
       title: "Investor Basic",
       price: "$49",
+      annualPrice: "$39",
+      discountAnnually: 20,
       suffix: "/mo",
       features: [
         "Browse pitch listings (limited)",
@@ -241,8 +244,11 @@ export const homePageContent: HomePageContent = {
       featured: false,
     },
     {
+      id: "investor-pro",
       title: "Investor Pro",
       price: "$99",
+      annualPrice: "$79",
+      discountAnnually: 20,
       suffix: "/mo",
       features: [
         "Full pitch listing access",
@@ -257,8 +263,11 @@ export const homePageContent: HomePageContent = {
       featured: true,
     },
     {
+      id: "investee-basic",
       title: "Investee",
       price: "$79",
+      annualPrice: "$59",
+      discountAnnually: 25,
       suffix: "/mo",
       features: [
         "1 active pitch deck",

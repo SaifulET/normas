@@ -183,7 +183,6 @@ function ReportActionMenu({
           >
             Delete
           </button>
-          
         </div>
       ) : null}
     </div>
@@ -360,6 +359,7 @@ function getPopulatedUserName(user: Report["user"]) {
   return "Unknown user";
 }
 
+// Helper to extract email
 function getPopulatedUserEmail(user: Report["user"]) {
   return user && typeof user === "object" ? user.email?.trim() || "" : "";
 }
@@ -518,49 +518,51 @@ export function SuperadminReportsPanel({
         </div>
       ) : null}
 
-      <div className="overflow-visible rounded-[14px] border border-[#E6E9F0] bg-white">
-        <div className="grid grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
-          <p>Report by</p>
-          <p>Reported user</p>
-          <p>Type</p>
-          <p>Status</p>
-          <p className="text-right">Actions</p>
-        </div>
+      <div className="overflow-hidden rounded-[14px] border border-[#E6E9F0] bg-white">
+        <div className="overflow-x-auto">
+          <div className="grid min-w-[800px] grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
+            <p>Report by</p>
+            <p>Reported user</p>
+            <p>Type</p>
+            <p>Status</p>
+            <p className="text-right">Actions</p>
+          </div>
 
-        {loadingReports ? (
-          <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">Loading reports...</div>
-        ) : filteredRecords.length === 0 ? (
-          <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">No reports found.</div>
-        ) : (
-          paginatedRecords.map((record) => (
-            <div
-              key={record.slug}
-              className="grid grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
-            >
-              <div className="flex items-center gap-3">
-                <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={record.reportByName.slice(0, 2).toUpperCase()} size={28} />
+          {loadingReports ? (
+            <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">Loading reports...</div>
+          ) : filteredRecords.length === 0 ? (
+            <div className="px-6 py-8 text-center text-[13px] text-[#8A91AB]">No reports found.</div>
+          ) : (
+            paginatedRecords.map((record) => (
+              <div
+                key={record.slug}
+                className="grid min-w-[800px] grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
+              >
+                <div className="flex items-center gap-3">
+                  <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={record.reportByName.slice(0, 2).toUpperCase()} size={28} />
+                  <div>
+                    <p className="text-[13px] font-medium text-[#202350]">{record.reportByName}</p>
+                    <p className="text-[11px] text-[#8A91AB]">{record.reportByEmail || "No email"}</p>
+                  </div>
+                </div>
+                <Link href={`/superadmin/dashboard/reports/${record.slug}`} className="flex items-center gap-3">
+                  <SuperadminAvatar from="#22C55E" to="#38BDF8" initials={record.reportedName.slice(0, 2).toUpperCase()} size={28} />
+                  <div>
+                    <p className="text-[13px] font-medium text-[#202350]">{record.reportedName}</p>
+                    <p className="text-[11px] text-[#8A91AB]">{record.reportedEmail || "Reported pitch"}</p>
+                  </div>
+                </Link>
+                <p className="text-[13px] text-[#34395B]">{record.type}</p>
                 <div>
-                  <p className="text-[13px] font-medium text-[#202350]">{record.reportByName}</p>
-                  <p className="text-[11px] text-[#8A91AB]">{record.reportByEmail || "No email"}</p>
+                  <SuperadminStatusBadge status={record.status} />
+                </div>
+                <div className="flex justify-end">
+                  <ReportActionMenu slug={record.slug} />
                 </div>
               </div>
-              <Link href={`/superadmin/dashboard/reports/${record.slug}`} className="flex items-center gap-3">
-                <SuperadminAvatar from="#22C55E" to="#38BDF8" initials={record.reportedName.slice(0, 2).toUpperCase()} size={28} />
-                <div>
-                  <p className="text-[13px] font-medium text-[#202350]">{record.reportedName}</p>
-                  <p className="text-[11px] text-[#8A91AB]">{record.reportedEmail || "Reported pitch"}</p>
-                </div>
-              </Link>
-              <p className="text-[13px] text-[#34395B]">{record.type}</p>
-              <div>
-                <SuperadminStatusBadge status={record.status} />
-              </div>
-              <div className="flex justify-end">
-                <ReportActionMenu slug={record.slug} />
-              </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
 
         <TableFooter
           itemLabel="reports"
@@ -639,45 +641,47 @@ export function SuperadminSupportPanel({
         <SuperadminSupportStatusDropdown value={status} onChange={setStatus} />
       </div>
 
-      <div className="overflow-visible rounded-[14px] border border-[#E6E9F0] bg-white">
-        <div className="grid grid-cols-[1.2fr_1.4fr_0.7fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
-          <p>Buyer & Email</p>
-          <p>Topic</p>
-          <p>Status</p>
-          <p className="text-right">Actions</p>
-        </div>
+      <div className="overflow-hidden rounded-[14px] border border-[#E6E9F0] bg-white">
+        <div className="overflow-x-auto">
+          <div className="grid min-w-[760px] grid-cols-[1.2fr_1.4fr_0.7fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
+            <p>Buyer & Email</p>
+            <p>Topic</p>
+            <p>Status</p>
+            <p className="text-right">Actions</p>
+          </div>
 
-        {paginatedRecords.map((record) => {
-          const user = getSuperadminUser(record.userSlug);
+          {paginatedRecords.map((record) => {
+            const user = getSuperadminUser(record.userSlug);
 
-          if (!user) {
-            return null;
-          }
+            if (!user) {
+              return null;
+            }
 
-          return (
-            <div
-              key={record.slug}
-              className="grid grid-cols-[1.2fr_1.4fr_0.7fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
-            >
-              <div className="flex items-center gap-3">
-                <SuperadminAvatar from={user.avatarFrom} to={user.avatarTo} initials={user.initials} size={28} />
+            return (
+              <div
+                key={record.slug}
+                className="grid min-w-[760px] grid-cols-[1.2fr_1.4fr_0.7fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
+              >
+                <div className="flex items-center gap-3">
+                  <SuperadminAvatar from={user.avatarFrom} to={user.avatarTo} initials={user.initials} size={28} />
+                  <div>
+                    <p className="text-[13px] font-medium text-[#202350]">{user.name}</p>
+                    <p className="text-[11px] text-[#8A91AB]">{user.email}</p>
+                  </div>
+                </div>
+                <Link href={`/superadmin/dashboard/support-center/${record.slug}`} className="text-[13px] font-medium text-[#202350]">
+                  {record.topic}
+                </Link>
                 <div>
-                  <p className="text-[13px] font-medium text-[#202350]">{user.name}</p>
-                  <p className="text-[11px] text-[#8A91AB]">{user.email}</p>
+                  <SuperadminStatusBadge status={record.status} />
+                </div>
+                <div className="flex justify-end">
+                  <SupportActionMenu slug={record.slug} />
                 </div>
               </div>
-              <Link href={`/superadmin/dashboard/support-center/${record.slug}`} className="text-[13px] font-medium text-[#202350]">
-                {record.topic}
-              </Link>
-              <div>
-                <SuperadminStatusBadge status={record.status} />
-              </div>
-              <div className="flex justify-end">
-                <SupportActionMenu slug={record.slug} />
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
 
         <TableFooter
           itemLabel="support requests"

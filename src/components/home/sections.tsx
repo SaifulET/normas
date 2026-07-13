@@ -51,20 +51,20 @@ export function HeroSection({ content }: { content: HeroContent }) {
 
       <div className="mx-auto flex max-w-7xl flex-col items-center pb-8 pt-20 text-center sm:pt-24 lg:pt-28">
         <h1
-          className={`${heroFont.className} max-w-5xl text-center text-[72px] font-extrabold leading-[88px] tracking-[-1.8px] text-[#1F2937]`}
+          className={`${heroFont.className} max-w-5xl text-center text-[36px] sm:text-[48px] md:text-[60px] lg:text-[72px] font-extrabold leading-[44px] sm:leading-[56px] md:leading-[72px] lg:leading-[88px] tracking-[-1.8px] text-[#1F2937]`}
         >
           {content.title}
           <span className="block text-[#E65E02]">{content.accentTitle}</span>
         </h1>
         <p
-          className={`${heroFont.className} mt-5 max-w-2xl text-center text-[20px] font-light leading-7 text-[#1F2937]`}
+          className={`${heroFont.className} mt-5 max-w-2xl text-center text-[16px] sm:text-[20px] font-light leading-6 sm:leading-7 text-[#1F2937]`}
         >
           {content.description}
         </p>
 
         <HeroSearchFormClient fields={content.searchFields} actionLabel={content.searchActionLabel} />
 
-        <div className="mt-12 flex w-full max-w-2xl flex-col gap-4 sm:flex-row">
+        <div className="mt-12 flex w-full max-w-2xl flex-col gap-4 sm:flex-row px-4 sm:px-0">
           {content.actions.map((action) => (
             <a
               key={action.label}
@@ -86,7 +86,7 @@ export function HeroSection({ content }: { content: HeroContent }) {
 
 export function StatsBandSection({ stats }: { stats: StatItem[] }) {
   return (
-    <SectionShell className="bg-[#2B425D] px-[160px] py-5 text-white">
+    <SectionShell className="bg-[#2B425D] px-4 sm:px-10 lg:px-[160px] py-5 text-white">
       <div className=" grid  grid-cols-2 gap-6 text-center md:grid-cols-4">
         {stats.map((stat) => (
           <div key={stat.label}>
@@ -101,7 +101,7 @@ export function StatsBandSection({ stats }: { stats: StatItem[] }) {
 
 export function OpportunitiesSection({ listings }: { listings: Listing[] }) {
   return (
-    <SectionShell className="bg-[#FFF] mx-[32px] my-[72px] " >
+    <SectionShell className="bg-[#FFF] mx-4 sm:mx-8 md:mx-[32px] my-[72px]" >
       <div id="opportunities" className="">
         <SectionHeading
           title="Ethical Investment Opportunities"
@@ -442,7 +442,7 @@ export function PricingSection({
   );
 
   return (
-    <SectionShell className="bg-white px-4 py-20 sm:px-6 lg:px-[147px]">
+    <SectionShell className="bg-white px-4 py-20 sm:px-6 md:px-8 xl:px-[147px]">
       <div id="pricing" className="">
         <SectionHeading
           title="Simple, Transparent Pricing"
@@ -461,7 +461,7 @@ export function PricingSection({
 
 export function FaqSection({ faqs }: { faqs: FaqItem[] }) {
   return (
-    <SectionShell className="bg-[#FFF] px-4 py-20 sm:px-6 lg:px-[147px]">
+    <SectionShell className="bg-[#FFF] px-4 py-20 sm:px-6 md:px-8 xl:px-[147px]">
       <div className="">
         <SectionHeading
           title="Common Questions"

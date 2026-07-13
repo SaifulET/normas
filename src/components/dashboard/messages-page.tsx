@@ -1692,7 +1692,10 @@ export function MessagesPage() {
       ) : null}
 
       <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white">
-          <aside className="sticky left-0 top-0 flex h-full min-h-0 w-[320px] shrink-0 flex-col overflow-hidden rounded-l-2xl border-r border-[#E2E8F0] bg-white">
+          <aside className={cx(
+            "sticky left-0 top-0 h-full min-h-0 w-full lg:w-[320px] shrink-0 flex-col overflow-hidden rounded-l-2xl border-r border-[#E2E8F0] bg-white",
+            selectedId ? "hidden lg:flex" : "flex"
+          )}>
             <div className="flex h-[53px] shrink-0 items-center justify-center gap-2 border-b border-[#E2E8F0] p-3">
               <div className="flex w-full items-center gap-2 text-xs font-medium leading-4 text-[#6B7280]">
                 {[
@@ -1760,12 +1763,25 @@ export function MessagesPage() {
             </div>
           </aside>
 
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#F8FAFC]">
+          <div className={cx(
+            "min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#F8FAFC]",
+            selectedId ? "flex" : "hidden lg:flex"
+          )}>
             {selectedId ? (
               <>
                 <div className="box-border flex min-h-[112px] shrink-0 items-start justify-between gap-6 rounded-tr-xl border-b border-[#E2E8F0] bg-white px-6 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
                   <div className="flex min-h-[80px] min-w-0 flex-1 flex-col items-start gap-4">
                     <div className="flex h-[26px] w-full items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId("")}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#DEE6F1] bg-white text-[#2B425D] lg:hidden mr-1"
+                        aria-label="Back to conversations"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="m15 19-7-7 7-7" />
+                        </svg>
+                      </button>
                       <h2 className="flex h-[26px] max-w-[340px] min-w-0 items-center pr-8 font-[family-name:var(--font-manrope)] text-lg font-semibold leading-[26px] text-[#16123E]">
                         <span className="truncate">{activeTitle}</span>
                       </h2>

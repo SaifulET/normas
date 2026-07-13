@@ -821,9 +821,9 @@ export function KycDataReviewCard({ kyc, mode, onChange }: KycDataReviewCardProp
     const changed = hasSectionChange(sectionFields);
 
     return (
-      <div className="-mx-6 -mb-5 flex w-[calc(100%+48px)] items-center justify-between gap-3 border-t border-[#C3C6CE] bg-[#F5F5F5] px-6 py-6">
+      <div className="-mx-4 -mb-4 sm:-mx-6 sm:-mb-5 flex w-[calc(100%+32px)] sm:w-[calc(100%+48px)] flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-[#C3C6CE] bg-[#F5F5F5] px-4 py-4 sm:px-6 sm:py-6">
         <div>{sectionStatus ? <StatusPill status={sectionStatus} /> : null}</div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {mode === "admin" && hasReviewableValue && onReview ? (
             <>
               {sectionStatus !== "declined" ? (
@@ -1496,7 +1496,7 @@ export function KycDataReviewCard({ kyc, mode, onChange }: KycDataReviewCardProp
           </div>
         </div>
 
-        <div className="-mx-6 -mb-5 flex w-[calc(100%+48px)] justify-end gap-3 border-t border-[#C3C6CE] bg-[#F5F5F5] px-6 py-6">
+        <div className="-mx-4 -mb-4 sm:-mx-6 sm:-mb-5 flex w-[calc(100%+32px)] sm:w-[calc(100%+48px)] flex-col sm:flex-row sm:justify-end gap-3 border-t border-[#C3C6CE] bg-[#F5F5F5] px-4 py-4 sm:px-6 sm:py-6">
           {mode === "admin" && hasFinancialValue ? (
             <>
               {combinedStatus !== "declined" ? (
@@ -1729,12 +1729,12 @@ export function KycDataReviewCard({ kyc, mode, onChange }: KycDataReviewCardProp
       </div>
 
       <section className="mx-auto w-full max-w-[896px] overflow-hidden rounded-[8px] border border-[#D7DEE8] bg-white shadow-[0_8px_28px_rgba(16,24,40,0.08)]">
-        <header className="border-b border-[#E4E7EC] px-6 py-6 text-center">
-          <h2 className="text-[22px] font-semibold text-[#243B5A]">KYC Verification</h2>
+        <header className="border-b border-[#E4E7EC] px-4 py-4 sm:px-6 sm:py-6 text-center">
+          <h2 className="text-[20px] sm:text-[22px] font-semibold text-[#243B5A]">KYC Verification</h2>
           <p className="mt-1 text-[11px] text-[#667085]">Complete your profile to unlock secure business opportunities.</p>
         </header>
 
-        <div className="space-y-5 px-6 py-5">
+        <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-5">
           {activeTab === "Declarations" ? (
             renderDeclarationsTab()
           ) : activeTab === "Extra documents" ? (

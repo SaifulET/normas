@@ -5,6 +5,7 @@ import { AppIcon } from "@/components/home/icons";
 import type { FooterLinkGroup, LinkItem, SocialLink } from "@/components/home/types";
 import { NavbarAuthControls } from "@/components/site/auth-controls";
 import { isAuthenticated, logout } from "@/lib/auth";
+import { MobileNav } from "@/components/site/mobile-nav";
 
 const headerNavFont = Poppins({
   subsets: ["latin"],
@@ -20,9 +21,9 @@ export async function SiteHeader({ navItems, primaryCta }: SiteHeaderProps) {
   const authenticated = await isAuthenticated();
 
   return (
-    <header className="flex h-[67px] items-center justify-between rounded-full bg-[#F2F2F280] px-4 shadow-sm backdrop-blur">
-      <Link href="/" aria-label="EARLY-N home">
-        <Image src="/logo.svg" alt="EARLY-N" width={112} height={52} priority />
+    <header className="relative z-50 flex h-[67px] items-center justify-between rounded-full bg-[#F2F2F280] px-4 shadow-sm backdrop-blur">
+      <Link href="/" aria-label="EARLY-N home" className="shrink-0">
+        <Image src="/logo.svg" alt="EARLY-N" width={112} height={52} priority className="h-10 w-auto sm:h-[52px] sm:w-auto" />
       </Link>
 
       <nav
@@ -35,10 +36,16 @@ export async function SiteHeader({ navItems, primaryCta }: SiteHeaderProps) {
         ))}
       </nav>
 
-      <div className="flex items-center gap-5 text-xs font-bold">
+      <div className="flex items-center gap-3 text-xs font-bold">
         <NavbarAuthControls
           authenticated={authenticated}
           primaryCta={primaryCta}
+          logoutAction={logout}
+        />
+        <MobileNav
+          navItems={navItems}
+          primaryCta={primaryCta}
+          authenticated={authenticated}
           logoutAction={logout}
         />
       </div>

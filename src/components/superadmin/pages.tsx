@@ -270,44 +270,46 @@ export function SuperadminPaymentManagementPage() {
       </div>
 
       <TableCard>
-        <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_0.8fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
-          <p>Name</p>
-          <p>Account Type</p>
-          <p>Type of Product</p>
-          <p>Payment Date</p>
-          <p>Amount</p>
-          <p className="text-right">Actions</p>
-        </div>
+        <div className="overflow-x-auto">
+          <div className="grid min-w-[800px] grid-cols-[1.6fr_1fr_1fr_1fr_0.8fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
+            <p>Name</p>
+            <p>Account Type</p>
+            <p>Type of Product</p>
+            <p>Payment Date</p>
+            <p>Amount</p>
+            <p className="text-right">Actions</p>
+          </div>
 
-        {superadminPayments.map((payment) => {
-          const user = getSuperadminUser(payment.userSlug);
+          {superadminPayments.map((payment) => {
+            const user = getSuperadminUser(payment.userSlug);
 
-          if (!user) {
-            return null;
-          }
+            if (!user) {
+              return null;
+            }
 
-          return (
-            <div
-              key={payment.slug}
-              className="grid grid-cols-[1.6fr_1fr_1fr_1fr_0.8fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
-            >
-              <Link href={`/superadmin/dashboard/payment-management/${payment.slug}`} className="flex items-center gap-3">
-                <SuperadminAvatar from={user.avatarFrom} to={user.avatarTo} initials={user.initials} size={28} />
-                <div>
-                  <p className="text-[13px] font-medium text-[#202350]">{user.name}</p>
-                  <p className="text-[11px] text-[#8A91AB]">{user.email}</p>
+            return (
+              <div
+                key={payment.slug}
+                className="grid min-w-[800px] grid-cols-[1.6fr_1fr_1fr_1fr_0.8fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
+              >
+                <Link href={`/superadmin/dashboard/payment-management/${payment.slug}`} className="flex items-center gap-3">
+                  <SuperadminAvatar from={user.avatarFrom} to={user.avatarTo} initials={user.initials} size={28} />
+                  <div>
+                    <p className="text-[13px] font-medium text-[#202350]">{user.name}</p>
+                    <p className="text-[11px] text-[#8A91AB]">{user.email}</p>
+                  </div>
+                </Link>
+                <p className="text-[13px] text-[#34395B]">{user.accountType}</p>
+                <p className="text-[13px] text-[#34395B]">{payment.productType}</p>
+                <p className="text-[13px] text-[#34395B]">{payment.paymentDate}</p>
+                <p className="text-[13px] text-[#34395B]">{payment.amount}</p>
+                <div className="flex justify-end">
+                  <SuperadminPaymentActionMenu slug={payment.slug} />
                 </div>
-              </Link>
-              <p className="text-[13px] text-[#34395B]">{user.accountType}</p>
-              <p className="text-[13px] text-[#34395B]">{payment.productType}</p>
-              <p className="text-[13px] text-[#34395B]">{payment.paymentDate}</p>
-              <p className="text-[13px] text-[#34395B]">{payment.amount}</p>
-              <div className="flex justify-end">
-                <SuperadminPaymentActionMenu slug={payment.slug} />
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
 
         <TableFooter />
       </TableCard>
@@ -486,7 +488,7 @@ export function SuperadminReportDetailPage({
           className="h-[250px] w-full rounded-[18px] object-cover sm:h-[340px]"
         />
 
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between px-[107px]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between px-4 sm:px-8 lg:px-[107px]">
           <div>
             <div className="flex flex-wrap items-center gap-3 text-[12px] text-[#7D86A2]">
               <span>United Kingdom</span>
@@ -511,7 +513,7 @@ export function SuperadminReportDetailPage({
           </button>
         </div>
 
-        <div className=" px-[107px]">
+        <div className="px-4 sm:px-8 lg:px-[107px]">
           <div className="space-y-8">
             <div className="flex flex-wrap gap-x-10 gap-y-3 text-[13px] text-[#7B84A0]">
               <div>
@@ -542,6 +544,7 @@ export function SuperadminReportDetailPage({
                   <p>2. Predictive Analytics: Machine learning models analyze the data to forecast maintenance needs, preventing unexpected failures.</p>
                   <p>3. Performance Optimization: AI algorithms adjust blade pitch and rotation speed dynamically to maximize energy capture based on current wind conditions.</p>
                   <p>4. Energy Forecasting: The system predicts energy production trends to aid in grid management and resource planning.</p>
+                  <p>5. Implementation: The system will integrate seamlessly with existing grid infrastructures.</p>
                 </div>
                 <div>
                   <p className="font-semibold text-[#27324A]">Benefits:</p>
@@ -568,129 +571,8 @@ export function SuperadminReportDetailPage({
               </div>
             </div>
           </div>
-
-          
         </div>
       </section>
-    </div>
-  );
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <SuperadminBackLink href="/superadmin/dashboard/reports" />
-          <div>
-            <h1 className="text-[20px] font-semibold tracking-[-0.04em] text-[#202350]">Report Details</h1>
-            <p className="mt-1 text-[13px] text-[#69729A]">This page contain result of the report, so that admin can assess the whole thing.</p>
-          </div>
-        </div>
-        <SuperadminNotificationButton />
-      </div>
-
-      <SectionCard className="overflow-visible rounded-[18px] px-10 pb-10 pt-8">
-        <div className="flex flex-col gap-8 xl:flex-row xl:items-start xl:justify-between">
-          <div className="grid gap-8 sm:grid-cols-2 sm:gap-x-24">
-            <div className="flex items-center gap-3">
-              <span className="text-[16px] tracking-[-0.18em] text-[#6B7280]">||||</span>
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Report ID</p>
-                <p className="mt-1 text-[13px] text-[#202350]">{report.reportId}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-[#6B7280]">Nº</span>
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Report Count</p>
-                <p className="mt-1 text-[13px] text-[#202350]">{report.reportCount}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-start gap-3 xl:items-end">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="rounded-[10px] bg-[#F1F3F8] px-4 py-2 text-sm font-medium text-[#5E6684]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="rounded-[10px] bg-[#4E4A86] px-4 py-2 text-sm font-medium text-white"
-              >
-                Update
-              </button>
-            </div>
-            <SuperadminReportDetailActionMenu />
-          </div>
-        </div>
-
-        <div className="mt-8 grid gap-6 xl:grid-cols-[1.04fr_0.96fr]">
-          <div>
-            <p className="mb-3 text-[11px] font-medium text-[#202350]">Reported Content</p>
-            <div className="rounded-[14px] bg-white">
-              <Image
-                src={report.imageSrc}
-                alt="Reported content"
-                width={860}
-                height={520}
-                className="h-[288px] w-full rounded-[12px] object-cover"
-              />
-              <p className="pt-2 text-[11px] leading-5 text-[#535C79]">{report.contentText}</p>
-            </div>
-          </div>
-
-          <div className="space-y-5">
-            <div>
-              <SuperadminStatusBadge status={report.status} />
-            </div>
-
-            <div>
-              <p className="mb-3 text-[11px] font-medium text-[#202350]">Reported User</p>
-              <div className="flex items-center gap-3 rounded-[14px] bg-[#FBFCFE] px-4 py-4">
-                <SuperadminAvatar
-                  from={reportedUser.avatarFrom}
-                  to={reportedUser.avatarTo}
-                  initials={reportedUser.initials}
-                  size={42}
-                />
-                <div>
-                  <p className="text-sm font-medium text-[#202350]">{reportedUser.name}</p>
-                  <p className="text-[11px] text-[#8A91AB]">{reportedUser.username}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="max-h-[292px] space-y-5 overflow-y-auto pr-2">
-              {resolvedReporters.map((item, index) =>
-                item ? (
-                  <div
-                    key={`${item.slug}-${index}`}
-                    className="grid gap-5 border-b border-[#EEF1F6] pb-5 last:border-b-0 last:pb-0 sm:grid-cols-[0.9fr_1.1fr]"
-                  >
-                    <div>
-                      <p className="mb-3 text-[11px] font-medium text-[#202350]">Reported By</p>
-                      <div className="flex items-center gap-3">
-                        <SuperadminAvatar from={item.avatarFrom} to={item.avatarTo} initials={item.initials} size={38} />
-                        <div>
-                          <p className="text-sm font-medium text-[#202350]">{item.name}</p>
-                          <p className="text-[11px] text-[#8A91AB]">{item.username}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-3 text-[11px] font-medium text-[#202350]">Reported Reason</p>
-                      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#6B7280]">Content Violations</p>
-                      <p className="mt-1 text-[12px] text-[#535C79]">{report.reportedReason}</p>
-                    </div>
-                  </div>
-                ) : null,
-              )}
-            </div>
-          </div>
-        </div>
-      </SectionCard>
     </div>
   );
 }

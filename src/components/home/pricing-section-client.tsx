@@ -95,7 +95,7 @@ export function PricingCardsClient({
         </div>
       ) : null}
 
-      <div className="mx-auto mt-9 grid max-w-6xl items-stretch justify-center gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mx-auto mt-9 grid max-w-6xl grid-cols-1 items-stretch justify-center gap-6 md:grid-cols-2 lg:grid-cols-3">
         {pricingPlans.map((plan) => {
           const annualAvailable = Boolean(plan.annualPrice);
           const displayPrice = showAnnualPrices && annualAvailable ? plan.annualPrice : plan.price;
@@ -107,7 +107,7 @@ export function PricingCardsClient({
           return (
             <article
               key={plan.id ?? plan.title}
-              className={`relative flex w-full min-w-0 flex-col rounded-lg bg-white p-7 ring-1 ${
+              className={`relative flex w-full min-w-0 flex-col rounded-lg bg-white p-5 sm:p-7 ring-1 ${
                 plan.featured
                   ? "ring-[#2B425D] shadow-2xl shadow-[#182231]/15"
                   : "ring-[#2B425D]/15 shadow-sm"
