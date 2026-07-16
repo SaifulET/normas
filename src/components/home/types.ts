@@ -127,12 +127,12 @@ export interface SectorItem {
 }
 
 export interface Testimonial {
-  id: number;
+  id: number | string;
   name: string;
   role: string;
   quote: string;
   rating: number;
-  avatar: ImageAsset;
+  avatar?: ImageAsset;
 }
 
 export interface PricingPlan {

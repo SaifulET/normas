@@ -210,20 +210,7 @@ export const homePageContent: HomePageContent = {
     { title: "Manufacturing", icon: "factory", listingCount: 0, href: "#" },
     { title: "Cross-Sector", icon: "globe", listingCount: 0, href: "#" },
   ],
-  testimonials: Array.from({ length: 6 }, (_, index) => ({
-    id: index,
-    name: "Jasmine Synthia",
-    role: "Operation Manager, MasterPlan LLC",
-    quote:
-      "Vesioh transformed our response times. Coordination is now seamless across the entire team. It's the best investment we've made this year.",
-    rating: 4,
-    avatar: {
-      src: "/middlepartimg4.png",
-      alt: "Customer portrait",
-      width: 52,
-      height: 52,
-    },
-  })),
+  testimonials: [],
   pricingPlans: [
     {
       id: "investor-basic",

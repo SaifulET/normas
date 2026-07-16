@@ -385,6 +385,10 @@ export function SectorCategoriesSection({ sectors }: { sectors: SectorItem[] }) 
 }
 
 export function TestimonialsSection({ testimonials }: { testimonials: Testimonial[] }) {
+  if (!testimonials.length) {
+    return null;
+  }
+
   return (
     <SectionShell className="bg-[#FFF] px-4 py-20 sm:px-6 lg:px-[147px]">
       <div className="">
@@ -401,13 +405,17 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
             >
               <p className="relative z-10 text-base leading-7 text-[#141A33]">&quot;{testimonial.quote}&quot;</p>
               <div className="relative z-10 mt-6 flex items-center gap-4">
-                <Image
-                  src={testimonial.avatar.src}
-                  alt={testimonial.avatar.alt}
-                  width={testimonial.avatar.width}
-                  height={testimonial.avatar.height}
-                  className="h-12 w-12 rounded-full object-cover"
-                />
+                {testimonial.avatar ? (
+                  <img
+                    src={testimonial.avatar.src}
+                    alt={testimonial.avatar.alt}
+                    className="h-12 w-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2B425D] text-sm font-semibold uppercase text-white">
+                    {testimonial.name.charAt(0)}
+                  </div>
+                )}
                 <div>
                   <h3 className="text-sm font-semibold text-[#141A33]">{testimonial.name}</h3>
                   <p className="mt-1 text-[11px] text-[#141A33]/45">{testimonial.role}</p>

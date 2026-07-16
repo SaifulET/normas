@@ -13,15 +13,16 @@ import {
   TestimonialsSection,
   ValuesSection,
 } from "./sections";
-import type { FaqItem, HomePageContent, PricingPlan } from "./types";
+import type { FaqItem, HomePageContent, PricingPlan, Testimonial } from "./types";
 
 interface HomePageProps {
   content?: HomePageContent;
   faqs?: FaqItem[];
   pricingPlans?: PricingPlan[];
+  testimonials?: Testimonial[];
 }
 
-export function HomePage({ content = homePageContent, faqs, pricingPlans }: HomePageProps) {
+export function HomePage({ content = homePageContent, faqs, pricingPlans, testimonials = [] }: HomePageProps) {
   const faqItems = faqs && faqs.length > 0 ? faqs : content.faqs;
   const planItems = pricingPlans && pricingPlans.length > 0 ? pricingPlans : content.pricingPlans;
 
@@ -43,7 +44,7 @@ export function HomePage({ content = homePageContent, faqs, pricingPlans }: Home
       <FounderFundingSection image={content.founderImage} steps={content.founderSteps} />
       <AdminCompletionSection tasks={content.adminTasks} />
       <SectorCategoriesSectionClient sectors={content.sectors} />
-      <TestimonialsSection testimonials={content.testimonials} />
+      <TestimonialsSection testimonials={testimonials} />
       <PricingSection pricingPlans={planItems} />
       <FaqSection faqs={faqItems} />
       <FooterSection linkGroups={content.footerLinkGroups} socialLinks={content.socialLinks} />
