@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { signupUser } from "@/lib/auth-api";
+import { clearAuthenticatedSession } from "@/lib/auth";
 import { setSuperadminSession } from "@/lib/superadmin-auth";
 
 function getRequiredFormString(formData: FormData, key: string) {
@@ -15,11 +16,13 @@ function getRequiredFormString(formData: FormData, key: string) {
 }
 
 export async function submitSuperadminLogin() {
+  await clearAuthenticatedSession();
   await setSuperadminSession();
   redirect("/superadmin/dashboard/user-management");
 }
 
 export async function setSuperadminLoginSession() {
+  await clearAuthenticatedSession();
   await setSuperadminSession();
 }
 
@@ -31,6 +34,7 @@ export async function submitSuperadminSignup(formData: FormData) {
     role: "superadmin",
   });
 
+  await clearAuthenticatedSession();
   await setSuperadminSession();
   redirect("/superadmin/dashboard/user-management");
 }

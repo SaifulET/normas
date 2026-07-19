@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { setAuthenticatedSession } from "@/lib/auth";
+import { clearSuperadminSession } from "@/lib/superadmin-auth";
 import { signupUser } from "@/lib/auth-api";
 
 function getRequiredFormString(formData: FormData, key: string) {
@@ -15,11 +16,13 @@ function getRequiredFormString(formData: FormData, key: string) {
 }
 
 export async function submitLogin() {
+  await clearSuperadminSession();
   await setAuthenticatedSession();
   redirect("/dashboard");
 }
 
 export async function setLoginSession() {
+  await clearSuperadminSession();
   await setAuthenticatedSession();
 }
 
@@ -33,6 +36,7 @@ export async function submitSignup(formData: FormData) {
     role,
   });
 
+  await clearSuperadminSession();
   await setAuthenticatedSession();
   redirect(`/kyc-verification?role=${role === "investee" ? "investee" : "investor"}`);
 }

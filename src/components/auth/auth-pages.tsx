@@ -292,6 +292,10 @@ export function LoginPageView() {
         throw new Error("Login succeeded, but the server did not return a session. Please try again.");
       }
 
+      if (authSession.user.role === "superadmin") {
+        throw new Error("Please use the superadmin login page for this account.");
+      }
+
       await clearStoredUserSession();
       setAuth({
         refreshToken: authSession.refreshToken,

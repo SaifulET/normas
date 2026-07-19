@@ -76,8 +76,26 @@ function getInitials(name?: string, fallback = "U") {
   return initials || fallback;
 }
 
+function normalizeRole(role?: string) {
+  return role?.trim().toLowerCase() ?? "";
+}
+
+function formatRoleLabel(role?: string, fallback = "") {
+  const normalizedRole = normalizeRole(role);
+
+  if (!normalizedRole) {
+    return fallback;
+  }
+
+  return normalizedRole.charAt(0).toUpperCase() + normalizedRole.slice(1);
+}
+
 function getRoleDashboardHref(pathname: string, role?: string) {
-  const normalizedRole = role?.toLowerCase();
+  const normalizedRole = normalizeRole(role);
+
+  if (normalizedRole === "superadmin") {
+    return pathname.startsWith("/superadmin") ? null : "/superadmin/dashboard/user-management";
+  }
 
   if (normalizedRole === "investee" && pathname.startsWith("/dashboard")) {
     const suffix = pathname.slice("/dashboard".length);
@@ -327,6 +345,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     initials: getInitials(authProfile?.name, fallbackSidebarUser.initials),
     name: authProfile?.name?.trim() || fallbackSidebarUser.name,
     profileImage: authProfile?.profileImage?.trim() || undefined,
+    role: formatRoleLabel(authProfile?.role, fallbackSidebarUser.role),
   };
   const sidebarNavItems = investeeDashboard ? investeeDashboardNavItems : dashboardNavItems;
   const dashboardHomeHref = investeeDashboard ? "/investee-dashboard" : "/dashboard";
