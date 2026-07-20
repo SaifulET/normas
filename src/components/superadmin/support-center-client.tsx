@@ -423,7 +423,7 @@ export function SuperadminSupportDetailClient({
   };
 
   return (
-    <div className="flex h-[calc(100vh-104px)] flex-col gap-8 overflow-hidden">
+    <div className="flex h-[calc(100vh-104px)] lg:h-[calc(100vh-48px)] flex-col gap-4 overflow-hidden">
       <div className="flex shrink-0 items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <SuperadminBackLink href="/superadmin/dashboard/support-center" />
@@ -444,17 +444,24 @@ export function SuperadminSupportDetailClient({
           {errorMessage}
         </div>
       ) : conversation ? (
-        <section className="flex min-h-0 flex-1 flex-col gap-6">
-          <div className="shrink-0 rounded-[14px] border border-[#E6E9F0] bg-white px-5 py-5">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex items-start gap-4">
-                <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={getInitials(participant.name, participant.email)} size={48} />
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Client</p>
-                  <h2 className="mt-1 text-[18px] font-semibold text-[#202350]">{participant.name}</h2>
-                  <p className="mt-1 text-[13px] text-[#69729A]">{participant.email || "No email"}</p>
-                  <p className="mt-4 text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Topic</p>
-                  <p className="mt-1 text-[15px] font-medium text-[#202350]">{conversation.subject || "Support request"}</p>
+        <section className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="shrink-0 rounded-[14px] border border-[#E6E9F0] bg-white px-5 py-3">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 flex-1 items-center gap-4">
+                <div className="shrink-0">
+                  <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={getInitials(participant.name, participant.email)} size={40} />
+                </div>
+                <div className="min-w-0 flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Client</p>
+                    <h2 className="text-[15px] font-semibold text-[#202350] break-all">
+                      {participant.name} <span className="text-[12px] font-normal text-[#69729A] ml-2">({participant.email || "No email"})</span>
+                    </h2>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Topic</p>
+                    <p className="text-[14px] font-medium text-[#202350] break-words">{conversation.subject || "Support request"}</p>
+                  </div>
                 </div>
               </div>
 
@@ -487,55 +494,57 @@ export function SuperadminSupportDetailClient({
             <div className="shrink-0 border-b border-[#EEF1F6] px-5 py-4 bg-white">
               <p className="text-[14px] font-semibold text-[#202350]">Conversation</p>
             </div>
-            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto bg-[#F8FAFC] px-5 py-6">
-              {(conversation.messages ?? []).length === 0 ? (
-                <p className="text-sm text-[#69729A] text-center py-8">No messages yet.</p>
-              ) : (
-                (conversation.messages ?? []).map((message) => {
-                  const outgoing = message.senderType === "superadmin";
-                  const senderName = messageSenderLabel(message);
-                  const messageText = message.message || conversation.subject || "Support ticket created";
-                  const avatarInitials = getInitials(message.senderName || senderName, message.senderEmail);
+            <div className="min-h-0 flex-1 px-5 py-2 bg-white flex flex-col">
+              <div className="min-h-0 flex-1 rounded-[10px] border border-[#E2E8F0] bg-[#F8FAFC] overflow-y-auto p-4 space-y-6">
+                {(conversation.messages ?? []).length === 0 ? (
+                  <p className="text-sm text-[#69729A] text-center py-8">No messages yet.</p>
+                ) : (
+                  (conversation.messages ?? []).map((message) => {
+                    const outgoing = message.senderType === "superadmin";
+                    const senderName = messageSenderLabel(message);
+                    const messageText = message.message || conversation.subject || "Support ticket created";
+                    const avatarInitials = getInitials(message.senderName || senderName, message.senderEmail);
 
-                  return (
-                    <div key={message._id} className={`flex items-start gap-3 ${outgoing ? "justify-end" : "justify-start"}`}>
-                      {!outgoing && (
-                        <div className="shrink-0">
-                          <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={avatarInitials} size={32} />
-                        </div>
-                      )}
-                      
-                      <div className={`max-w-[70%] flex flex-col ${outgoing ? "items-end" : "items-start"}`}>
-                        <div className="flex items-center gap-2 px-1 mb-1">
-                          <span className="text-[11px] font-semibold text-[#4A5271]">
-                            {senderName}
-                          </span>
-                        </div>
+                    return (
+                      <div key={message._id} className={`flex items-start gap-3 ${outgoing ? "justify-end" : "justify-start"}`}>
+                        {!outgoing && (
+                          <div className="shrink-0">
+                            <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={avatarInitials} size={32} />
+                          </div>
+                        )}
                         
-                        <div className={`rounded-2xl px-4 py-3 shadow-sm ${
-                          outgoing 
-                            ? "bg-[#4E4A86] text-white rounded-tr-none" 
-                            : "bg-white text-[#202350] border border-[#E4E8F0] rounded-tl-none"
-                        }`}>
-                          <p className="whitespace-pre-wrap text-[13px] leading-6">{messageText}</p>
-                          <p className={`mt-1.5 text-right text-[10px] ${outgoing ? "text-[#E0DDF0]" : "text-[#8A91AB]"}`}>
-                            {formatTime(message.sentAt)}
-                          </p>
+                        <div className={`min-w-0 max-w-[70%] flex flex-col ${outgoing ? "items-end" : "items-start"}`}>
+                          <div className="flex items-center gap-2 px-1 mb-1 max-w-full">
+                            <span className="text-[11px] font-semibold text-[#4A5271] break-all">
+                              {senderName}
+                            </span>
+                          </div>
+                          
+                          <div className={`rounded-2xl px-4 py-3 shadow-sm ${
+                            outgoing 
+                              ? "bg-[#4E4A86] text-white rounded-tr-none" 
+                              : "bg-white text-[#202350] border border-[#E4E8F0] rounded-tl-none"
+                          }`}>
+                            <p className="whitespace-pre-wrap text-[13px] leading-6 break-words">{messageText}</p>
+                            <p className={`mt-1.5 text-right text-[10px] ${outgoing ? "text-[#E0DDF0]" : "text-[#8A91AB]"}`}>
+                              {formatTime(message.sentAt)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
 
-                      {outgoing && (
-                        <div className="shrink-0">
-                          <SuperadminAvatar from="#4E4A86" to="#7C78B8" initials="SA" size={32} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
+                        {outgoing && (
+                          <div className="shrink-0">
+                            <SuperadminAvatar from="#4E4A86" to="#7C78B8" initials="SA" size={32} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
-            <form onSubmit={handleReply} className="shrink-0 border-t border-[#EEF1F6] px-5 py-4 bg-white">
+            <form onSubmit={handleReply} className="shrink-0 px-5 pb-4 pt-2 bg-white">
               <textarea
                 value={draft}
                 onChange={(event) => setDraft(event.target.value.slice(0, 1000))}

@@ -1,15 +1,23 @@
 import { API_BASE_URL } from "./api-config";
+import { apiRequest, type ApiSuccessResponse } from "./api";
 import type { PricingPlan } from "@/components/home/types";
 
 export type SubscriptionPlan = {
+  _id?: string | null;
   annualPrice?: number;
   audienceRole?: "investor" | "investee" | string;
   currency?: string;
   description?: string;
   discountAnnually?: number;
   discountMonthly?: number;
+  featureComparison?: Array<{
+    feature?: string;
+    isAvailable?: boolean;
+    value?: unknown;
+  }>;
   features?: string[];
   isActive?: boolean;
+  lastModifiedAt?: string | null;
   monthlyPrice?: number;
   planType: string;
   pricePerMonth?: number;
@@ -19,6 +27,33 @@ export type SubscriptionPlan = {
   subscriptionTopics?: string[];
   tier?: "basic" | "pro" | string;
   title: string;
+};
+
+export type PricingModifier = {
+  _id?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+};
+
+export type AdminPricingPlansData = {
+  lastModifiedAt?: string | null;
+  lastModifiedBy?: PricingModifier | null;
+  plans?: SubscriptionPlan[];
+  pricingId?: string | null;
+};
+
+export type AdminPricingPlanData = {
+  lastModifiedAt?: string | null;
+  lastModifiedBy?: PricingModifier | null;
+  plan?: SubscriptionPlan;
+  pricingId?: string | null;
+};
+
+export type AdminPricingPlanPayload = {
+  discountAnnually: number;
+  discountMonthly: number;
+  pricePerMonth: number;
 };
 
 type PricingPlansResponse = {
@@ -102,4 +137,19 @@ export function mapSubscriptionPlan(plan: SubscriptionPlan): PricingPlan {
 export async function getPublicPricingPlans() {
   const plans = await getPricingPlans();
   return plans.map(mapSubscriptionPlan);
+}
+
+export function getAdminPricingPlans() {
+  return apiRequest<ApiSuccessResponse<AdminPricingPlansData>>({
+    method: "GET",
+    url: "pricing/admin/plans",
+  });
+}
+
+export function updateAdminPricingPlan(planType: string, payload: AdminPricingPlanPayload) {
+  return apiRequest<ApiSuccessResponse<AdminPricingPlanData>>({
+    data: payload,
+    method: "PATCH",
+    url: `pricing/admin/plans/${encodeURIComponent(planType)}`,
+  });
 }

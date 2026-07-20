@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { getApiErrorMessage } from "@/lib/api";
+import { getAdminPricingPlans, updateAdminPricingPlan, type SubscriptionPlan } from "@/lib/pricing-api";
 import {
   getCachedSuperadminProfile,
   getSuperadminProfile,
@@ -37,11 +38,16 @@ type TaxForm = {
   tax: string;
 };
 
+type PricingPlanKey = "investorBasic" | "investorPro" | "investee";
+
 type PricingPlanForm = {
   annualDiscount: string;
   monthlyDiscount: string;
+  planType: string;
   price: string;
 };
+
+type PricingPlansState = Record<PricingPlanKey, PricingPlanForm>;
 
 const tabs: SettingsTab[] = [
   { href: "/superadmin/dashboard/settings", label: "General" },
@@ -71,19 +77,113 @@ const initialPricingPlans = {
   investee: {
     annualDiscount: "5",
     monthlyDiscount: "5",
+    planType: "investee",
     price: "5",
   },
   investorBasic: {
     annualDiscount: "5",
     monthlyDiscount: "5",
+    planType: "investor_basic",
     price: "5",
   },
   investorPro: {
     annualDiscount: "5",
     monthlyDiscount: "5",
+    planType: "investor_pro",
     price: "5",
   },
-} satisfies Record<string, PricingPlanForm>;
+} satisfies PricingPlansState;
+
+const pricingPlanCards: Array<{
+  key: PricingPlanKey;
+  planTypes: string[];
+  subtitle: string;
+}> = [
+  { key: "investorBasic", planTypes: ["investor_basic", "investor-basic"], subtitle: "Investor Basic" },
+  { key: "investorPro", planTypes: ["investor_pro", "investor-pro"], subtitle: "Investor Pro" },
+  { key: "investee", planTypes: ["investee", "investee-basic"], subtitle: "Investee" },
+];
+
+function createPricingPlansState(source = initialPricingPlans): PricingPlansState {
+  return {
+    investee: { ...source.investee },
+    investorBasic: { ...source.investorBasic },
+    investorPro: { ...source.investorPro },
+  };
+}
+
+function formatPricingNumber(value?: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "";
+  }
+
+  return String(value);
+}
+
+function mapPricingPlanToForm(plan: SubscriptionPlan, fallbackPlanType: string): PricingPlanForm {
+  return {
+    annualDiscount: formatPricingNumber(plan.discountAnnually),
+    monthlyDiscount: formatPricingNumber(plan.discountMonthly),
+    planType: plan.planType || fallbackPlanType,
+    price: formatPricingNumber(plan.pricePerMonth ?? plan.monthlyPrice),
+  };
+}
+
+function mapAdminPricingPlans(plans: SubscriptionPlan[] = []) {
+  const nextPlans = createPricingPlansState();
+
+  for (const card of pricingPlanCards) {
+    const plan = card.planTypes.map((planType) => plans.find((item) => item.planType === planType)).find(Boolean);
+
+    if (plan) {
+      nextPlans[card.key] = mapPricingPlanToForm(plan, card.planTypes[0]);
+    }
+  }
+
+  return nextPlans;
+}
+
+function parsePricingValue(value: string, label: string, min: number, max: number) {
+  const parsed = Number(value.trim());
+
+  if (!value.trim() || !Number.isFinite(parsed)) {
+    throw new Error(`${label} must be a valid number.`);
+  }
+
+  if (parsed < min || parsed > max) {
+    throw new Error(`${label} must be between ${min} and ${max}.`);
+  }
+
+  return parsed;
+}
+
+function getPricingPayload(plan: PricingPlanForm) {
+  return {
+    discountAnnually: parsePricingValue(plan.annualDiscount, "Annual discount", 0, 100),
+    discountMonthly: parsePricingValue(plan.monthlyDiscount, "Monthly discount", 0, 100),
+    pricePerMonth: parsePricingValue(plan.price, "Price", 0, Number.MAX_SAFE_INTEGER),
+  };
+}
+
+function formatPricingLastModified(lastModifiedBy?: { email?: string; name?: string } | null, lastModifiedAt?: string | null) {
+  const name = lastModifiedBy?.name?.trim() || lastModifiedBy?.email?.trim() || "Admin";
+
+  if (!lastModifiedAt) {
+    return "No pricing changes saved yet";
+  }
+
+  const date = new Date(lastModifiedAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return `Last modified by ${name}`;
+  }
+
+  return `Last modified by ${name} on ${new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date)}`;
+}
 
 function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -210,11 +310,13 @@ export function SettingsCard({
 }
 
 function PricingTextInput({
+  disabled = false,
   onChange,
   prefix,
   suffix,
   value,
 }: {
+  disabled?: boolean;
   onChange: (value: string) => void;
   prefix?: string;
   suffix?: string;
@@ -225,9 +327,11 @@ function PricingTextInput({
       {prefix ? <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-[#7B83A2]">{prefix}</span> : null}
       <input
         value={value}
+        disabled={disabled}
+        inputMode="decimal"
         onChange={(event) => onChange(event.target.value)}
         className={cx(
-          "h-8 w-full rounded-[6px] border border-[#DDE3EF] bg-white text-[12px] text-[#23275A] outline-none transition focus:border-[#5E568E]",
+          "h-8 w-full rounded-[6px] border border-[#DDE3EF] bg-white text-[12px] text-[#23275A] outline-none transition focus:border-[#5E568E] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#8A91AB]",
           prefix ? "pl-9 pr-3" : "px-3",
           suffix ? "pr-8" : "",
         )}
@@ -238,16 +342,20 @@ function PricingTextInput({
 }
 
 function PricingPlanCard({
+  disabled = false,
   onCancel,
   onChange,
   onSave,
   plan,
+  saving = false,
   subtitle,
 }: {
+  disabled?: boolean;
   onCancel: () => void;
   onChange: (next: PricingPlanForm) => void;
   onSave: () => void;
   plan: PricingPlanForm;
+  saving?: boolean;
   subtitle: string;
 }) {
   return (
@@ -260,6 +368,7 @@ function PricingPlanCard({
         <label className="block">
           <span className="mb-2 block text-[10px] font-medium uppercase tracking-[0.18em] text-[#4F5676]">Price /mo</span>
           <PricingTextInput
+            disabled={disabled}
             prefix="$"
             value={plan.price}
             onChange={(value) =>
@@ -275,6 +384,7 @@ function PricingPlanCard({
           <label className="block">
             <span className="mb-2 block text-[10px] font-medium uppercase tracking-[0.18em] text-[#4F5676]">Discount Monthly</span>
             <PricingTextInput
+              disabled={disabled}
               suffix="%"
               value={plan.monthlyDiscount}
               onChange={(value) =>
@@ -287,8 +397,9 @@ function PricingPlanCard({
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-[10px] font-medium uppercase tracking-[0.18em] text-[#4F5676]">Discount Anually</span>
+            <span className="mb-2 block text-[10px] font-medium uppercase tracking-[0.18em] text-[#4F5676]">Discount Annually</span>
             <PricingTextInput
+              disabled={disabled}
               suffix="%"
               value={plan.annualDiscount}
               onChange={(value) =>
@@ -305,16 +416,18 @@ function PricingPlanCard({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-[6px] border border-[#D8DEEA] bg-white px-3 py-1.5 text-[10px] font-medium text-[#5F6786] transition hover:border-[#BFC8D9]"
+            disabled={disabled}
+            className="rounded-[6px] border border-[#D8DEEA] bg-white px-3 py-1.5 text-[10px] font-medium text-[#5F6786] transition hover:border-[#BFC8D9] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onSave}
-            className="rounded-[6px] bg-[#161616] px-3 py-1.5 text-[10px] font-medium text-white transition hover:bg-black"
+            disabled={disabled}
+            className="rounded-[6px] bg-[#161616] px-3 py-1.5 text-[10px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save
+            {saving ? "Saving..." : "Save"}
           </button>
         </div>
       </div>
@@ -845,39 +958,118 @@ export function SuperadminSettingsGeneralClient({
 }
 
 export function SuperadminSettingsPricingClient() {
-  const [plans, setPlans] = useState(initialPricingPlans);
-  const [savedPlans, setSavedPlans] = useState(initialPricingPlans);
+  const [plans, setPlans] = useState<PricingPlansState>(() => createPricingPlansState());
+  const [savedPlans, setSavedPlans] = useState<PricingPlansState>(() => createPricingPlansState());
+  const [pricingLoading, setPricingLoading] = useState(true);
+  const [pricingError, setPricingError] = useState<string | null>(null);
+  const [pricingMessage, setPricingMessage] = useState<string | null>(null);
+  const [savingPlan, setSavingPlan] = useState<PricingPlanKey | null>(null);
+  const [lastModifiedLabel, setLastModifiedLabel] = useState("Loading pricing...");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadPricingPlans() {
+      setPricingLoading(true);
+      setPricingError(null);
+      setPricingMessage(null);
+
+      try {
+        const response = await getAdminPricingPlans();
+        const nextPlans = mapAdminPricingPlans(response.data?.plans ?? []);
+
+        if (active) {
+          setPlans(nextPlans);
+          setSavedPlans(nextPlans);
+          setLastModifiedLabel(formatPricingLastModified(response.data?.lastModifiedBy, response.data?.lastModifiedAt));
+        }
+      } catch (error) {
+        if (active) {
+          setPricingError(getApiErrorMessage(error, "Unable to load pricing plans."));
+          setLastModifiedLabel("Pricing has not been loaded from the API");
+        }
+      } finally {
+        if (active) {
+          setPricingLoading(false);
+        }
+      }
+    }
+
+    void loadPricingPlans();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function savePricingPlan(key: PricingPlanKey) {
+    const plan = plans[key];
+    const card = pricingPlanCards.find((item) => item.key === key);
+
+    setSavingPlan(key);
+    setPricingError(null);
+    setPricingMessage(null);
+
+    try {
+      const response = await updateAdminPricingPlan(plan.planType, getPricingPayload(plan));
+      const nextPlan = response.data?.plan
+        ? mapPricingPlanToForm(response.data.plan, plan.planType)
+        : plan;
+
+      setPlans((current) => ({ ...current, [key]: nextPlan }));
+      setSavedPlans((current) => ({ ...current, [key]: nextPlan }));
+      setLastModifiedLabel(formatPricingLastModified(response.data?.lastModifiedBy, response.data?.lastModifiedAt));
+      setPricingMessage(`${card?.subtitle ?? "Pricing plan"} saved successfully.`);
+    } catch (error) {
+      setPricingError(getApiErrorMessage(error, "Unable to save pricing plan."));
+    } finally {
+      setSavingPlan(null);
+    }
+  }
+
+  function cancelPricingPlan(key: PricingPlanKey) {
+    setPlans((current) => ({ ...current, [key]: savedPlans[key] }));
+    setPricingError(null);
+    setPricingMessage(null);
+  }
 
   return (
     <SuperadminSettingsShell activeHref="/superadmin/dashboard/settings/pricing" title="Pricing" subtitle="Manage pricing of your app">
       <div className="space-y-6">
         <div className="-mt-12 flex justify-end">
-          <p className="text-[10px] text-[#8A91AB]">Last modified by Admin on Oct 24, 2023</p>
+          <p className="text-[10px] text-[#8A91AB]">{lastModifiedLabel}</p>
         </div>
 
-        <PricingPlanCard
-          subtitle="Investor Basic"
-          plan={plans.investorBasic}
-          onChange={(next) => setPlans((current) => ({ ...current, investorBasic: next }))}
-          onCancel={() => setPlans((current) => ({ ...current, investorBasic: savedPlans.investorBasic }))}
-          onSave={() => setSavedPlans((current) => ({ ...current, investorBasic: plans.investorBasic }))}
-        />
+        {pricingLoading ? (
+          <div className="rounded-[12px] border border-[#E2E6F0] bg-[#F8FAFC] px-4 py-3 text-[12px] text-[#7E84A3]">
+            Loading pricing plans from the API...
+          </div>
+        ) : null}
 
-        <PricingPlanCard
-          subtitle="Investor Pro"
-          plan={plans.investorPro}
-          onChange={(next) => setPlans((current) => ({ ...current, investorPro: next }))}
-          onCancel={() => setPlans((current) => ({ ...current, investorPro: savedPlans.investorPro }))}
-          onSave={() => setSavedPlans((current) => ({ ...current, investorPro: plans.investorPro }))}
-        />
+        {pricingError ? (
+          <div className="rounded-[12px] border border-[#F7D5D5] bg-[#FFF5F5] px-4 py-3 text-[12px] font-medium text-[#D92D20]">
+            {pricingError}
+          </div>
+        ) : null}
 
-        <PricingPlanCard
-          subtitle="Investee"
-          plan={plans.investee}
-          onChange={(next) => setPlans((current) => ({ ...current, investee: next }))}
-          onCancel={() => setPlans((current) => ({ ...current, investee: savedPlans.investee }))}
-          onSave={() => setSavedPlans((current) => ({ ...current, investee: plans.investee }))}
-        />
+        {pricingMessage ? (
+          <div className="rounded-[12px] border border-[#CBE7D3] bg-[#F1FBF4] px-4 py-3 text-[12px] font-medium text-[#15803D]">
+            {pricingMessage}
+          </div>
+        ) : null}
+
+        {pricingPlanCards.map((card) => (
+          <PricingPlanCard
+            key={card.key}
+            disabled={pricingLoading || savingPlan !== null}
+            saving={savingPlan === card.key}
+            subtitle={card.subtitle}
+            plan={plans[card.key]}
+            onChange={(next) => setPlans((current) => ({ ...current, [card.key]: next }))}
+            onCancel={() => cancelPricingPlan(card.key)}
+            onSave={() => void savePricingPlan(card.key)}
+          />
+        ))}
       </div>
     </SuperadminSettingsShell>
   );

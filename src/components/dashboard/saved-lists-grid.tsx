@@ -106,7 +106,11 @@ export function SavedListsGrid({
 
   useEffect(() => {
     if (page > totalPages) {
-      setPage(totalPages);
+      const timeoutId = window.setTimeout(() => {
+        setPage(totalPages);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
   }, [page, totalPages]);
 

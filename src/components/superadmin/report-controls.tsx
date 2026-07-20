@@ -487,12 +487,20 @@ export function SuperadminReportsPanel({
   const paginatedRecords = filteredRecords.slice((safePage - 1) * PAGE_LIMIT, safePage * PAGE_LIMIT);
 
   useEffect(() => {
-    setPage(1);
+    const timeoutId = window.setTimeout(() => {
+      setPage(1);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [query, status]);
 
   useEffect(() => {
     if (page > totalPages) {
-      setPage(totalPages);
+      const timeoutId = window.setTimeout(() => {
+        setPage(totalPages);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
   }, [page, totalPages]);
 
@@ -616,12 +624,20 @@ export function SuperadminSupportPanel({
   const paginatedRecords = filteredRecords.slice((safePage - 1) * PAGE_LIMIT, safePage * PAGE_LIMIT);
 
   useEffect(() => {
-    setPage(1);
+    const timeoutId = window.setTimeout(() => {
+      setPage(1);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [query, status]);
 
   useEffect(() => {
     if (page > totalPages) {
-      setPage(totalPages);
+      const timeoutId = window.setTimeout(() => {
+        setPage(totalPages);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
   }, [page, totalPages]);
 

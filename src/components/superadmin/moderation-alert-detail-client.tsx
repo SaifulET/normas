@@ -130,7 +130,11 @@ export function ModerationAlertDetailClient({ alertId }: { alertId: string }) {
   };
 
   useEffect(() => {
-    void loadAlert();
+    const timeoutId = window.setTimeout(() => {
+      void loadAlert();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertId]);
 

@@ -1769,8 +1769,8 @@ export function MessagesPage() {
           )}>
             {selectedId ? (
               <>
-                <div className="box-border flex min-h-[112px] shrink-0 items-start justify-between gap-6 rounded-tr-xl border-b border-[#E2E8F0] bg-white px-6 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-                  <div className="flex min-h-[80px] min-w-0 flex-1 flex-col items-start gap-4">
+                <div className="box-border flex min-h-[72px] shrink-0 items-center justify-between gap-6 rounded-tr-xl border-b border-[#E2E8F0] bg-white px-6 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                  <div className="flex min-h-[48px] min-w-0 flex-1 flex-col items-start gap-2">
                     <div className="flex h-[26px] w-full items-center gap-3">
                       <button
                         type="button"
@@ -1850,139 +1850,141 @@ export function MessagesPage() {
                   </div>
                 </div>
 
-                <div ref={messageListRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-6 py-4">
-                  {loadingConversation ? (
-                    <div className="flex h-full min-h-[420px] items-center justify-center text-sm text-[#667085]">
-                      Loading messages...
-                    </div>
-                  ) : timelineItems.length ? (
-                    <div className="flex flex-col gap-4">
-                      {pagination?.hasMore ? (
-                        <div className="flex justify-center">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void loadOlderMessages();
-                            }}
-                            className="rounded-xl border border-[#DEE6F1] px-4 py-2 text-xs font-semibold text-[#314B6B] transition hover:bg-[#F4F7FB]"
-                          >
-                            Load older messages
-                          </button>
-                        </div>
-                      ) : null}
-
-                      {timelineItems.map((timelineItem) => {
-                        if (timelineItem.kind === "schedule") {
-                          const schedule = timelineItem.item;
-                          const outgoing = isScheduleOutgoing(schedule, currentUser.id);
-                          const scheduleTime = formatMessageTime(schedule.createdAt ?? schedule.updatedAt ?? getScheduleStart(schedule));
-
-                          return (
-                            <div
-                              key={timelineItem.id}
-                              className={cx(
-                                "flex w-full max-w-[507px] flex-col gap-1 font-sans",
-                                outgoing ? "ml-auto items-end" : "mr-auto items-start",
-                              )}
+                <div className="min-h-0 flex-1 px-6 py-3 bg-white flex flex-col">
+                  <div ref={messageListRef} className="min-h-0 flex-1 rounded-[10px] border border-[#E2E8F0] bg-[#F8FAFC] overflow-y-auto overscroll-contain p-4">
+                    {loadingConversation ? (
+                      <div className="flex h-full min-h-[420px] items-center justify-center text-sm text-[#667085]">
+                        Loading messages...
+                      </div>
+                    ) : timelineItems.length ? (
+                      <div className="flex flex-col gap-4">
+                        {pagination?.hasMore ? (
+                          <div className="flex justify-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void loadOlderMessages();
+                              }}
+                              className="rounded-xl border border-[#DEE6F1] px-4 py-2 text-xs font-semibold text-[#314B6B] transition hover:bg-[#F4F7FB]"
                             >
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  void openScheduleDetails(schedule);
-                                }}
-                                className="inline-flex min-h-[52px] w-[152px] items-center gap-2 rounded-md bg-[#F8F5EF] px-3 py-2 text-left shadow-sm transition hover:bg-[#F1ECE3] focus:outline-none focus:ring-2 focus:ring-[#ED6A06]/35"
+                              Load older messages
+                            </button>
+                          </div>
+                        ) : null}
+
+                        {timelineItems.map((timelineItem) => {
+                          if (timelineItem.kind === "schedule") {
+                            const schedule = timelineItem.item;
+                            const outgoing = isScheduleOutgoing(schedule, currentUser.id);
+                            const scheduleTime = formatMessageTime(schedule.createdAt ?? schedule.updatedAt ?? getScheduleStart(schedule));
+
+                            return (
+                              <div
+                                key={timelineItem.id}
+                                className={cx(
+                                  "flex w-full max-w-[507px] flex-col gap-1 font-sans",
+                                  outgoing ? "ml-auto items-end" : "mr-auto items-start",
+                                )}
                               >
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-[#2B425D]">
-                                  <DashboardIcon name="schedule" className="h-4 w-4" />
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-xs font-semibold leading-4 text-[#111111]">
-                                    Schedule
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void openScheduleDetails(schedule);
+                                  }}
+                                  className="inline-flex min-h-[52px] w-[152px] items-center gap-2 rounded-md bg-[#F8F5EF] px-3 py-2 text-left shadow-sm transition hover:bg-[#F1ECE3] focus:outline-none focus:ring-2 focus:ring-[#ED6A06]/35"
+                                >
+                                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-[#2B425D]">
+                                    <DashboardIcon name="schedule" className="h-4 w-4" />
                                   </span>
-                                  <span className="block truncate text-[9px] font-normal leading-3 text-[#6B7280]">
-                                    Set if you are available or not
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-xs font-semibold leading-4 text-[#111111]">
+                                      Schedule
+                                    </span>
+                                    <span className="block truncate text-[9px] font-normal leading-3 text-[#6B7280]">
+                                      Set if you are available or not
+                                    </span>
                                   </span>
-                                </span>
-                              </button>
-                              {scheduleTime ? (
-                                <span className="px-1 text-[10px] font-normal leading-4 text-[#8A8A8A]">
-                                  {scheduleTime}
-                                </span>
-                              ) : null}
-                            </div>
-                          );
-                        }
-
-                        const message = timelineItem.item;
-                        const outgoing = message.direction === "outgoing";
-                        const isRestricted = message.isRestricted || message.moderationStatus === "restricted";
-                        const senderName = getMessageSenderName(
-                          message,
-                          selectedConversation,
-                          activeConversation,
-                          currentUser.id,
-                          viewerRole,
-                        );
-
-                        return (
-                          <div
-                            id={`message-${message._id}`}
-                            key={timelineItem.id}
-                            className={cx(
-                              "flex w-full max-w-[507px] min-w-0 flex-col justify-center gap-2 px-8 py-3 font-sans shadow-sm",
-                              outgoing
-                                ? "ml-auto rounded-[40px_0px_40px_40px] border border-transparent bg-[#E7EAEE]"
-                                : "mr-auto rounded-[0px_40px_40px_40px] border border-[#777777] bg-white",
-                              targetMessageId === message._id && "ring-2 ring-[#ED6A06] ring-offset-2",
-                            )}
-                          >
-                            {!outgoing ? (
-                              <p className="font-sans text-base font-semibold leading-6 tracking-[0.015em] text-[#111111]">
-                                {senderName}
-                              </p>
-                            ) : null}
-                            {outgoing ? (
-                              <p className="sr-only">
-                                You
-                              </p>
-                            ) : null}
-                            <p className="max-w-full whitespace-pre-wrap break-all font-sans text-base font-normal leading-6 text-[#111111] [overflow-wrap:anywhere]">
-                              {message.message}
-                            </p>
-                            {isRestricted ? (
-                              <div className="rounded-[10px] border border-[#F7C98B] bg-[#FFF7ED] px-3 py-2 text-xs font-medium leading-5 text-[#9A4B00]">
-                                {outgoing
-                                  ? "Restricted: this message was saved, but hidden from the receiver because it includes contact or off-platform communication details."
-                                  : "Restricted message visible to superadmin only."}
-                                {message.moderationReasons?.length ? (
-                                  <span className="mt-1 block font-normal text-[#B45309]">
-                                    {message.moderationReasons.join(", ")}
+                                </button>
+                                {scheduleTime ? (
+                                  <span className="px-1 text-[10px] font-normal leading-4 text-[#8A8A8A]">
+                                    {scheduleTime}
                                   </span>
                                 ) : null}
                               </div>
-                            ) : null}
-                            <div className="flex h-5 items-center justify-between gap-8 font-sans text-xs uppercase leading-5 tracking-[0.05em] text-[#777777]">
-                              <span>{formatMessageTime(message.sentAt)}</span>
-                              {outgoing ? <MessageStatus seen={message.isSeen} /> : null}
+                            );
+                          }
+
+                          const message = timelineItem.item;
+                          const outgoing = message.direction === "outgoing";
+                          const isRestricted = message.isRestricted || message.moderationStatus === "restricted";
+                          const senderName = getMessageSenderName(
+                            message,
+                            selectedConversation,
+                            activeConversation,
+                            currentUser.id,
+                            viewerRole,
+                          );
+
+                          return (
+                            <div
+                              id={`message-${message._id}`}
+                              key={timelineItem.id}
+                              className={cx(
+                                "flex w-full max-w-[507px] min-w-0 flex-col justify-center gap-2 px-8 py-3 font-sans shadow-sm",
+                                outgoing
+                                  ? "ml-auto rounded-[40px_0px_40px_40px] border border-transparent bg-[#E7EAEE]"
+                                  : "mr-auto rounded-[0px_40px_40px_40px] border border-[#777777] bg-white",
+                                targetMessageId === message._id && "ring-2 ring-[#ED6A06] ring-offset-2",
+                              )}
+                            >
+                              {!outgoing ? (
+                                <p className="font-sans text-base font-semibold leading-6 tracking-[0.015em] text-[#111111]">
+                                  {senderName}
+                                </p>
+                              ) : null}
+                              {outgoing ? (
+                                <p className="sr-only">
+                                  You
+                                </p>
+                              ) : null}
+                              <p className="max-w-full whitespace-pre-wrap break-all font-sans text-base font-normal leading-6 text-[#111111] [overflow-wrap:anywhere]">
+                                {message.message}
+                              </p>
+                              {isRestricted ? (
+                                <div className="rounded-[10px] border border-[#F7C98B] bg-[#FFF7ED] px-3 py-2 text-xs font-medium leading-5 text-[#9A4B00]">
+                                  {outgoing
+                                    ? "Restricted: this message was saved, but hidden from the receiver because it includes contact or off-platform communication details."
+                                    : "Restricted message visible to superadmin only."}
+                                  {message.moderationReasons?.length ? (
+                                    <span className="mt-1 block font-normal text-[#B45309]">
+                                      {message.moderationReasons.join(", ")}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              <div className="flex h-5 items-center justify-between gap-8 font-sans text-xs uppercase leading-5 tracking-[0.05em] text-[#777777]">
+                                <span>{formatMessageTime(message.sentAt)}</span>
+                                {outgoing ? <MessageStatus seen={message.isSeen} /> : null}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="flex h-full min-h-[420px] flex-col items-center justify-center text-center">
-                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#F4F6FB] text-[#314B6B]">
-                        <DashboardIcon name="messages" className="h-10 w-10" />
+                          );
+                        })}
                       </div>
-                      <p className="mt-5 max-w-sm text-base text-[#475467]">
-                        Start conversation with the party from here and keep all pitch discussion inside the dashboard.
-                      </p>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex h-full min-h-[420px] flex-col items-center justify-center text-center">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#F4F6FB] text-[#314B6B]">
+                          <DashboardIcon name="messages" className="h-10 w-10" />
+                        </div>
+                        <p className="mt-5 max-w-sm text-base text-[#475467]">
+                          Start conversation with the party from here and keep all pitch discussion inside the dashboard.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="sticky bottom-0 z-10 flex min-h-[160px] shrink-0 items-center justify-center border-t border-[#EEF2F7] bg-white px-4 py-4 sm:px-6">
-                  <div className="flex h-[132px] w-full max-w-[907px] flex-col rounded-2xl border border-[#9CA3AF] bg-white p-2">
+                  <div className="flex h-[132px] w-full flex-col rounded-2xl border border-[#9CA3AF] bg-white p-2">
                     <textarea
                       value={draft}
                       onChange={(event) => setDraft(event.target.value)}
