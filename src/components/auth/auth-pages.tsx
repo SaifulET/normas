@@ -509,7 +509,15 @@ export function SignupPageView() {
           </label>
 
           {errorMessage ? <p className="text-sm font-medium text-red-600">{errorMessage}</p> : null}
-          <SubmitButton idleLabel="Signup" isPending={isSubmitting} pendingLabel="Creating..." />
+          <div className="space-y-3">
+            <SubmitButton idleLabel="Signup" isPending={isSubmitting} pendingLabel="Creating..." />
+            <Link
+              href="/login"
+              className="inline-flex h-[44px] w-full items-center justify-center rounded-[10px] border border-[#B8C0CC] bg-white px-4 text-sm font-medium text-[#314864] transition hover:bg-[#F8FAFC]"
+            >
+              Sign In
+            </Link>
+          </div>
         </form>
 
         <SecurityBadge />

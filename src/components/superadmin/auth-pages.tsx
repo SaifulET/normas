@@ -625,9 +625,15 @@ export function SuperadminSignupPage() {
           <Field label="Full Name" name="name" placeholder="Tuval Ramsey" required />
           <Field label="Email Address" name="email" placeholder="admin@mooment.com" required type="email" />
           <PasswordField placeholder="••••••••" required />
-          <div className="pt-2">
+          <div className="pt-2 space-y-3">
             {errorMessage ? <p className="mb-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
             <SubmitButton idleLabel="Signup" isPending={isSubmitting} pendingLabel="Creating..." />
+            <Link
+              href="/superadmin/auth/login"
+              className="inline-flex h-[44px] w-full items-center justify-center rounded-[10px] border border-[#B8C0CC] bg-white px-4 text-sm font-medium text-[#4E4A86] transition hover:bg-[#F8FAFC]"
+            >
+              Sign In
+            </Link>
           </div>
         </form>
 

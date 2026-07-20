@@ -484,47 +484,71 @@ export function SuperadminSupportDetailClient({
           ) : null}
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[#E6E9F0] bg-white">
-            <div className="shrink-0 border-b border-[#EEF1F6] px-5 py-4">
+            <div className="shrink-0 border-b border-[#EEF1F6] px-5 py-4 bg-white">
               <p className="text-[14px] font-semibold text-[#202350]">Conversation</p>
             </div>
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto bg-[#F8FAFC] px-5 py-6">
               {(conversation.messages ?? []).length === 0 ? (
-                <p className="text-sm text-[#69729A]">No messages yet.</p>
+                <p className="text-sm text-[#69729A] text-center py-8">No messages yet.</p>
               ) : (
                 (conversation.messages ?? []).map((message) => {
                   const outgoing = message.senderType === "superadmin";
+                  const senderName = messageSenderLabel(message);
+                  const messageText = message.message || conversation.subject || "Support ticket created";
+                  const avatarInitials = getInitials(message.senderName || senderName, message.senderEmail);
 
                   return (
-                    <div key={message._id} className={`flex ${outgoing ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[720px] rounded-[12px] px-4 py-3 ${outgoing ? "bg-[#314B6B] text-white" : "bg-[#F5F7FB] text-[#202350]"}`}>
-                        <p className={`text-[12px] font-semibold ${outgoing ? "text-white/80" : "text-[#69729A]"}`}>
-                          {messageSenderLabel(message)}
-                        </p>
-                        <p className="mt-2 whitespace-pre-wrap text-[14px] leading-6">{message.message}</p>
-                        <p className={`mt-2 text-[11px] ${outgoing ? "text-white/70" : "text-[#8A91AB]"}`}>
-                          {formatTime(message.sentAt)}
-                        </p>
+                    <div key={message._id} className={`flex items-start gap-3 ${outgoing ? "justify-end" : "justify-start"}`}>
+                      {!outgoing && (
+                        <div className="shrink-0">
+                          <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={avatarInitials} size={32} />
+                        </div>
+                      )}
+                      
+                      <div className={`max-w-[70%] flex flex-col ${outgoing ? "items-end" : "items-start"}`}>
+                        <div className="flex items-center gap-2 px-1 mb-1">
+                          <span className="text-[11px] font-semibold text-[#4A5271]">
+                            {senderName}
+                          </span>
+                        </div>
+                        
+                        <div className={`rounded-2xl px-4 py-3 shadow-sm ${
+                          outgoing 
+                            ? "bg-[#4E4A86] text-white rounded-tr-none" 
+                            : "bg-white text-[#202350] border border-[#E4E8F0] rounded-tl-none"
+                        }`}>
+                          <p className="whitespace-pre-wrap text-[13px] leading-6">{messageText}</p>
+                          <p className={`mt-1.5 text-right text-[10px] ${outgoing ? "text-[#E0DDF0]" : "text-[#8A91AB]"}`}>
+                            {formatTime(message.sentAt)}
+                          </p>
+                        </div>
                       </div>
+
+                      {outgoing && (
+                        <div className="shrink-0">
+                          <SuperadminAvatar from="#4E4A86" to="#7C78B8" initials="SA" size={32} />
+                        </div>
+                      )}
                     </div>
                   );
                 })
               )}
             </div>
 
-            <form onSubmit={handleReply} className="shrink-0 border-t border-[#EEF1F6] px-5 py-4">
+            <form onSubmit={handleReply} className="shrink-0 border-t border-[#EEF1F6] px-5 py-4 bg-white">
               <textarea
                 value={draft}
                 onChange={(event) => setDraft(event.target.value.slice(0, 1000))}
-                rows={4}
+                rows={3}
                 maxLength={1000}
                 placeholder="Write a reply..."
-                className="w-full resize-none rounded-[10px] border border-[#DDE4EF] px-4 py-3 text-sm text-[#202350] outline-none placeholder:text-[#9AA1B6] focus:border-[#314B6B]"
+                className="w-full resize-none rounded-[10px] border border-[#DDE4EF] px-4 py-3 text-sm text-[#202350] outline-none placeholder:text-[#9AA1B6] focus:border-[#4E4A86] focus:ring-1 focus:ring-[#4E4A86]"
               />
               <div className="mt-3 flex justify-end">
                 <button
                   type="submit"
                   disabled={saving || !draft.trim()}
-                  className="inline-flex h-10 items-center justify-center rounded-[8px] bg-[#314B6B] px-5 text-sm font-semibold text-white transition hover:bg-[#243B5A] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-10 items-center justify-center rounded-[8px] bg-[#4E4A86] px-5 text-sm font-semibold text-white transition hover:bg-[#3F3B73] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving ? "Sending..." : "Send Reply"}
                 </button>

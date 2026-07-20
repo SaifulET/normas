@@ -681,7 +681,7 @@ export function UpgradeCheckoutPage() {
           <div className="rounded-lg border border-[#E9EEF5] p-5">
             <h2 className="text-lg font-semibold text-[#1E2746]">Secure payment</h2>
             <p className="mt-3 text-sm leading-6 text-[#6B7280]">
-              Card details and billing address are collected inside Stripe's secure embedded checkout. Normas never stores card numbers.
+              Card details and billing address are collected inside Stripes secure embedded checkout. Normas never stores card numbers.
             </p>
           </div>
 
