@@ -51,13 +51,13 @@ export function HeroSection({ content }: { content: HeroContent }) {
 
       <div className="mx-auto flex max-w-7xl flex-col items-center pb-8 pt-20 text-center sm:pt-24 lg:pt-28">
         <h1
-          className={`${heroFont.className} max-w-5xl text-center text-[36px] sm:text-[48px] md:text-[60px] lg:text-[72px] font-extrabold leading-[44px] sm:leading-[56px] md:leading-[72px] lg:leading-[88px] tracking-[-1.8px] text-[#1F2937]`}
+          className={`${heroFont.className} max-w-5xl text-center text-[28px] sm:text-[48px] md:text-[60px] lg:text-[72px] font-extrabold leading-[34px] sm:leading-[56px] md:leading-[72px] lg:leading-[88px] tracking-[-1.8px] text-[#1F2937]`}
         >
           {content.title}
           <span className="block text-[#E65E02]">{content.accentTitle}</span>
         </h1>
         <p
-          className={`${heroFont.className} mt-5 max-w-2xl text-center text-[16px] sm:text-[20px] font-light leading-6 sm:leading-7 text-[#1F2937]`}
+          className={`${heroFont.className} mt-5 max-w-2xl text-center text-[14px] sm:text-[20px] font-light leading-5 sm:leading-7 text-[#1F2937]`}
         >
           {content.description}
         </p>
@@ -87,11 +87,11 @@ export function HeroSection({ content }: { content: HeroContent }) {
 export function StatsBandSection({ stats }: { stats: StatItem[] }) {
   return (
     <SectionShell className="bg-[#2B425D] px-4 sm:px-10 lg:px-[160px] py-5 text-white">
-      <div className=" grid  grid-cols-2 gap-6 text-center md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-6 text-center md:grid-cols-4">
         {stats.map((stat) => (
           <div key={stat.label}>
-            <p className="text-3xl font-black leading-none">{stat.value}</p>
-            <p className="mt-2 text-sm font-semibold text-white/55">{stat.label}</p>
+            <p className="text-2xl sm:text-3xl font-black leading-none">{stat.value}</p>
+            <p className="mt-2 text-xs sm:text-sm font-semibold text-white/55">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -188,7 +188,7 @@ export function ValuesSection({
               alt={image.alt}
               width={image.width}
               height={image.height}
-              className={`aspect-square rounded-[14px] object-cover shadow-[0_16px_32px_-24px_rgba(15,23,42,0.35)] ${
+              className={`w-full aspect-square rounded-[14px] object-cover shadow-[0_16px_32px_-24px_rgba(15,23,42,0.35)] ${
                 index === 0 ? "mt-8" : index === 2 ? "-mt-6" : index === 3 ? "mt-2" : ""
               }`}
             />
@@ -249,7 +249,7 @@ export function HowItWorksSection({
               </span>
               <p className="text-sm font-black text-[#E65E02]">For Ethical Investors</p>
             </div>
-            <h3 className="mt-5 text-3xl font-black tracking-normal">Deploy Capital with Purpose</h3>
+            <h3 className="mt-5 text-xl sm:text-3xl font-black tracking-normal">Deploy Capital with Purpose</h3>
 
             <div className="mt-8">
               <StepCards
@@ -304,7 +304,7 @@ export function FounderFundingSection({
             </span>
             <p className="text-sm font-black text-[#E65E02]">For Impact Founders</p>
           </div>
-          <h2 className="mt-5 text-3xl font-black tracking-normal text-[#2B425D] sm:text-4xl">
+          <h2 className="mt-5 text-xl sm:text-3xl font-black tracking-normal text-[#2B425D] sm:text-4xl">
             Secure Aligned Funding
           </h2>
 
@@ -331,10 +331,10 @@ export function AdminCompletionSection({ tasks }: { tasks: AdminTask[] }) {
     <SectionShell className="bg-[#FFF] px-4 py-16 text-center sm:px-6 lg:px-[147px]">
       <div className="">
         <AppIcon name="shieldUser" className="mx-auto h-10 w-10 text-[#E65E02]" />
-        <h2 className="mt-4 text-2xl font-black tracking-normal text-[#2B425D] sm:text-3xl">
+        <h2 className="mt-4 text-xl sm:text-3xl font-black tracking-normal text-[#2B425D]">
           Admin Facilitated Completion
         </h2>
-        <p className="mx-auto mt-4 max-w-3xl text-sm leading-7 text-[#182231]/65 sm:text-base">
+        <p className="mx-auto mt-4 max-w-3xl text-xs leading-5 sm:text-base sm:leading-7 text-[#182231]/65">
           Once interest is solidified, EARLY-N admins step in to facilitate formal agreements and commission
           tracking, ensuring a professional and legally sound conclusion for both parties.
         </p>
@@ -455,7 +455,7 @@ export function PricingSection({
         <SectionHeading
           title="Simple, Transparent Pricing"
           description="For serious investors and founders ready to make an impact"
-          titleClassName="text-center font-semibold text-[36px] leading-[48px] tracking-normal text-[#1F2937] sm:text-[36px]"
+          titleClassName="text-center font-semibold text-[24px] sm:text-[36px] leading-[32px] sm:leading-[48px] tracking-normal text-[#1F2937]"
         />
         <PricingCardsClient
           annualDiscount={annualDiscount}
@@ -474,7 +474,7 @@ export function FaqSection({ faqs }: { faqs: FaqItem[] }) {
         <SectionHeading
           title="Common Questions"
           description="Everything you need to know about EARLY-N"
-          titleClassName="text-center font-semibold text-[36px] leading-[48px] tracking-normal text-[#1F2937] sm:text-[36px]"
+          titleClassName="text-center font-semibold text-[24px] sm:text-[36px] leading-[32px] sm:leading-[48px] tracking-normal text-[#1F2937]"
         />
         <FaqList items={faqs} />
       </div>

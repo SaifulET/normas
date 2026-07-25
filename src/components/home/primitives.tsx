@@ -29,13 +29,13 @@ export function SectionHeading({
         <p className="text-xs font-black uppercase tracking-[0.28em] text-[#E65E02]">{eyebrow}</p>
       ) : null}
       <h2
-        className={`mt-4 text-4xl font-black leading-tight tracking-normal text-[#182231] sm:text-5xl ${titleClassName ?? ""}`}
+        className={`mt-4 text-2xl font-black leading-tight tracking-normal text-[#182231] sm:text-4xl lg:text-5xl ${titleClassName ?? ""}`}
       >
         {title}
         {accentTitle ? <span className="block text-[#E65E02]">{accentTitle}</span> : null}
       </h2>
       {description ? (
-        <p className={`mt-4 w-[442px] text-base leading-7 text-[#182231]/60 ${descriptionClass}`}>
+        <p className={`mt-4 w-full max-w-[442px] text-sm leading-6 text-[#182231]/60 sm:text-base sm:leading-7 ${descriptionClass}`}>
           {description}
         </p>
       ) : null}
@@ -164,11 +164,11 @@ export function FaqList({ items }: { items: FaqItem[] }) {
     <div className="mt-12 divide-y divide-[#2B425D]/10">
       {items.map((item) => (
         <details key={item.question} className="group">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-7 text-left text-xl font-semibold text-[#2B425D] marker:hidden sm:text-2xl">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-4 sm:py-7 text-left text-base font-semibold text-[#2B425D] marker:hidden sm:text-2xl">
             {item.question}
             <AppIcon name="add" className="h-5 w-5 shrink-0 transition group-open:rotate-45" />
           </summary>
-          <p className="max-w-3xl pb-7 text-sm leading-7 text-[#182231]/60">{item.answer}</p>
+          <p className="max-w-3xl pb-5 sm:pb-7 text-xs leading-6 text-[#182231]/60 sm:text-sm sm:leading-7">{item.answer}</p>
         </details>
       ))}
     </div>

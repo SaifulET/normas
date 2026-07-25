@@ -20,7 +20,7 @@ function AuthSubmitButton({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-full bg-[#E65E02] px-7 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#c84f00] disabled:cursor-wait disabled:opacity-80"
+        className="hidden sm:inline-flex items-center justify-center rounded-full bg-[#E65E02] px-7 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#c84f00] disabled:cursor-wait disabled:opacity-80 whitespace-nowrap"
       >
         {pending ? pendingLabel : idleLabel}
       </button>
@@ -68,7 +68,7 @@ export function NavbarAuthControls({
         Login
       </Link>
       <Link
-        className="rounded-full bg-[#E65E02] px-7 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#c84f00]"
+        className="hidden sm:inline-flex rounded-full bg-[#E65E02] px-7 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#c84f00] whitespace-nowrap"
         href={primaryCta.href}
       >
         {primaryCta.label}
