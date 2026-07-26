@@ -24,6 +24,11 @@ export const metadata: Metadata = {
   title: "EARLY-N | Ethical Investment Platform",
   description:
     "Connect impact-driven investors with ethical startups seeking mission-aligned capital.",
+  icons: {
+    apple: "/logo.svg?v=3",
+    icon: [{ url: "/logo.svg?v=3", type: "image/svg+xml" }],
+    shortcut: "/logo.svg?v=3",
+  },
 };
 
 export default function RootLayout({

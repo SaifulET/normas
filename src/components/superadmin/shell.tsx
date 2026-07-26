@@ -169,18 +169,19 @@ function SidebarLogo({
       {!collapsed ? (
         <>
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="relative h-[28px] w-[62px] shrink-0 overflow-hidden">
-              <Image
-                src="/footer-logo.svg"
-                alt="EARLY-N"
-                fill
-                priority
-                sizes="62px"
-                className="object-left object-contain"
-              />
+            <div className="flex h-10 w-[92px] shrink-0 items-center rounded-[7px] bg-white px-2 shadow-[0_8px_18px_rgba(7,18,33,0.14)]">
+              <div className="relative h-[30px] w-full overflow-hidden">
+                <Image
+                  src="/logo.svg"
+                  alt="Early-N business logo"
+                  fill
+                  priority
+                  sizes="92px"
+                  className="object-contain"
+                />
+              </div>
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[1.08rem] font-semibold text-white">Early-N</p>
               <p className="truncate text-xs text-white/65">Super Admin</p>
             </div>
           </div>
@@ -196,15 +197,17 @@ function SidebarLogo({
         </>
       ) : (
         <>
-          <div className="relative h-[28px] w-[34px] shrink-0 overflow-hidden">
-            <Image
-              src="/footer-logo.svg"
-              alt="EARLY-N"
-              fill
-              priority
-              sizes="34px"
-              className="object-left object-contain"
-            />
+          <div className="flex h-[34px] w-[58px] shrink-0 items-center rounded-[7px] bg-white px-1.5 shadow-[0_8px_18px_rgba(7,18,33,0.14)]">
+            <div className="relative h-[26px] w-full overflow-hidden">
+              <Image
+                src="/logo.svg"
+                alt="Early-N business logo"
+                fill
+                priority
+                sizes="58px"
+                className="object-contain"
+              />
+            </div>
           </div>
           <button
             type="button"
@@ -478,18 +481,19 @@ export function SuperadminShell({
           >
             <div className="relative shrink-0 border-b border-white/8 px-4 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="relative h-[28px] w-[62px] shrink-0 overflow-hidden">
-                  <Image
-                    src="/footer-logo.svg"
-                    alt="EARLY-N"
-                    fill
-                    priority
-                    sizes="62px"
-                    className="object-left object-contain"
-                  />
+                <div className="flex h-10 w-[92px] shrink-0 items-center rounded-[7px] bg-white px-2 shadow-[0_8px_18px_rgba(7,18,33,0.14)]">
+                  <div className="relative h-[30px] w-full overflow-hidden">
+                    <Image
+                      src="/logo.svg"
+                      alt="Early-N business logo"
+                      fill
+                      priority
+                      sizes="92px"
+                      className="object-contain"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <p className="text-[1.08rem] font-semibold text-white">Early-N</p>
                   <p className="text-xs text-white/65">Super Admin</p>
                 </div>
               </div>
@@ -555,14 +559,14 @@ export function SuperadminShell({
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div className="relative h-[28px] w-[62px] shrink-0 overflow-hidden">
+          <div className="relative h-[30px] w-[74px] shrink-0 overflow-hidden">
             <Image
               src="/logo.svg"
-              alt="EARLY-N"
+              alt="Early-N business logo"
               fill
               priority
-              sizes="62px"
-              className="object-left object-contain"
+              sizes="74px"
+              className="object-contain"
             />
           </div>
         </div>
