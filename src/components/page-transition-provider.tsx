@@ -25,6 +25,8 @@ function shouldTransition(fromPath: string, toPath: string) {
   return isDashboardPath(fromPath) !== isDashboardPath(toPath);
 }
 
+const ENTER_DURATION_MS = 220;
+
 function getRoleCorrectedHref(href: string) {
   const storedRole = getStoredAuthState()?.state?.user?.role?.toLowerCase();
 
@@ -74,10 +76,7 @@ export function PageTransitionProvider({
 
     clearTimers();
     setState("leaving");
-
-    schedule(() => {
-      router.push(href);
-    }, 600);
+    router.push(href);
   };
 
   useEffect(() => {
@@ -130,11 +129,10 @@ export function PageTransitionProvider({
     if (shouldTransition(previousPath, pathname)) {
       clearTimers();
       setState("entering");
-      schedule(() => setState("idle"),600);
+      schedule(() => setState("idle"), ENTER_DURATION_MS);
     }
 
     previousPathRef.current = pathname;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   useEffect(() => clearTimers, []);
