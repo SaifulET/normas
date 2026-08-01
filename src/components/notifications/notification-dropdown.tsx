@@ -66,6 +66,7 @@ function getReferenceId(notification: NotificationItem) {
     getMetadataString(notification, "invoiceId") ||
     getMetadataString(notification, "listId") ||
     getMetadataString(notification, "reportId") ||
+    getMetadataString(notification, "noticeId") ||
     getMetadataString(notification, "userId") ||
     getMetadataString(notification, "alertId")
   );
@@ -89,6 +90,10 @@ function getNotificationHref(notification: NotificationItem, pathname: string) {
 
   if (referenceType === "schedule") {
     return `${dashboardPrefix}/schedule?scheduleId=${encodeURIComponent(referenceId)}`;
+  }
+
+  if (referenceType === "Notice") {
+    return `${dashboardPrefix}/notices/${encodeURIComponent(referenceId)}`;
   }
 
   if (referenceType === "list") {

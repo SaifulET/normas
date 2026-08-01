@@ -3,7 +3,7 @@ import { getPitchBySlug, pitchDetails, type PitchDetail } from "@/components/pit
 export interface DashboardNavItem {
   label: string;
   href: string;
-  icon: "website" | "dashboard" | "plus" | "save" | "messages" | "schedule" | "support" | "upgrade";
+  icon: "website" | "dashboard" | "plus" | "save" | "messages" | "schedule" | "notice" | "support" | "upgrade";
 }
 
 export interface DashboardMessageItem {
@@ -51,6 +51,7 @@ export const dashboardNavItems: DashboardNavItem[] = [
   { label: "Save list", href: "/dashboard/save-list", icon: "save" },
   { label: "Messages", href: "/dashboard/messages", icon: "messages" },
   { label: "Schedule", href: "/dashboard/schedule", icon: "schedule" },
+  { label: "Notices", href: "/dashboard/notices", icon: "notice" },
   { label: "Support Center", href: "/dashboard/support-center", icon: "support" },
   { label: "Upgrade Plan", href: "/dashboard/upgrade-plan", icon: "upgrade" },
 ];
@@ -67,6 +68,7 @@ export const investeeDashboardNavItems: DashboardNavItem[] = [
   { label: "Created list", href: "/investee-dashboard/created-list", icon: "save" },
   { label: "Messages", href: "/investee-dashboard/messages", icon: "messages" },
   { label: "Schedule", href: "/investee-dashboard/schedule", icon: "schedule" },
+  { label: "Notices", href: "/investee-dashboard/notices", icon: "notice" },
   { label: "Support Center", href: "/investee-dashboard/support-center", icon: "support" },
   { label: "Upgrade Plan", href: "/investee-dashboard/upgrade-plan", icon: "upgrade" },
 ];

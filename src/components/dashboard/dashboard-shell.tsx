@@ -334,7 +334,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [authProfile, setAuthProfile] = useState<AuthProfileResponse["data"] | null>(getInitialAuthProfile);
+  const [authProfile, setAuthProfile] = useState<AuthProfileResponse["data"] | null>(null);
   const [subscriptionAccess, setSubscriptionAccess] = useState<SubscriptionAccess>("checking");
   const desktopSidebarWidth = collapsed ? "lg:pl-[96px]" : "lg:pl-[276px]";
   const investeeDashboard = pathname.startsWith("/investee-dashboard");
@@ -358,6 +358,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     let active = true;
 
     const loadProfile = async () => {
+      const initialProfile = getInitialAuthProfile();
+
+      if (active && initialProfile) {
+        setAuthProfile(initialProfile);
+      }
+
       try {
         const response = await apiRequest<AuthProfileResponse>({
           method: "GET",

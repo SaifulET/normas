@@ -14,7 +14,7 @@ import {
 } from "@/lib/superadmin-profile-api";
 import { superadminNavItems, type SuperadminNavIcon } from "./data";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Logout03Icon, Notification01Icon, Settings01Icon, SidebarRightIcon, User02Icon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Logout03Icon, Note01Icon, Notification01Icon, Settings01Icon, SidebarRightIcon, User02Icon } from "@hugeicons/core-free-icons";
 
 function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -58,6 +58,10 @@ function SuperadminIcon({
     case "moderation":
       return (
        <HugeiconsIcon icon={Flag02Icon} className="w-[24px] h-[24px]" />
+      );
+    case "notice":
+      return (
+       <HugeiconsIcon icon={Note01Icon} className="w-[24px] h-[24px]" />
       );
     case "reports":
       return (

@@ -10,7 +10,7 @@ export default async function InvesteeDashboardLayout({
   const authenticated = await isAuthenticated();
 
   if (!authenticated) {
-    redirect("/");
+    redirect("/login");
   }
 
   return <DashboardShell>{children}</DashboardShell>;

@@ -4,6 +4,7 @@ export type SuperadminNavIcon =
   | "lists"
   | "messages"
   | "moderation"
+  | "notice"
   | "payment"
   | "reports"
   | "schedule"
@@ -81,6 +82,7 @@ export const superadminNavItems: SuperadminNavItem[] = [
   { label: "Messages", href: "/superadmin/dashboard/messages", icon: "messages", section: "core" },
   { label: "Moderation", href: "/superadmin/dashboard/moderation", icon: "moderation", section: "core" },
   { label: "Schedule", href: "/superadmin/dashboard/schedule", icon: "schedule", section: "core" },
+  { label: "Notices", href: "/superadmin/dashboard/notices", icon: "notice", section: "core" },
   { label: "User Management", href: "/superadmin/dashboard/user-management", icon: "users", section: "core" },
   { label: "Payment Management", href: "/superadmin/dashboard/payment-management", icon: "payment", section: "core" },
   { label: "Reports", href: "/superadmin/dashboard/reports", icon: "reports", section: "core" },

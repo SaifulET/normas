@@ -23,6 +23,24 @@ import { setLoginSession } from "./actions";
 
 const PASSWORD_RESET_EMAIL_STORAGE_KEY = "earlyn_password_reset_email";
 
+function getPostLoginHref(role: string | undefined, redirectPath: string | null) {
+  const fallbackHref = role === "investee" ? "/investee-dashboard" : "/dashboard";
+
+  if (!redirectPath || !redirectPath.startsWith("/") || redirectPath.startsWith("//")) {
+    return fallbackHref;
+  }
+
+  if (role === "investee" && redirectPath.startsWith("/investee-dashboard")) {
+    return redirectPath;
+  }
+
+  if (role === "investor" && redirectPath.startsWith("/dashboard")) {
+    return redirectPath;
+  }
+
+  return fallbackHref;
+}
+
 function getStoredPasswordResetEmail() {
   if (typeof window === "undefined") {
     return "";
@@ -268,7 +286,7 @@ function AuthCard({
   );
 }
 
-export function LoginPageView() {
+export function LoginPageView({ redirectPath = null }: { redirectPath?: string | null }) {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [errorMessage, setErrorMessage] = useState("");
@@ -304,7 +322,7 @@ export function LoginPageView() {
       });
 
       await setLoginSession();
-      router.push(authSession.user.role === "investee" ? "/investee-dashboard" : "/dashboard");
+      router.push(getPostLoginHref(authSession.user.role, redirectPath));
       router.refresh();
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, "Unable to login. Please check your credentials."));
