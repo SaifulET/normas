@@ -62,7 +62,7 @@ export function SiteFooter({ linkGroups, socialLinks }: SiteFooterProps) {
   return (
     <footer id="footer" className="bg-[#2B425D] px-4 py-12 text-white sm:px-6 lg:px-[147px]">
       <div>
-        <div className="grid gap-10 md:grid-cols-[3fr_1fr_1fr_1fr]">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-[3fr_1fr_1fr_1fr]">
           <div>
             <Link href="/" aria-label="EARLY-N home">
               <Image src="/footer-logo.svg" alt="EARLY-N" width={112} height={52} />

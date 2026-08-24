@@ -149,7 +149,7 @@ function LockedListingOverlay() {
 function ResultCard({ locked, viewMode, listing }: ResultCardProps) {
   if (viewMode === "list") {
     return (
-      <article className="relative grid overflow-hidden rounded-2xl border border-[#D7DFEA] bg-white shadow-[0_14px_32px_-28px_rgba(31,41,55,0.55)] md:grid-cols-[260px_1fr]">
+      <article className="relative grid grid-cols-1 overflow-hidden rounded-2xl border border-[#D7DFEA] bg-white shadow-[0_14px_32px_-28px_rgba(31,41,55,0.55)] md:grid-cols-[260px_1fr]">
         <div className="relative min-h-[200px]">
           <Image
             src={listing.image.src}
@@ -245,7 +245,7 @@ function ResultCard({ locked, viewMode, listing }: ResultCardProps) {
 
         <p className="mt-4 min-h-12 text-sm leading-6 text-[#667085]">{listing.description}</p>
 
-        <div className="mt-6 flex items-end justify-between gap-4 border-t border-[#E8EDF3] pt-4">
+        <div className="mt-6 flex flex-col gap-4 border-t border-[#E8EDF3] pt-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
               Funding Target
@@ -255,7 +255,7 @@ function ResultCard({ locked, viewMode, listing }: ResultCardProps) {
 
           <Link
             href={locked ? "/dashboard/upgrade-plan/change-plan" : listing.href}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#ED6A06] px-5 text-sm font-semibold text-white transition hover:bg-[#d35f05]"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#ED6A06] px-5 text-sm font-semibold text-white transition hover:bg-[#d35f05] sm:w-auto w-full"
           >
             {locked ? "Subscribe to Unlock" : "View Pitch"}
           </Link>
@@ -411,7 +411,7 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
 
   return (
     <section className="bg-[#F8FAFC] px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-      <div className=" grid  gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="rounded-2xl border border-[#D7DFEA] bg-white p-5 shadow-[0_14px_32px_-28px_rgba(31,41,55,0.55)]">
           <div className="flex items-center gap-2 text-[#243B5A]">
             <span className="text-base font-semibold">Filters</span>
@@ -611,7 +611,7 @@ export function SearchMarketplace({ initialFilters }: { initialFilters: SearchFi
             </div>
           ) : null}
 
-          <div className={`mt-5 ${viewMode === "grid" ? "grid gap-5 xl:grid-cols-2" : "space-y-4"}`}>
+          <div className={`mt-5 ${viewMode === "grid" ? "grid grid-cols-1 gap-5 xl:grid-cols-2" : "space-y-4"}`}>
             {listings.map((listing) => (
               <ResultCard key={listing.id} locked={lockInvestorListings} viewMode={viewMode} listing={listing} />
             ))}

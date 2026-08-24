@@ -7,6 +7,7 @@ import "quill/dist/quill.snow.css";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { getAdminUsers, type AdminUserSummary } from "@/lib/admin-users-api";
 import { getApiErrorMessage } from "@/lib/api";
 import {
   createSuperadminNotice,
@@ -26,7 +27,9 @@ function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
 }
 
-const targetOptions: Array<{ label: string; value: NoticeTargetType }> = [
+type NoticeFormTargetType = Exclude<NoticeTargetType, "custom">;
+
+const targetOptions: Array<{ label: string; value: NoticeFormTargetType }> = [
   { label: "Investors", value: "investor" },
   { label: "Investees", value: "investee" },
   { label: "All", value: "all" },
@@ -36,6 +39,18 @@ type QuillConstructor = (typeof import("quill"))["default"];
 type QuillInstance = InstanceType<QuillConstructor>;
 
 const emptyEditorHtml = "<p><br></p>";
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function parseEmails(value: string) {
+  return value
+    .split(/[\s,;]+/)
+    .map(normalizeEmail)
+    .filter(Boolean);
+}
 
 function sanitizeNoticeHtml(html: string) {
   return html
@@ -126,6 +141,10 @@ function getStatusClassName(status: Notice["status"]) {
 }
 
 function getTargetLabel(targetType: NoticeTargetType) {
+  if (targetType === "custom") {
+    return "Email only";
+  }
+
   if (targetType === "all") {
     return "All";
   }
@@ -461,10 +480,74 @@ function NoticeForm({
 }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [message, setMessage] = useState(emptyEditorHtml);
+  const [recipientInput, setRecipientInput] = useState("");
+  const [recipientSearchResults, setRecipientSearchResults] = useState<AdminUserSummary[]>([]);
+  const [recipientSearchLoading, setRecipientSearchLoading] = useState(false);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  const [targetType, setTargetType] = useState<NoticeTargetType>("investor");
+  const [targetType, setTargetType] = useState<NoticeFormTargetType | "">("investor");
   const [title, setTitle] = useState("");
+
+  useEffect(() => {
+    const query = recipientInput.trim();
+
+    if (query.length < 2 || query.includes("@")) {
+      return;
+    }
+
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      setRecipientSearchLoading(true);
+      getAdminUsers({ limit: 8, search: query })
+        .then((response) => {
+          if (!active) {
+            return;
+          }
+
+          const selected = new Set(selectedEmails);
+          setRecipientSearchResults(
+            (response.data.users ?? []).filter((user) => user.email && !selected.has(normalizeEmail(user.email))),
+          );
+        })
+        .catch(() => {
+          if (active) {
+            setRecipientSearchResults([]);
+          }
+        })
+        .finally(() => {
+          if (active) {
+            setRecipientSearchLoading(false);
+          }
+        });
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [recipientInput, selectedEmails]);
+
+  function addRecipientEmails(values: string[]) {
+    const nextEmails = values.map(normalizeEmail).filter(Boolean);
+    const invalidEmail = nextEmails.find((email) => !emailPattern.test(email));
+
+    if (invalidEmail) {
+      setErrorMessage(`Invalid recipient email: ${invalidEmail}`);
+      return false;
+    }
+
+    setErrorMessage("");
+    setSelectedEmails((current) => [...new Set([...current, ...nextEmails])]);
+    setTargetType("");
+    setRecipientInput("");
+    setRecipientSearchResults([]);
+    return true;
+  }
+
+  function removeRecipientEmail(email: string) {
+    setSelectedEmails((current) => current.filter((item) => item !== email));
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -476,12 +559,28 @@ function NoticeForm({
       return;
     }
 
+    if (recipientInput.trim() && !addRecipientEmails(parseEmails(recipientInput))) {
+      return;
+    }
+
+    const customRecipientEmails = recipientInput.trim()
+      ? [...new Set([...selectedEmails, ...parseEmails(recipientInput)])]
+      : selectedEmails;
+
+    const resolvedTargetType: NoticeTargetType = targetType || "custom";
+
+    if (resolvedTargetType === "custom" && customRecipientEmails.length === 0) {
+      setErrorMessage("Select an audience or add at least one email recipient.");
+      return;
+    }
+
     setSaving(true);
 
     try {
       const response = await createSuperadminNotice({
+        customRecipientEmails,
         message: message.trim(),
-        targetType,
+        targetType: resolvedTargetType,
         title: title.trim(),
       });
 
@@ -489,6 +588,9 @@ function NoticeForm({
       setTitle("");
       setMessage(emptyEditorHtml);
       setTargetType("investor");
+      setSelectedEmails([]);
+      setRecipientInput("");
+      setRecipientSearchResults([]);
       setSuccessMessage("Notice accepted and recipients are being processed.");
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, "Unable to create notice."));
@@ -531,7 +633,7 @@ function NoticeForm({
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setTargetType(option.value)}
+                onClick={() => setTargetType((current) => (current === option.value ? "" : option.value))}
                 className={cx(
                   "rounded-[6px] px-3 py-2 text-[12px] font-semibold transition",
                   targetType === option.value ? "bg-white text-[#202350] shadow-sm" : "text-[#7E86A3]",
@@ -542,6 +644,86 @@ function NoticeForm({
             ))}
           </div>
         </div>
+      </div>
+
+      <div>
+        <span className="mb-2 block text-[12px] font-semibold text-[#202350]">Additional email recipients</span>
+        <div className="relative">
+          <div className="flex min-h-11 flex-wrap items-center gap-2 rounded-[8px] border border-[#DDE2EC] bg-white px-3 py-2 focus-within:border-[#5E568E]">
+            {selectedEmails.map((email) => (
+              <span key={email} className="inline-flex items-center gap-2 rounded-full bg-[#EEF2F8] px-3 py-1 text-[12px] font-medium text-[#202350]">
+                {email}
+                <button
+                  type="button"
+                  onClick={() => removeRecipientEmail(email)}
+                  className="text-[#69729A] transition hover:text-[#202350]"
+                  aria-label={`Remove ${email}`}
+                >
+                  x
+                </button>
+              </span>
+            ))}
+            <input
+              value={recipientInput}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setRecipientInput(nextValue);
+
+                if (parseEmails(nextValue).some((email) => emailPattern.test(email))) {
+                  setTargetType("");
+                }
+              }}
+              onBlur={() => {
+                if (recipientInput.trim()) {
+                  addRecipientEmails(parseEmails(recipientInput));
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === "," || event.key === ";") {
+                  event.preventDefault();
+                  addRecipientEmails(parseEmails(recipientInput));
+                }
+
+                if (event.key === "Backspace" && !recipientInput && selectedEmails.length > 0) {
+                  removeRecipientEmail(selectedEmails[selectedEmails.length - 1]);
+                }
+              }}
+              placeholder={selectedEmails.length ? "Add another email or search user" : "Type an email, paste emails, or search users"}
+              className="h-7 min-w-[220px] flex-1 bg-transparent text-[13px] text-[#202350] outline-none placeholder:text-[#9AA1B6]"
+            />
+          </div>
+
+          {(recipientSearchResults.length > 0 || recipientSearchLoading) && recipientInput.trim().length >= 2 && !recipientInput.includes("@") ? (
+            <div className="absolute z-20 mt-2 max-h-56 w-full overflow-auto rounded-[8px] border border-[#DDE2EC] bg-white p-2 shadow-[0_18px_45px_rgba(31,35,61,0.16)]">
+              {recipientSearchLoading ? (
+                <p className="px-3 py-2 text-[12px] text-[#69729A]">Searching users...</p>
+              ) : (
+                recipientSearchResults.map((user) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      if (user.email) {
+                        addRecipientEmails([user.email]);
+                      }
+                    }}
+                    className="flex w-full items-center justify-between gap-3 rounded-[7px] px-3 py-2 text-left transition hover:bg-[#F6F7FA]"
+                  >
+                    <span>
+                      <span className="block text-[12px] font-semibold text-[#202350]">{user.name || user.email}</span>
+                      <span className="block text-[11px] text-[#69729A]">{user.email}</span>
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9AA1B6]">{user.role}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          ) : null}
+        </div>
+        <p className="mt-2 text-[11px] text-[#69729A]">
+          Adding an email clears the audience. Select an audience again to send both.
+        </p>
       </div>
 
       <div>

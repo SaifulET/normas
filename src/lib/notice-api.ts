@@ -1,6 +1,6 @@
 import { apiRequest, type ApiSuccessResponse } from "./api";
 
-export type NoticeTargetType = "investor" | "investee" | "all";
+export type NoticeTargetType = "investor" | "investee" | "all" | "custom";
 export type NoticeStatus = "processing" | "published" | "partially_failed" | "archived";
 export type NoticeAudience = "investor" | "investee";
 
@@ -27,6 +27,9 @@ export type Notice = {
     role?: string;
   } | string | null;
   emailStats?: NoticeEmailStats;
+  customRecipients?: Array<{
+    email?: string;
+  }>;
   failedEmails?: Array<{
     _id?: string;
     attempts?: number;
@@ -115,6 +118,7 @@ export function getSuperadminNotice(noticeId: string) {
 }
 
 export function createSuperadminNotice(payload: {
+  customRecipientEmails?: string[];
   image?: File | null;
   message: string;
   targetType: NoticeTargetType;
@@ -124,6 +128,10 @@ export function createSuperadminNotice(payload: {
   formData.append("title", payload.title);
   formData.append("message", payload.message);
   formData.append("targetType", payload.targetType);
+
+  if (payload.customRecipientEmails?.length) {
+    formData.append("customRecipientEmails", JSON.stringify(payload.customRecipientEmails));
+  }
 
   if (payload.image) {
     formData.append("image", payload.image);
