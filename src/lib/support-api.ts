@@ -11,8 +11,17 @@ export type SupportRequestResponse = ApiSuccessResponse<unknown>;
 
 export type SupportStatus = "pending" | "dismissed" | "resolved" | string;
 
+export type ChatAttachment = {
+  key: string;
+  mimeType: string;
+  originalName: string;
+  size: number;
+  url: string;
+};
+
 export type SupportMessage = {
   _id: string;
+  attachments?: ChatAttachment[];
   message: string;
   messageStatus?: "sent" | "seen" | string;
   seenAt?: string | null;
@@ -110,9 +119,31 @@ export function getMySupportConversation(conversationId: string) {
   });
 }
 
-export function sendSupportMessage(conversationId: string, message: string) {
+export function uploadSupportAttachment(conversationId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest<ApiSuccessResponse<ChatAttachment>>({
+    data: formData,
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+    method: "POST",
+    url: `support/${conversationId}/attachments`,
+  });
+}
+
+export function deleteSupportAttachment(conversationId: string, key: string) {
+  return apiRequest<SupportConversationResponse>({
+    data: { key },
+    method: "DELETE",
+    url: `support/${conversationId}/attachments`,
+  });
+}
+
+export function sendSupportMessage(conversationId: string, message: string, attachments: ChatAttachment[] = []) {
   return apiRequest<SupportMessageResponse>({
-    data: { message },
+    data: { attachments, message },
     method: "POST",
     url: `support/${conversationId}/messages`,
   });

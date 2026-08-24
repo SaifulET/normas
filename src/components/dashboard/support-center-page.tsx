@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { getApiErrorMessage } from "@/lib/api";
 import {
+  deleteSupportAttachment,
   getMySupportConversation,
   getMySupportConversations,
   sendSupportMessage,
+  uploadSupportAttachment,
+  type ChatAttachment,
   type SupportConversation,
   type SupportMessage,
 } from "@/lib/support-api";
@@ -61,10 +64,75 @@ function getLastMessage(conversation: SupportConversation) {
   return conversation.messages?.[conversation.messages.length - 1] ?? null;
 }
 
+function getMessagePreview(message?: SupportMessage | null) {
+  if (!message) {
+    return "No messages yet.";
+  }
+
+  return message.message || message.attachments?.[0]?.originalName || "Attachment";
+}
+
 function getSenderLabel(message: SupportMessage) {
   return message.senderType === "superadmin"
     ? "Superadmin"
     : message.senderName || message.senderEmail || "You";
+}
+
+function formatFileSize(size?: number) {
+  if (!size) {
+    return "";
+  }
+
+  if (size < 1024 * 1024) {
+    return `${Math.max(1, Math.round(size / 1024))} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AttachmentList({
+  attachments = [],
+  canRemove = false,
+  onRemove,
+  tone = "light",
+}: {
+  attachments?: ChatAttachment[];
+  canRemove?: boolean;
+  onRemove?: (attachment: ChatAttachment) => void;
+  tone?: "dark" | "light";
+}) {
+  if (attachments.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 space-y-2">
+      {attachments.map((attachment) => (
+        <div
+          key={attachment.key}
+          className={`flex items-center justify-between gap-3 rounded-[8px] border px-3 py-2 text-xs ${
+            tone === "dark" ? "border-white/20 bg-white/10 text-white" : "border-[#DDE4EF] bg-white text-[#314B6B]"
+          }`}
+        >
+          <a href={attachment.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate font-semibold underline-offset-2 hover:underline">
+            {attachment.originalName}
+          </a>
+          <span className={tone === "dark" ? "text-white/70" : "text-[#8A91AB]"}>{formatFileSize(attachment.size)}</span>
+          {canRemove ? (
+            <button
+              type="button"
+              onClick={() => onRemove?.(attachment)}
+              className={`shrink-0 rounded-[6px] px-2 py-1 font-semibold ${
+                tone === "dark" ? "bg-white/10 text-white hover:bg-white/20" : "bg-[#F2F4F7] text-[#526079] hover:bg-[#E6EBF3]"
+              }`}
+            >
+              Remove
+            </button>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function DashboardSupportCenterPage() {
@@ -141,7 +209,7 @@ export function DashboardSupportCenterPage() {
               >
                 <div>
                   <p className="text-sm font-semibold text-[#1E2746]">{conversation.subject || "Support request"}</p>
-                  <p className="mt-1 line-clamp-1 text-xs text-[#667085]">{lastMessage?.message || "No messages yet."}</p>
+                  <p className="mt-1 line-clamp-1 text-xs text-[#667085]">{getMessagePreview(lastMessage)}</p>
                 </div>
                 <div>
                   <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusClassName(conversation.status)}`}>
@@ -163,7 +231,10 @@ export function DashboardSupportDetailPage({ conversationId }: { conversationId:
   const [draft, setDraft] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [pendingAttachments, setPendingAttachments] = useState<ChatAttachment[]>([]);
   const [saving, setSaving] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pathname = usePathname();
   const dashboardBase = getDashboardBase(pathname);
 
@@ -203,7 +274,7 @@ export function DashboardSupportDetailPage({ conversationId }: { conversationId:
   const handleReply = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!conversation?._id || !draft.trim() || saving) {
+    if (!conversation?._id || (!draft.trim() && pendingAttachments.length === 0) || saving) {
       return;
     }
 
@@ -211,13 +282,51 @@ export function DashboardSupportDetailPage({ conversationId }: { conversationId:
     setErrorMessage("");
 
     try {
-      const response = await sendSupportMessage(conversation._id, draft.trim());
+      const response = await sendSupportMessage(conversation._id, draft.trim(), pendingAttachments);
       setConversation(response.data.conversation ?? conversation);
       setDraft("");
+      setPendingAttachments([]);
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, "Unable to send support message."));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAttachmentSelect = async (file?: File) => {
+    if (!conversation?._id || !file || uploadingAttachment) {
+      return;
+    }
+
+    setUploadingAttachment(true);
+    setErrorMessage("");
+
+    try {
+      const response = await uploadSupportAttachment(conversation._id, file);
+      setPendingAttachments((current) => [...current, response.data]);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to upload attachment."));
+    } finally {
+      setUploadingAttachment(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveAttachment = async (attachment: ChatAttachment) => {
+    if (!conversation?._id) {
+      return;
+    }
+
+    setErrorMessage("");
+
+    try {
+      const response = await deleteSupportAttachment(conversation._id, attachment.key);
+      setPendingAttachments((current) => current.filter((item) => item.key !== attachment.key));
+      setConversation(response.data ?? conversation);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to remove attachment."));
     }
   };
 
@@ -272,7 +381,15 @@ export function DashboardSupportDetailPage({ conversationId }: { conversationId:
                       <p className={`text-xs font-semibold ${outgoing ? "text-white/80" : "text-[#667085]"}`}>
                         {outgoing ? "You" : getSenderLabel(message)}
                       </p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{message.message}</p>
+                      {message.message ? <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{message.message}</p> : null}
+                      <AttachmentList
+                        attachments={message.attachments}
+                        canRemove={outgoing}
+                        onRemove={(attachment) => {
+                          void handleRemoveAttachment(attachment);
+                        }}
+                        tone={outgoing ? "dark" : "light"}
+                      />
                       <p className={`mt-2 text-xs ${outgoing ? "text-white/70" : "text-[#98A2B3]"}`}>
                         {formatTime(message.sentAt)}
                       </p>
@@ -294,9 +411,34 @@ export function DashboardSupportDetailPage({ conversationId }: { conversationId:
                 className="w-full resize-none border-0 bg-transparent px-2 py-2 text-sm text-[#1E2746] outline-none placeholder:text-[#98A2B3]"
               />
               <div className="flex justify-end">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(event) => {
+                    void handleAttachmentSelect(event.target.files?.[0]);
+                  }}
+                />
+                <AttachmentList
+                  attachments={pendingAttachments}
+                  canRemove
+                  onRemove={(attachment) => {
+                    void handleRemoveAttachment(attachment);
+                  }}
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAttachment || saving}
+                  className="inline-flex h-9 items-center justify-center rounded-[8px] border border-[#D7DFEA] px-3 text-sm font-semibold text-[#314B6B] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {uploadingAttachment ? "Uploading..." : "Attach file"}
+                </button>
                 <button
                   type="submit"
-                  disabled={saving || !draft.trim()}
+                  disabled={saving || (!draft.trim() && pendingAttachments.length === 0)}
                   className="inline-flex h-9 items-center justify-center rounded-[8px] bg-[#314B6B] px-4 text-sm font-semibold text-white transition hover:bg-[#243B5A] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving ? "Sending..." : "Send"}

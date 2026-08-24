@@ -40,8 +40,17 @@ export type ConversationListInfo = {
   title?: string;
 };
 
+export type ChatAttachment = {
+  key: string;
+  mimeType: string;
+  originalName: string;
+  size: number;
+  url: string;
+};
+
 export type ConversationMessage = {
   _id: string;
+  attachments?: ChatAttachment[];
   author?: ConversationSeenByEntry;
   authorId?: string;
   authorRole?: string;
@@ -238,9 +247,31 @@ export function markConversationSeen(conversationId: string) {
   });
 }
 
-export function sendConversationMessage(conversationId: string, message: string) {
+export function uploadConversationAttachment(conversationId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest<ConversationEnvelope<ChatAttachment>>({
+    data: formData,
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+    method: "POST",
+    url: `investment-conversations/${conversationId}/attachments`,
+  });
+}
+
+export function deleteConversationAttachment(conversationId: string, key: string) {
+  return apiRequest<ConversationEnvelope<InvestmentConversation>>({
+    data: { key },
+    method: "DELETE",
+    url: `investment-conversations/${conversationId}/attachments`,
+  });
+}
+
+export function sendConversationMessage(conversationId: string, message: string, attachments: ChatAttachment[] = []) {
   return apiRequest<ConversationEnvelope<SendMessageData>>({
-    data: { message },
+    data: { attachments, message },
     method: "POST",
     url: `investment-conversations/${conversationId}/messages`,
   });

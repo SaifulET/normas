@@ -7,11 +7,14 @@ import { getApiErrorMessage } from "@/lib/api";
 import { getStoredAccessToken, getStoredAuthState } from "@/lib/auth-storage";
 import {
   createOrGetInvestmentConversation,
+  deleteConversationAttachment,
   getConversationMessages,
   getConversationSidebar,
   getInvestmentConversation,
   markConversationSeen,
   sendConversationMessage,
+  uploadConversationAttachment,
+  type ChatAttachment,
   type ConversationMessage,
   type ConversationMessagePagination,
   type ConversationSeenByEntry,
@@ -192,6 +195,54 @@ function formatMessageTime(value?: string) {
   }).format(date);
 }
 
+function formatAttachmentSize(size?: number) {
+  if (!size) {
+    return "";
+  }
+
+  if (size < 1024 * 1024) {
+    return `${Math.max(1, Math.round(size / 1024))} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function MessageAttachmentList({
+  attachments = [],
+  canRemove = false,
+  onRemove,
+}: {
+  attachments?: ChatAttachment[];
+  canRemove?: boolean;
+  onRemove?: (attachment: ChatAttachment) => void;
+}) {
+  if (attachments.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2">
+      {attachments.map((attachment) => (
+        <div key={attachment.key} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-[#D7DFEA] bg-white px-3 py-2 text-xs text-[#314B6B]">
+          <a href={attachment.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate font-semibold underline-offset-2 hover:underline">
+            {attachment.originalName}
+          </a>
+          <span className="shrink-0 text-[#777777]">{formatAttachmentSize(attachment.size)}</span>
+          {canRemove ? (
+            <button
+              type="button"
+              onClick={() => onRemove?.(attachment)}
+              className="shrink-0 rounded-lg bg-[#F3F4F6] px-2 py-1 font-semibold text-[#526079] transition hover:bg-[#E6EBF3]"
+            >
+              Remove
+            </button>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function getConversationTitle(conversation?: InvestmentConversation | SidebarConversation | null) {
   if (!conversation) {
     return "Investment conversation";
@@ -215,7 +266,12 @@ function getConversationListId(conversation?: InvestmentConversation | SidebarCo
 }
 
 function getMessagePreview(conversation: SidebarConversation) {
-  return conversation.lastIncomingMessagePreview || conversation.lastIncomingMessage?.message || "No messages yet.";
+  return (
+    conversation.lastIncomingMessagePreview ||
+    conversation.lastIncomingMessage?.message ||
+    conversation.lastIncomingMessage?.attachments?.[0]?.originalName ||
+    "No messages yet."
+  );
 }
 
 function formatFundingTarget(value?: number) {
@@ -938,9 +994,11 @@ export function MessagesPage() {
   const [pagination, setPagination] = useState<ConversationMessagePagination | null>(null);
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [draft, setDraft] = useState("");
+  const [pendingAttachments, setPendingAttachments] = useState<ChatAttachment[]>([]);
   const [loadingInbox, setLoadingInbox] = useState(true);
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [sending, setSending] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [error, setError] = useState("");
   const [conversationSchedules, setConversationSchedules] = useState<Schedule[]>([]);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -968,6 +1026,7 @@ export function MessagesPage() {
   const localOutgoingMessageIdsRef = useRef<Set<string>>(new Set());
   const pendingOutgoingMessagesRef = useRef<PendingOutgoingMessage[]>([]);
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const readReceiptIdsRef = useRef<Set<string>>(new Set());
   const markSeenInFlightRef = useRef<Set<string>>(new Set());
   const lastMarkSeenAtRef = useRef<Record<string, number>>({});
@@ -1474,8 +1533,8 @@ export function MessagesPage() {
     }
   }
 
-  async function sendMessageWithHttpFallback(message: string) {
-    const response = await sendConversationMessage(selectedId, message);
+  async function sendMessageWithHttpFallback(message: string, attachments: ChatAttachment[]) {
+    const response = await sendConversationMessage(selectedId, message, attachments);
     const sentMessage = response.data?.message
       ? {
           ...normalizeSocketMessage(response.data.message, currentUserIdRef.current, otherUserIdRef.current, "outgoing"),
@@ -1493,14 +1552,16 @@ export function MessagesPage() {
     }
 
     setDraft("");
+    setPendingAttachments([]);
     void loadInbox(selectedId, { silent: true });
   }
 
   async function handleSend() {
     const message = draft.trim();
+    const attachmentsToSend = [...pendingAttachments];
     const socket = socketRef.current;
 
-    if (!selectedId || !message || sending) {
+    if (!selectedId || (!message && attachmentsToSend.length === 0) || sending) {
       return;
     }
 
@@ -1513,7 +1574,7 @@ export function MessagesPage() {
 
     if (!socket?.connected) {
       try {
-        await sendMessageWithHttpFallback(message);
+        await sendMessageWithHttpFallback(message, attachmentsToSend);
       } catch (sendError) {
         setError(getApiErrorMessage(sendError, "Unable to send message. Please try again."));
       } finally {
@@ -1531,7 +1592,7 @@ export function MessagesPage() {
 
       acknowledged = true;
 
-      void sendMessageWithHttpFallback(message)
+      void sendMessageWithHttpFallback(message, attachmentsToSend)
         .catch((sendError) => {
           setError(getApiErrorMessage(sendError, "Message send timed out. Please try again."));
         })
@@ -1543,6 +1604,7 @@ export function MessagesPage() {
     socket.emit(
       INVESTMENT_SOCKET_EVENTS.sendMessage,
       {
+        attachments: attachmentsToSend,
         conversationId: selectedId,
         message,
       },
@@ -1577,10 +1639,56 @@ export function MessagesPage() {
         }
 
         setDraft("");
+        setPendingAttachments([]);
         setSending(false);
         void loadInbox(selectedId, { silent: true });
       }
     );
+  }
+
+  async function handleAttachmentSelect(file?: File) {
+    if (!selectedId || !file || uploadingAttachment) {
+      return;
+    }
+
+    setUploadingAttachment(true);
+    setError("");
+
+    try {
+      const response = await uploadConversationAttachment(selectedId, file);
+      const attachment = response.data;
+
+      if (attachment) {
+        setPendingAttachments((current) => [...current, attachment]);
+      }
+    } catch (uploadError) {
+      setError(getApiErrorMessage(uploadError, "Unable to upload attachment."));
+    } finally {
+      setUploadingAttachment(false);
+      if (attachmentInputRef.current) {
+        attachmentInputRef.current.value = "";
+      }
+    }
+  }
+
+  async function handleRemoveAttachment(attachment: ChatAttachment) {
+    if (!selectedId) {
+      return;
+    }
+
+    setError("");
+
+    try {
+      const response = await deleteConversationAttachment(selectedId, attachment.key);
+      setPendingAttachments((current) => current.filter((item) => item.key !== attachment.key));
+
+      if (response.data) {
+        setSelectedConversation(response.data);
+        setMessages(response.data.messages ?? messages);
+      }
+    } catch (deleteError) {
+      setError(getApiErrorMessage(deleteError, "Unable to remove attachment."));
+    }
   }
 
   function openScheduleModal() {
@@ -1947,9 +2055,18 @@ export function MessagesPage() {
                                   You
                                 </p>
                               ) : null}
-                              <p className="max-w-full whitespace-pre-wrap break-all font-sans text-base font-normal leading-6 text-[#111111] [overflow-wrap:anywhere]">
-                                {message.message}
-                              </p>
+                              {message.message ? (
+                                <p className="max-w-full whitespace-pre-wrap break-all font-sans text-base font-normal leading-6 text-[#111111] [overflow-wrap:anywhere]">
+                                  {message.message}
+                                </p>
+                              ) : null}
+                              <MessageAttachmentList
+                                attachments={message.attachments}
+                                canRemove={outgoing}
+                                onRemove={(attachment) => {
+                                  void handleRemoveAttachment(attachment);
+                                }}
+                              />
                               {isRestricted ? (
                                 <div className="rounded-[10px] border border-[#F7C98B] bg-[#FFF7ED] px-3 py-2 text-xs font-medium leading-5 text-[#9A4B00]">
                                   {outgoing
@@ -1984,7 +2101,7 @@ export function MessagesPage() {
                 </div>
 
                 <div className="sticky bottom-0 z-10 flex min-h-[160px] shrink-0 items-center justify-center border-t border-[#EEF2F7] bg-white px-4 py-4 sm:px-6">
-                  <div className="flex h-[132px] w-full flex-col rounded-2xl border border-[#9CA3AF] bg-white p-2">
+                  <div className="flex min-h-[132px] w-full flex-col rounded-2xl border border-[#9CA3AF] bg-white p-2">
                     <textarea
                       value={draft}
                       onChange={(event) => setDraft(event.target.value)}
@@ -1996,17 +2113,44 @@ export function MessagesPage() {
                       placeholder="Type here..."
                       className="min-h-0 flex-1 resize-none rounded-2xl border-0 bg-transparent px-4 py-2 font-[family-name:var(--font-manrope)] text-base leading-[120%] tracking-normal text-[#16123E] outline-none placeholder:text-[#6B7280]"
                     />
+                    <input
+                      ref={attachmentInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={(event) => {
+                        void handleAttachmentSelect(event.target.files?.[0]);
+                      }}
+                    />
+                    <div className="px-2">
+                      <MessageAttachmentList
+                        attachments={pendingAttachments}
+                        canRemove
+                        onRemove={(attachment) => {
+                          void handleRemoveAttachment(attachment);
+                        }}
+                      />
+                    </div>
                     <div className="flex h-10 items-center justify-between gap-5 px-2 pb-2">
-                      {canCreateSchedules ? (
+                      <div className="flex items-center gap-2">
+                        {canCreateSchedules ? (
+                          <button
+                            type="button"
+                            onClick={openScheduleModal}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[#213448] transition hover:bg-[#F3F4F6]"
+                            aria-label="Open schedule"
+                          >
+                            <DashboardIcon name="calendar" className="h-6 w-6" />
+                          </button>
+                        ) : null}
                         <button
                           type="button"
-                          onClick={openScheduleModal}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[#213448] transition hover:bg-[#F3F4F6]"
-                          aria-label="Open schedule"
+                          onClick={() => attachmentInputRef.current?.click()}
+                          disabled={uploadingAttachment || sending}
+                          className="inline-flex h-10 items-center justify-center rounded-lg px-3 font-sans text-sm font-medium text-[#213448] transition hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          <DashboardIcon name="calendar" className="h-6 w-6" />
+                          {uploadingAttachment ? "Uploading..." : "Attach file"}
                         </button>
-                      ) : null}
+                      </div>
 
                       <div className="flex items-center gap-5">
                         {viewerRole !== "superadmin" ? (
@@ -2022,7 +2166,7 @@ export function MessagesPage() {
                           onClick={() => {
                             void handleSend();
                           }}
-                          disabled={sending || !draft.trim()}
+                          disabled={sending || (!draft.trim() && pendingAttachments.length === 0)}
                           className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg bg-[#2B425D] px-4 font-sans text-sm font-medium leading-[22px] text-[#F9FAFB] transition hover:bg-[#213448] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {sending ? "Sending..." : "Send"}
