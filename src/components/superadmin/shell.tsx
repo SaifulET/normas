@@ -63,6 +63,10 @@ function SuperadminIcon({
       return (
        <HugeiconsIcon icon={Note01Icon} className="w-[24px] h-[24px]" />
       );
+    case "blog":
+      return (
+       <HugeiconsIcon icon={Note01Icon} className="w-[24px] h-[24px]" />
+      );
     case "reports":
       return (
        <HugeiconsIcon icon={Flag02Icon} className="w-[24px] h-[24px]" />

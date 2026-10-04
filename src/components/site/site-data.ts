@@ -5,6 +5,7 @@ const siteNavItems: LinkItem[] = [
   { label: "Search", href: "/search" },
   { label: "About", href: "/about" },
   { label: "Pricing", href: "/pricing" },
+  { label: "Blog", href: "/blog" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -27,12 +28,14 @@ export const siteFooterLinkGroups: FooterLinkGroup[] = [
       { label: "How it Works", href: "/#how-it-works" },
       { label: "Listings", href: "/search" },
       { label: "Pricing", href: "/pricing" },
+      { label: "Blog", href: "/blog" },
     ],
   },
   {
     title: "Company",
     links: [
       { label: "About", href: "/about" },
+      { label: "Blog", href: "/blog" },
       { label: "Contact", href: "/contact" },
     ],
   },
