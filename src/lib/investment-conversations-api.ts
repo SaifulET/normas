@@ -269,6 +269,13 @@ export function deleteConversationAttachment(conversationId: string, key: string
   });
 }
 
+export function deleteInvestmentConversation(conversationId: string) {
+  return apiRequest<ConversationEnvelope<{ id?: string; message?: string }>>({
+    method: "DELETE",
+    url: `investment-conversations/${conversationId}`,
+  });
+}
+
 export function sendConversationMessage(conversationId: string, message: string, attachments: ChatAttachment[] = []) {
   return apiRequest<ConversationEnvelope<SendMessageData>>({
     data: { attachments, message },

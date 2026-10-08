@@ -8,7 +8,8 @@ import {
   sitePrimaryCta,
   siteSocialLinks,
 } from "@/components/site/site-data";
-import { getBlog, getBlogs, type Blog } from "@/lib/blog-api";
+import { getBlogs, type Blog } from "@/lib/blog-api";
+import { BlogShareButtons } from "./blog-share-buttons";
 
 function sanitizeBlogHtml(html: string) {
   return html
@@ -103,10 +104,7 @@ export async function BlogListPage() {
   );
 }
 
-export async function BlogDetailPage({ slug }: { slug: string }) {
-  const response = await getBlog(slug);
-  const blog = response.data;
-
+export function BlogDetailPage({ blog }: { blog: Blog }) {
   return (
     <main className="min-h-screen bg-white text-[#243041]">
       <section className="bg-white px-4 py-6 sm:px-6 lg:px-[32px]">
@@ -133,6 +131,8 @@ export async function BlogDetailPage({ slug }: { slug: string }) {
             <img src={blog.coverImage.url} alt="" className="aspect-[16/8] w-full rounded-[8px] object-cover" />
           </div>
         ) : null}
+
+        <BlogShareButtons slug={blog.slug} title={blog.title} />
 
         <section className="px-4 py-12 sm:px-6 lg:px-[147px]">
           <div

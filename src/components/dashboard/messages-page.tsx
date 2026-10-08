@@ -8,6 +8,7 @@ import { getStoredAccessToken, getStoredAuthState } from "@/lib/auth-storage";
 import {
   createOrGetInvestmentConversation,
   deleteConversationAttachment,
+  deleteInvestmentConversation,
   getConversationMessages,
   getConversationSidebar,
   getInvestmentConversation,
@@ -999,6 +1000,7 @@ export function MessagesPage() {
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [sending, setSending] = useState(false);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [deletingConversation, setDeletingConversation] = useState(false);
   const [error, setError] = useState("");
   const [conversationSchedules, setConversationSchedules] = useState<Schedule[]>([]);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -1058,6 +1060,7 @@ export function MessagesPage() {
   const activeFundingTarget = formatFundingTarget(visibleActiveList?.fundingTarget);
   const viewerRole = normalizeParticipantRole(currentUser.role) || (pathname.startsWith("/superadmin") ? "superadmin" : "");
   const canCreateSchedules = viewerRole === "superadmin";
+  const canDeleteConversation = viewerRole === "superadmin";
   const timelineItems = useMemo(
     () => buildTimelineItems(messages, conversationSchedules),
     [conversationSchedules, messages],
@@ -1691,6 +1694,34 @@ export function MessagesPage() {
     }
   }
 
+  async function handleDeleteConversation() {
+    if (!selectedId || deletingConversation) {
+      return;
+    }
+
+    if (!window.confirm("Delete this conversation? This action cannot be undone.")) {
+      return;
+    }
+
+    const conversationId = selectedId;
+    setDeletingConversation(true);
+    setError("");
+
+    try {
+      await deleteInvestmentConversation(conversationId);
+      setConversations((current) => current.filter((conversation) => conversation.conversationId !== conversationId));
+      setSelectedId("");
+      setSelectedConversation(null);
+      setMessages([]);
+      setPagination(null);
+      setConversationSchedules([]);
+    } catch (deleteError) {
+      setError(getApiErrorMessage(deleteError, "Unable to delete conversation."));
+    } finally {
+      setDeletingConversation(false);
+    }
+  }
+
   function openScheduleModal() {
     setScheduleForm(createDefaultScheduleForm(activeTitle));
     setScheduleMessage("");
@@ -1952,9 +1983,23 @@ export function MessagesPage() {
 
                   </div>
 
-                  <div className="inline-flex h-8 shrink-0 items-center gap-2 rounded-full border border-[#E7ECF3] bg-[#F8FAFC] px-4 font-sans text-xs text-[#6B7280]">
-                    <DashboardIcon name="spark" className="h-4 w-4 text-[#ED6A06]" />
-                    {socketConnected ? "Live conversation" : "Connecting live chat"}
+                  <div className="flex shrink-0 items-center gap-2">
+                    {canDeleteConversation ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleDeleteConversation();
+                        }}
+                        disabled={deletingConversation}
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-[#F4C7C7] bg-white px-3 font-sans text-xs font-semibold text-[#B42318] transition hover:bg-[#FFF5F5] disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {deletingConversation ? "Deleting..." : "Delete"}
+                      </button>
+                    ) : null}
+                    <div className="inline-flex h-8 items-center gap-2 rounded-full border border-[#E7ECF3] bg-[#F8FAFC] px-4 font-sans text-xs text-[#6B7280]">
+                      <DashboardIcon name="spark" className="h-4 w-4 text-[#ED6A06]" />
+                      {socketConnected ? "Live conversation" : "Connecting live chat"}
+                    </div>
                   </div>
                 </div>
 

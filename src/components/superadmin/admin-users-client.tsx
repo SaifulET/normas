@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  deleteAdminUser,
+  deleteAdminUsers,
   getAdminUsers,
   updateAdminUserAccountStatus,
   type AdminAccountStatus,
@@ -14,7 +16,7 @@ import { getApiErrorMessage } from "@/lib/api";
 import { SuperadminAvatar, SuperadminStatusBadge } from "./shell";
 import { SuperadminUserActionMenu } from "./user-action-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon, UserGroup03Icon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, Search01Icon, UserGroup03Icon } from "@hugeicons/core-free-icons";
 
 const PAGE_LIMIT = 8;
 const STATUS_OPTIONS: AdminAccountStatus[] = ["pending", "active", "inactive"];
@@ -105,6 +107,44 @@ export function SuperadminUserManagementClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUserSummary | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const loadUsers = useCallback(async (targetPage: number, options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setLoading(true);
+    }
+
+    setError("");
+
+    try {
+      const response = await getAdminUsers({
+        accountStatus,
+        limit: PAGE_LIMIT,
+        page: targetPage,
+        role,
+        search: debouncedSearch || undefined,
+      });
+
+      setUsers(response.data.users ?? []);
+      setPagination(response.data.pagination ?? {
+        limit: PAGE_LIMIT,
+        page: targetPage,
+        total: response.data.users?.length ?? 0,
+        totalPages: 1,
+      });
+    } catch (caughtError) {
+      setError(getApiErrorMessage(caughtError, "Unable to fetch admin users"));
+      setUsers([]);
+    } finally {
+      if (!options.silent) {
+        setLoading(false);
+      }
+    }
+  }, [accountStatus, debouncedSearch, role]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -118,7 +158,7 @@ export function SuperadminUserManagementClient() {
   useEffect(() => {
     let active = true;
 
-    async function loadUsers() {
+    async function loadActiveUsers() {
       setLoading(true);
       setError("");
 
@@ -151,7 +191,7 @@ export function SuperadminUserManagementClient() {
       }
     }
 
-    void loadUsers();
+    void loadActiveUsers();
 
     return () => {
       active = false;
@@ -161,6 +201,44 @@ export function SuperadminUserManagementClient() {
   const totalLabel = useMemo(() => pagination.total.toLocaleString(), [pagination.total]);
   const pageStart = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
   const pageEnd = Math.min(pagination.page * pagination.limit, pagination.total);
+  const selectedUserIdSet = useMemo(() => new Set(selectedUserIds), [selectedUserIds]);
+  const selectedCount = selectedUserIds.length;
+  const visibleUserIds = useMemo(() => users.map((user) => user.id), [users]);
+  const visibleSelectedCount = visibleUserIds.filter((userId) => selectedUserIdSet.has(userId)).length;
+  const allVisibleSelected = visibleUserIds.length > 0 && visibleSelectedCount === visibleUserIds.length;
+  const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
+
+  async function refreshAfterDelete(deletedCount: number) {
+    const nextTotal = Math.max(0, pagination.total - deletedCount);
+    const nextTotalPages = Math.max(1, Math.ceil(nextTotal / PAGE_LIMIT));
+    const nextPage = Math.min(page, nextTotalPages);
+
+    if (nextPage !== page) {
+      setPage(nextPage);
+    } else {
+      await loadUsers(nextPage, { silent: true });
+    }
+  }
+
+  function toggleUserSelection(userId: string) {
+    setSelectedUserIds((current) =>
+      current.includes(userId) ? current.filter((selectedId) => selectedId !== userId) : [...current, userId],
+    );
+  }
+
+  function toggleVisibleSelection() {
+    setSelectedUserIds((current) => {
+      const currentSet = new Set(current);
+
+      if (allVisibleSelected) {
+        visibleUserIds.forEach((userId) => currentSet.delete(userId));
+      } else {
+        visibleUserIds.forEach((userId) => currentSet.add(userId));
+      }
+
+      return [...currentSet];
+    });
+  }
 
   async function handleStatusChange(user: AdminUserSummary, nextStatus: AdminAccountStatus) {
     if (user.accountStatus === nextStatus) return;
@@ -177,6 +255,48 @@ export function SuperadminUserManagementClient() {
       setError(getApiErrorMessage(caughtError, "Unable to update account status"));
     } finally {
       setUpdatingUserId(null);
+    }
+  }
+
+  async function handleDeleteUser() {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setDeletingUserId(deleteTarget.id);
+    setError("");
+
+    try {
+      await deleteAdminUser(deleteTarget.id);
+      setSelectedUserIds((current) => current.filter((userId) => userId !== deleteTarget.id));
+      setDeleteTarget(null);
+      await refreshAfterDelete(1);
+    } catch (caughtError) {
+      setError(getApiErrorMessage(caughtError, "Unable to delete user"));
+    } finally {
+      setDeletingUserId(null);
+    }
+  }
+
+  async function handleBulkDeleteUsers() {
+    if (selectedUserIds.length === 0) {
+      return;
+    }
+
+    setBulkDeleting(true);
+    setError("");
+
+    try {
+      const response = await deleteAdminUsers(selectedUserIds);
+      const deletedCount = response.data.deletedCount || selectedUserIds.length;
+
+      setSelectedUserIds([]);
+      setBulkDeleteOpen(false);
+      await refreshAfterDelete(deletedCount);
+    } catch (caughtError) {
+      setError(getApiErrorMessage(caughtError, "Unable to delete selected users"));
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -240,9 +360,48 @@ export function SuperadminUserManagementClient() {
         </div>
       ) : null}
 
+      {selectedCount > 0 ? (
+        <div className="flex flex-col gap-3 rounded-[12px] border border-[#F4C7C7] bg-[#FFF9F9] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[13px] font-medium text-[#202350]">
+            {selectedCount} user{selectedCount === 1 ? "" : "s"} marked
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedUserIds([])}
+              className="inline-flex h-8 items-center justify-center rounded-[8px] border border-[#DDE2EC] bg-white px-3 text-[12px] font-semibold text-[#4A5271] transition hover:bg-[#F7F8FC]"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={() => setBulkDeleteOpen(true)}
+              className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] bg-[#B42318] px-3 text-[12px] font-semibold text-white transition hover:bg-[#991B1B]"
+            >
+              <HugeiconsIcon icon={Delete02Icon} className="h-4 w-4" />
+              Delete marked
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <section className="overflow-hidden rounded-[14px] border border-[#E6E9F0] bg-white">
         <div className="overflow-x-auto">
-          <div className="grid min-w-[840px] grid-cols-[2fr_1fr_1fr_1.2fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
+          <div className="grid min-w-[960px] grid-cols-[36px_2fr_1fr_1fr_1.2fr_96px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
+            <label className="flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                ref={(input) => {
+                  if (input) {
+                    input.indeterminate = someVisibleSelected;
+                  }
+                }}
+                onChange={toggleVisibleSelection}
+                className="h-4 w-4 rounded border-[#CBD5E1] accent-[#B42318]"
+                aria-label="Mark all visible users"
+              />
+            </label>
             <p>Name</p>
             <p>Account Type</p>
             <p>Joining Date</p>
@@ -261,8 +420,20 @@ export function SuperadminUserManagementClient() {
               return (
                 <div
                   key={user.id}
-                  className="grid min-w-[840px] grid-cols-[2fr_1fr_1fr_1.2fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
+                  className={cx(
+                    "grid min-w-[960px] grid-cols-[36px_2fr_1fr_1fr_1.2fr_96px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0",
+                    selectedUserIdSet.has(user.id) && "bg-[#FFF9F9]",
+                  )}
                 >
+                  <label className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedUserIdSet.has(user.id)}
+                      onChange={() => toggleUserSelection(user.id)}
+                      className="h-4 w-4 rounded border-[#CBD5E1] accent-[#B42318]"
+                      aria-label={`Mark ${user.name || user.email || "user"}`}
+                    />
+                  </label>
                   <Link href={`/superadmin/dashboard/user-management/${user.id}`} className="flex min-w-0 items-center gap-3">
                     <SuperadminAvatar
                       from={avatarFrom}
@@ -286,7 +457,17 @@ export function SuperadminUserManagementClient() {
                       onChange={(status) => void handleStatusChange(user, status)}
                     />
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(user)}
+                      disabled={deletingUserId === user.id}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#F4C7C7] bg-white text-[#B42318] transition hover:bg-[#FFF5F5] disabled:cursor-wait disabled:opacity-60"
+                      aria-label={`Delete ${user.name || user.email || "user"}`}
+                      title="Delete user"
+                    >
+                      <HugeiconsIcon icon={Delete02Icon} className="h-4 w-4" />
+                    </button>
                     <SuperadminUserActionMenu slug={user.id} />
                   </div>
                 </div>
@@ -328,6 +509,67 @@ export function SuperadminUserManagementClient() {
           </div>
         </div>
       </section>
+
+      {deleteTarget || bulkDeleteOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/35 p-4"
+          onClick={() => {
+            if (!deletingUserId && !bulkDeleting) {
+              setDeleteTarget(null);
+              setBulkDeleteOpen(false);
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-[360px] rounded-[14px] border border-[#E6E9F0] bg-white p-5 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#FFF5F5] text-[#B42318]">
+                <HugeiconsIcon icon={Delete02Icon} className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-[15px] font-semibold text-[#202350]">
+                  {bulkDeleteOpen ? "Delete marked users?" : "Delete user?"}
+                </h2>
+                <p className="mt-1 text-[12px] leading-5 text-[#69729A]">
+                  {bulkDeleteOpen
+                    ? `${selectedCount} marked user${selectedCount === 1 ? "" : "s"} will be removed from user management.`
+                    : `${deleteTarget?.name || deleteTarget?.email || "This user"} will be removed from user management.`}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setBulkDeleteOpen(false);
+                }}
+                disabled={Boolean(deletingUserId) || bulkDeleting}
+                className="inline-flex h-9 items-center justify-center rounded-[8px] border border-[#DDE2EC] bg-white px-4 text-[12px] font-semibold text-[#4A5271] transition hover:bg-[#F7F8FC] disabled:cursor-wait disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (bulkDeleteOpen) {
+                    void handleBulkDeleteUsers();
+                  } else {
+                    void handleDeleteUser();
+                  }
+                }}
+                disabled={Boolean(deletingUserId) || bulkDeleting}
+                className="inline-flex h-9 items-center justify-center rounded-[8px] bg-[#B42318] px-4 text-[12px] font-semibold text-white transition hover:bg-[#991B1B] disabled:cursor-wait disabled:opacity-60"
+              >
+                {deletingUserId || bulkDeleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

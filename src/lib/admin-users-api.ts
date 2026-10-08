@@ -188,3 +188,18 @@ export function updateAdminUserAccountStatus(userId: string, accountStatus: Admi
     url: `admin/users/${userId}/status`,
   });
 }
+
+export function deleteAdminUser(userId: string) {
+  return apiRequest<ApiSuccessResponse<{ id?: string; message?: string }>>({
+    method: "DELETE",
+    url: `admin/users/${userId}`,
+  });
+}
+
+export function deleteAdminUsers(userIds: string[]) {
+  return apiRequest<ApiSuccessResponse<{ deletedCount?: number; ids?: string[]; message?: string }>>({
+    data: { userIds },
+    method: "DELETE",
+    url: "admin/users/bulk",
+  });
+}
