@@ -11,18 +11,18 @@ import { clearStoredUserSession } from "@/lib/auth-storage";
 import {
   forgotPassword,
   getAuthSessionFromResponse,
-  getAuthUserFromResponse,
+  requestSuperadminSignup,
   resendPasswordOtp,
   setNewPassword,
   signinUser,
-  signupUser,
+  verifySuperadminSignup,
   verifyPasswordOtp,
 } from "@/lib/auth-api";
 import { useAuthStore } from "@/store";
 import { setSuperadminLoginSession } from "./auth-actions";
 
 const SUPERADMIN_PASSWORD_RESET_EMAIL_STORAGE_KEY = "earlyn_superadmin_password_reset_email";
-const SUPERADMIN_SIGNUP_EMAIL = "saifulislam3412883@gmail.com";
+const SUPERADMIN_APPROVAL_EMAIL = "info@earlyn.com";
 
 function getStoredSuperadminPasswordResetEmail() {
   if (typeof window === "undefined") {
@@ -565,12 +565,44 @@ export function SuperadminSignupPage() {
   const router = useRouter();
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const setAuth = useAuthStore((state) => state.setAuth);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [otp, setOtp] = useState(["", "", "", ""]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const inputRefs = [
+    useRef<HTMLInputElement | null>(null),
+    useRef<HTMLInputElement | null>(null),
+    useRef<HTMLInputElement | null>(null),
+    useRef<HTMLInputElement | null>(null),
+  ];
+
+  const updateOtpValue = (index: number, rawValue: string) => {
+    const nextCharacter = rawValue.slice(-1);
+    const nextValue = /^[0-9]$/.test(nextCharacter) ? nextCharacter : "";
+
+    setOtp((current) => current.map((item, currentIndex) => (currentIndex === index ? nextValue : item)));
+
+    if (nextValue && index < inputRefs.length - 1) {
+      inputRefs[index + 1].current?.focus();
+    }
+  };
+
+  const pasteOtpValue = (rawValue: string) => {
+    const nextOtp = rawValue.replace(/\D/g, "").slice(0, 4).split("");
+
+    if (!nextOtp.length) {
+      return;
+    }
+
+    setOtp((current) => current.map((item, index) => nextOtp[index] ?? item));
+    inputRefs[Math.min(nextOtp.length, inputRefs.length) - 1]?.current?.focus();
+  };
 
   const handleSignup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage("");
+    setSuccessMessage("");
     setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
@@ -578,25 +610,42 @@ export function SuperadminSignupPage() {
     const password = String(formData.get("password") ?? "");
 
     try {
-      if (email !== SUPERADMIN_SIGNUP_EMAIL) {
-        throw new Error("Superadmin signup is restricted to the authorized admin email.");
-      }
-
-      const response = await signupUser({
+      await requestSuperadminSignup({
         email,
         name: String(formData.get("name") ?? ""),
         password,
-        role: "superadmin",
       });
-      let authSession = getAuthSessionFromResponse(response);
-      const signupAuthUser = getAuthUserFromResponse(response);
 
-      await clearStoredUserSession();
+      setPendingEmail(email);
+      setOtp(["", "", "", ""]);
+      setSuccessMessage(`Verification code sent to ${SUPERADMIN_APPROVAL_EMAIL}.`);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to send verification code. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-      if (!authSession) {
-        const signinResponse = await signinUser({ email, password });
-        authSession = getAuthSessionFromResponse(signinResponse, signupAuthUser);
+  const handleVerifySignup = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsSubmitting(true);
+
+    try {
+      const code = otp.join("");
+
+      if (!pendingEmail) {
+        throw new Error("Please start superadmin signup first.");
       }
+
+      if (!/^\d{4}$/.test(code)) {
+        throw new Error("Enter the 4 digit verification code.");
+      }
+
+      const response = await verifySuperadminSignup({ email: pendingEmail, otp: code });
+      const authSession = getAuthSessionFromResponse(response);
+      await clearStoredUserSession();
 
       if (!authSession) {
         clearAuth();
@@ -613,26 +662,75 @@ export function SuperadminSignupPage() {
       router.push("/superadmin/dashboard/user-management");
       router.refresh();
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, "Unable to create your account. Please try again."));
+      setErrorMessage(getApiErrorMessage(error, "Unable to verify signup. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (pendingEmail) {
+    return (
+      <AuthShell>
+        <AuthCard>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#7D84A0]">Superadmin Auth</p>
+          <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.04em] text-[#1F2340]">Verify Signup</h2>
+          <p className="mt-2 text-sm text-[#6F768B]">
+            Enter the 4 digit code sent to {SUPERADMIN_APPROVAL_EMAIL} to approve {pendingEmail}.
+          </p>
+
+          <form onSubmit={handleVerifySignup} className="mt-8">
+            <div className="flex items-center justify-center gap-3">
+              {otp.map((value, index) => (
+                <SuperadminOtpBox
+                  key={index}
+                  inputRef={inputRefs[index]}
+                  value={value}
+                  onChange={(nextValue) => updateOtpValue(index, nextValue)}
+                  onPaste={pasteOtpValue}
+                />
+              ))}
+            </div>
+
+            <div className="pt-4">
+              {successMessage ? <p className="mb-3 text-sm font-medium text-green-700">{successMessage}</p> : null}
+              {errorMessage ? <p className="mb-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
+              <SubmitButton idleLabel="Verify & Signup" isPending={isSubmitting} pendingLabel="Verifying..." />
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingEmail("");
+                  setOtp(["", "", "", ""]);
+                  setErrorMessage("");
+                  setSuccessMessage("");
+                }}
+                className="mt-3 inline-flex h-[44px] w-full items-center justify-center rounded-[10px] border border-[#B8C0CC] bg-white px-4 text-sm font-medium text-[#4E4A86] transition hover:bg-[#F8FAFC]"
+              >
+                Edit Signup Details
+              </button>
+            </div>
+          </form>
+        </AuthCard>
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell>
       <AuthCard>
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#7D84A0]">Superadmin Auth</p>
         <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.04em] text-[#1F2340]">Signup</h2>
-        <p className="mt-2 text-sm text-[#6F768B]">Create the protected superadmin account for platform operations.</p>
+        <p className="mt-2 text-sm text-[#6F768B]">
+          Enter the new admin details. A verification code will be sent to {SUPERADMIN_APPROVAL_EMAIL}.
+        </p>
 
         <form onSubmit={handleSignup} className="mt-8 space-y-4">
           <Field label="Full Name" name="name" placeholder="Tuval Ramsey" required />
-          <Field label="Email Address" name="email" placeholder={SUPERADMIN_SIGNUP_EMAIL} required type="email" />
+          <Field label="Email Address" name="email" placeholder="admin@example.com" required type="email" />
           <PasswordField placeholder="••••••••" required />
           <div className="pt-2 space-y-3">
+            {successMessage ? <p className="mb-3 text-sm font-medium text-green-700">{successMessage}</p> : null}
             {errorMessage ? <p className="mb-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
-            <SubmitButton idleLabel="Signup" isPending={isSubmitting} pendingLabel="Creating..." />
+            <SubmitButton idleLabel="Send Verification Code" isPending={isSubmitting} pendingLabel="Sending..." />
             <Link
               href="/superadmin/auth/login"
               className="inline-flex h-[44px] w-full items-center justify-center rounded-[10px] border border-[#B8C0CC] bg-white px-4 text-sm font-medium text-[#4E4A86] transition hover:bg-[#F8FAFC]"

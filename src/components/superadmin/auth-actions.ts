@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { signupUser } from "@/lib/auth-api";
 import { clearAuthenticatedSession } from "@/lib/auth";
 import { setSuperadminSession } from "@/lib/superadmin-auth";
 
@@ -27,14 +26,8 @@ export async function setSuperadminLoginSession() {
 }
 
 export async function submitSuperadminSignup(formData: FormData) {
-  await signupUser({
-    email: getRequiredFormString(formData, "email"),
-    name: getRequiredFormString(formData, "name"),
-    password: getRequiredFormString(formData, "password"),
-    role: "superadmin",
-  });
-
-  await clearAuthenticatedSession();
-  await setSuperadminSession();
-  redirect("/superadmin/dashboard/user-management");
+  getRequiredFormString(formData, "email");
+  getRequiredFormString(formData, "name");
+  getRequiredFormString(formData, "password");
+  throw new Error("Superadmin signup requires verification through the signup page.");
 }

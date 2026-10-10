@@ -23,6 +23,7 @@ function isAuthEndpoint(url?: string) {
   return Boolean(
     url?.includes("auth/signin") ||
       url?.includes("auth/signup") ||
+      url?.includes("auth/superadmin/signup") ||
       url?.includes("auth/refresh-token") ||
       url?.includes("auth/forgot-password") ||
       url?.includes("auth/resend-password-otp") ||

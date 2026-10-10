@@ -63,11 +63,36 @@ export type PasswordResetResponse = {
   success?: boolean;
 };
 
+export type SuperadminSignupRequestResponse = {
+  data?: {
+    email?: string;
+    message?: string;
+  };
+  message?: string;
+  success?: boolean;
+};
+
 export function signupUser(payload: SignupRequest) {
   return apiRequest<SignupResponse>({
     data: payload,
     method: "POST",
     url: "auth/signup",
+  });
+}
+
+export function requestSuperadminSignup(payload: Omit<SignupRequest, "role">) {
+  return apiRequest<SuperadminSignupRequestResponse>({
+    data: payload,
+    method: "POST",
+    url: "auth/superadmin/signup/request",
+  });
+}
+
+export function verifySuperadminSignup(payload: { email: string; otp: string }) {
+  return apiRequest<SignupResponse>({
+    data: payload,
+    method: "POST",
+    url: "auth/superadmin/signup/verify",
   });
 }
 
