@@ -22,6 +22,7 @@ import { useAuthStore } from "@/store";
 import { setSuperadminLoginSession } from "./auth-actions";
 
 const SUPERADMIN_PASSWORD_RESET_EMAIL_STORAGE_KEY = "earlyn_superadmin_password_reset_email";
+const SUPERADMIN_SIGNUP_EMAIL = "saifulislam3412883@gmail.com";
 
 function getStoredSuperadminPasswordResetEmail() {
   if (typeof window === "undefined") {
@@ -573,10 +574,14 @@ export function SuperadminSignupPage() {
     setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") ?? "");
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const password = String(formData.get("password") ?? "");
 
     try {
+      if (email !== SUPERADMIN_SIGNUP_EMAIL) {
+        throw new Error("Superadmin signup is restricted to the authorized admin email.");
+      }
+
       const response = await signupUser({
         email,
         name: String(formData.get("name") ?? ""),
@@ -619,11 +624,11 @@ export function SuperadminSignupPage() {
       <AuthCard>
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-[#7D84A0]">Superadmin Auth</p>
         <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.04em] text-[#1F2340]">Signup</h2>
-        <p className="mt-2 text-sm text-[#6F768B]">Create a separate superadmin account for platform operations.</p>
+        <p className="mt-2 text-sm text-[#6F768B]">Create the protected superadmin account for platform operations.</p>
 
         <form onSubmit={handleSignup} className="mt-8 space-y-4">
           <Field label="Full Name" name="name" placeholder="Tuval Ramsey" required />
-          <Field label="Email Address" name="email" placeholder="admin@mooment.com" required type="email" />
+          <Field label="Email Address" name="email" placeholder={SUPERADMIN_SIGNUP_EMAIL} required type="email" />
           <PasswordField placeholder="••••••••" required />
           <div className="pt-2 space-y-3">
             {errorMessage ? <p className="mb-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
