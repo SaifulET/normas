@@ -22,15 +22,17 @@ export type SigninResponse = {
   user?: AuthUserResponse;
 };
 
-export type SignupResponse = {
-  data?: AuthSessionResponseData;
-  accessToken?: string;
+export type SignupRequestResponse = {
+  data?: {
+    email?: string;
+    message?: string;
+    role?: SignupRole;
+  };
   message?: string;
-  refreshToken?: string;
   success?: boolean;
-  token?: string;
-  user?: AuthUserResponse;
 };
+
+export type SignupResponse = SigninResponse;
 
 export type AuthSessionResponseData = {
   accessToken?: string;
@@ -73,10 +75,26 @@ export type SuperadminSignupRequestResponse = {
 };
 
 export function signupUser(payload: SignupRequest) {
-  return apiRequest<SignupResponse>({
+  return apiRequest<SignupRequestResponse>({
     data: payload,
     method: "POST",
     url: "auth/signup",
+  });
+}
+
+export function resendSignupOtp(payload: { email: string }) {
+  return apiRequest<SignupRequestResponse>({
+    data: payload,
+    method: "POST",
+    url: "auth/signup/resend-otp",
+  });
+}
+
+export function verifySignupOtp(payload: { email: string; otp: string }) {
+  return apiRequest<SignupResponse>({
+    data: payload,
+    method: "POST",
+    url: "auth/signup/verify",
   });
 }
 

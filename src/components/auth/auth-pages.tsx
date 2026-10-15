@@ -11,11 +11,12 @@ import { clearStoredUserSession } from "@/lib/auth-storage";
 import {
   forgotPassword,
   getAuthSessionFromResponse,
-  getAuthUserFromResponse,
+  resendSignupOtp,
   resendPasswordOtp,
   setNewPassword,
   signinUser,
   signupUser,
+  verifySignupOtp,
   verifyPasswordOtp,
 } from "@/lib/auth-api";
 import { useAuthStore } from "@/store";
@@ -366,71 +367,196 @@ export function LoginPageView({ redirectPath = null }: { redirectPath?: string |
 
 export function SignupPageView() {
   const router = useRouter();
-  const clearAuth = useAuthStore((state) => state.clearAuth);
   const setAuth = useAuthStore((state) => state.setAuth);
   const [role, setRole] = useState<"investor" | "investee">("investee");
+  const [pendingSignup, setPendingSignup] = useState<{ email: string; role: "investor" | "investee" } | null>(null);
+  const [otp, setOtp] = useState(["", "", "", ""]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isResending, setIsResending] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const inputRefs = [
+    useRef<HTMLInputElement | null>(null),
+    useRef<HTMLInputElement | null>(null),
+    useRef<HTMLInputElement | null>(null),
+    useRef<HTMLInputElement | null>(null),
+  ];
 
   const handleSignup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage("");
+    setSuccessMessage("");
     setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
     const nextRole = formData.get("role") === "investor" ? "investor" : "investee";
-    const email = String(formData.get("email") ?? "");
-    const password = String(formData.get("password") ?? "");
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
 
     try {
-      const response = await signupUser({
+      await signupUser({
         email,
         name: String(formData.get("name") ?? ""),
-        password,
+        password: String(formData.get("password") ?? ""),
         role: nextRole,
       });
-      let authSession = getAuthSessionFromResponse(response);
-      const signupAuthUser = getAuthUserFromResponse(response);
+      setPendingSignup({ email, role: nextRole });
+      setSuccessMessage(`We sent a 4 digit verification code to ${email}.`);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to send the verification code. Please try again."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const updateOtpValue = (index: number, rawValue: string) => {
+    const nextCharacter = rawValue.slice(-1);
+    const nextValue = /^[0-9]$/.test(nextCharacter) ? nextCharacter : "";
+
+    setOtp((current) => current.map((item, currentIndex) => (currentIndex === index ? nextValue : item)));
+
+    if (nextValue && index < inputRefs.length - 1) {
+      inputRefs[index + 1].current?.focus();
+    }
+  };
+
+  const pasteOtpValue = (rawValue: string) => {
+    const nextOtp = rawValue.replace(/\D/g, "").slice(0, 4).split("");
+
+    if (!nextOtp.length) {
+      return;
+    }
+
+    setOtp((current) => current.map((item, index) => nextOtp[index] ?? item));
+    inputRefs[Math.min(nextOtp.length, inputRefs.length) - 1]?.current?.focus();
+  };
+
+  const handleVerifySignup = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (!pendingSignup) {
+      setErrorMessage("Please submit the signup form first.");
+      return;
+    }
+
+    const code = otp.join("");
+
+    if (!/^\d{4}$/.test(code)) {
+      setErrorMessage("Enter the 4 digit OTP from your email.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await verifySignupOtp({ email: pendingSignup.email, otp: code });
+      const authSession = getAuthSessionFromResponse(response);
+
+      if (!authSession) {
+        throw new Error("Account created, but the server did not return a session. Please sign in.");
+      }
 
       await clearStoredUserSession();
-
-      if (!authSession) {
-        const signinResponse = await signinUser({ email, password });
-        authSession = getAuthSessionFromResponse(signinResponse, signupAuthUser);
-      }
-
-      if (!authSession) {
-        clearAuth();
-        throw new Error("Account created, but we could not start your session. Please sign in to continue KYC.");
-      }
-
       setAuth({
         refreshToken: authSession.refreshToken,
         token: authSession.token,
         user: authSession.user,
       });
-
       await setLoginSession();
-      router.push(`/kyc-verification?role=${nextRole}`);
+      router.push(`/kyc-verification?role=${pendingSignup.role}`);
       router.refresh();
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, "Unable to create your account. Please try again."));
+      setErrorMessage(getApiErrorMessage(error, "Unable to verify the code. Please try again."));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResendSignupOtp = async () => {
+    if (!pendingSignup) {
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsResending(true);
+
+    try {
+      await resendSignupOtp({ email: pendingSignup.email });
+      setOtp(["", "", "", ""]);
+      setSuccessMessage("A new verification code has been sent to your email.");
+      inputRefs[0].current?.focus();
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to resend the code. Please try again."));
+    } finally {
+      setIsResending(false);
     }
   };
 
   return (
     <AuthShell>
       <AuthCard className="mx-auto">
-        <h2 className="text-[24px] font-semibold tracking-[-0.03em] text-[#20232D]">Signup</h2>
+        <h2 className="text-[24px] font-semibold tracking-[-0.03em] text-[#20232D]">
+          {pendingSignup ? "Verify Email" : "Signup"}
+        </h2>
 
-        <div className="mt-4">
-          <p className="text-[15px] font-medium text-[#1F2937]">Choose Role</p>
-          <p className="mt-1 text-[13px] text-[#707A88]">Once you choose your role, you cannot change it.</p>
-        </div>
+        {pendingSignup ? (
+          <div className="mt-4 text-center">
+            <p className="text-[13px] leading-5 text-[#707A88]">
+              Enter the code sent to <span className="font-semibold text-[#344054]">{pendingSignup.email}</span>. Your account
+              will be created only after verification.
+            </p>
 
-        <form onSubmit={handleSignup} className="mt-4 space-y-4">
+            <form onSubmit={handleVerifySignup} className="mt-6">
+              <div className="flex items-center justify-center gap-3">
+                {otp.map((value, index) => (
+                  <OtpBox
+                    key={index}
+                    inputRef={inputRefs[index]}
+                    value={value}
+                    onChange={(nextValue) => updateOtpValue(index, nextValue)}
+                    onPaste={pasteOtpValue}
+                  />
+                ))}
+              </div>
+
+              <div className="mt-4 flex items-center justify-between text-[13px] text-[#4B5563]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingSignup(null);
+                    setOtp(["", "", "", ""]);
+                    setErrorMessage("");
+                    setSuccessMessage("");
+                  }}
+                  className="font-medium text-[#314864] hover:text-[#253850]"
+                >
+                  Change details
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResendSignupOtp}
+                  disabled={isResending}
+                  className="font-medium text-[#2563EB] hover:text-[#1D4ED8] disabled:cursor-wait disabled:opacity-70"
+                >
+                  {isResending ? "Sending..." : "Resend code"}
+                </button>
+              </div>
+
+              {successMessage ? <p className="mt-3 text-sm font-medium text-green-700">{successMessage}</p> : null}
+              {errorMessage ? <p className="mt-3 text-sm font-medium text-red-600">{errorMessage}</p> : null}
+              <SubmitButton idleLabel="Verify & Create Account" isPending={isSubmitting} pendingLabel="Verifying..." className="mt-4" />
+            </form>
+          </div>
+        ) : (
+          <>
+            <div className="mt-4">
+              <p className="text-[15px] font-medium text-[#1F2937]">Choose Role</p>
+              <p className="mt-1 text-[13px] text-[#707A88]">Once you choose your role, you cannot change it.</p>
+            </div>
+
+            <form onSubmit={handleSignup} className="mt-4 space-y-4">
           <fieldset>
             <legend className="sr-only">Choose role</legend>
             <div className="grid grid-cols-2 gap-3">
@@ -536,7 +662,9 @@ export function SignupPageView() {
               Sign In
             </Link>
           </div>
-        </form>
+            </form>
+          </>
+        )}
 
         <SecurityBadge />
       </AuthCard>

@@ -3,17 +3,6 @@
 import { redirect } from "next/navigation";
 import { setAuthenticatedSession } from "@/lib/auth";
 import { clearSuperadminSession } from "@/lib/superadmin-auth";
-import { signupUser } from "@/lib/auth-api";
-
-function getRequiredFormString(formData: FormData, key: string) {
-  const value = formData.get(key);
-
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${key} is required`);
-  }
-
-  return value.trim();
-}
 
 export async function submitLogin() {
   await clearSuperadminSession();
@@ -24,21 +13,6 @@ export async function submitLogin() {
 export async function setLoginSession() {
   await clearSuperadminSession();
   await setAuthenticatedSession();
-}
-
-export async function submitSignup(formData: FormData) {
-  const role = formData.get("role") === "investor" ? "investor" : "investee";
-
-  await signupUser({
-    email: getRequiredFormString(formData, "email"),
-    name: getRequiredFormString(formData, "name"),
-    password: getRequiredFormString(formData, "password"),
-    role,
-  });
-
-  await clearSuperadminSession();
-  await setAuthenticatedSession();
-  redirect(`/kyc-verification?role=${role === "investee" ? "investee" : "investor"}`);
 }
 
 export async function submitForgotPassword() {
