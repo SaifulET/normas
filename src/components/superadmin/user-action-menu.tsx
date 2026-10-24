@@ -10,9 +10,11 @@ const MENU_OFFSET = 6;
 const MENU_WIDTH = 132;
 
 function SuperadminRowActionMenu({
+  onDelete,
   showSuspend = true,
   viewHref,
 }: {
+  onDelete?: () => void;
   showSuspend?: boolean;
   viewHref: string;
 }) {
@@ -20,6 +22,7 @@ function SuperadminRowActionMenu({
   const [menuPosition, setMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const itemCount = 1 + (showSuspend ? 1 : 0) + (onDelete ? 1 : 0);
 
   const updateMenuPosition = useCallback(() => {
     const container = containerRef.current;
@@ -29,7 +32,7 @@ function SuperadminRowActionMenu({
     }
 
     const rect = container.getBoundingClientRect();
-    const menuHeight = showSuspend ? 94 : 47;
+    const menuHeight = itemCount * 47;
     const left = Math.max(MENU_EDGE_GAP, Math.min(window.innerWidth - MENU_WIDTH - MENU_EDGE_GAP, rect.right - MENU_WIDTH));
     const preferredTop = rect.bottom + MENU_OFFSET;
     const top =
@@ -38,7 +41,7 @@ function SuperadminRowActionMenu({
         : preferredTop;
 
     setMenuPosition({ left, top });
-  }, [showSuspend]);
+  }, [itemCount]);
 
   useEffect(() => {
     if (!open) {
@@ -77,7 +80,7 @@ function SuperadminRowActionMenu({
   const menu = open && menuPosition && typeof document !== "undefined" ? createPortal(
     <div
       ref={menuRef}
-      className="fixed z-[100] min-w-[132px] overflow-hidden rounded-[2px] border border-[#E7EAF1] bg-white shadow-[0_16px_32px_-18px_rgba(15,23,42,0.35)]"
+      className="fixed z-[200] min-w-[132px] overflow-hidden rounded-[2px] border border-[#E7EAF1] bg-white shadow-[0_16px_32px_-18px_rgba(15,23,42,0.35)]"
       style={{ left: menuPosition.left, top: menuPosition.top }}
       role="menu"
     >
@@ -95,6 +98,18 @@ function SuperadminRowActionMenu({
           className="block w-full border-t border-[#EEF1F6] px-4 py-3 text-left text-[14px] text-[#202350] transition hover:bg-[#F7F8FC]"
         >
           Suspend
+        </button>
+      ) : null}
+      {onDelete ? (
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            onDelete();
+          }}
+          className="block w-full border-t border-[#EEF1F6] px-4 py-3 text-left text-[14px] text-[#EF4444] transition hover:bg-[#F7F8FC]"
+        >
+          Delete
         </button>
       ) : null}
     </div>,
@@ -127,9 +142,21 @@ export function SuperadminUserActionMenu({
 }
 
 export function SuperadminPaymentActionMenu({
+  onDelete,
   slug,
 }: {
+  onDelete?: () => void;
   slug: string;
 }) {
-  return <SuperadminRowActionMenu viewHref={`/superadmin/dashboard/payment-management/${slug}`} />;
+  return <SuperadminRowActionMenu onDelete={onDelete} showSuspend={false} viewHref={`/superadmin/dashboard/payment-management/${slug}`} />;
+}
+
+export function SuperadminReportActionMenu({
+  onDelete,
+  slug,
+}: {
+  onDelete?: () => void;
+  slug: string;
+}) {
+  return <SuperadminRowActionMenu onDelete={onDelete} showSuspend={false} viewHref={`/superadmin/dashboard/reports/${slug}`} />;
 }

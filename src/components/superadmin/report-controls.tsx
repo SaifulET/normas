@@ -5,8 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SuperadminReportRecord, SuperadminSupportRecord } from "./data";
 import { getSuperadminUser } from "./data";
 import { SuperadminAvatar, SuperadminDotsButton, SuperadminStatusBadge } from "./shell";
+import { SuperadminReportActionMenu } from "./user-action-menu";
 import { getApiErrorMessage } from "@/lib/api";
-import { getReports, type Report } from "@/lib/report-api";
+import { deleteReport, getReports, type Report } from "@/lib/report-api";
+import { Delete02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 
 const PAGE_LIMIT = 8;
 
@@ -155,36 +158,61 @@ export function SuperadminSupportDetailStatusDropdown({
   return <SuperadminSupportStatusDropdown value={value} onChange={(next) => next !== "All" && setValue(next)} />;
 }
 
-function ReportActionMenu({
-  slug,
+function ConfirmDeleteDialog({
+  busy,
+  description,
+  onCancel,
+  onConfirm,
+  title,
 }: {
-  slug: string;
+  busy?: boolean;
+  description: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  title: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useCloseOnOutsideClick(open, () => setOpen(false));
-
   return (
-    <div ref={containerRef} className="relative">
-      <SuperadminDotsButton onClick={() => setOpen((current) => !current)} />
+    <div
+      className="fixed inset-0 z-[220] flex items-center justify-center bg-[#0F172A]/35 p-4"
+      onClick={() => {
+        if (!busy) {
+          onCancel();
+        }
+      }}
+    >
+      <div
+        className="w-full max-w-[360px] rounded-[14px] border border-[#E6E9F0] bg-white p-5 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start gap-3">
+          <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#FFF5F5] text-[#B42318]">
+            <HugeiconsIcon icon={Delete02Icon} className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-[15px] font-semibold text-[#202350]">{title}</h2>
+            <p className="mt-1 text-[12px] leading-5 text-[#69729A]">{description}</p>
+          </div>
+        </div>
 
-      {open ? (
-        <div className="absolute right-0 top-9 z-20 min-w-[170px] overflow-hidden rounded-[6px] border border-[#E7EAF1] bg-white shadow-[0_16px_32px_-18px_rgba(15,23,42,0.35)]">
-          <Link
-            href={`/superadmin/dashboard/reports/${slug}`}
-            onClick={() => setOpen(false)}
-            className="block px-4 py-3 text-[14px] text-[#202350] transition hover:bg-[#F7F8FC]"
-          >
-            View
-          </Link>
+        <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
-            onClick={() => setOpen(false)}
-            className="block w-full px-4 py-3 text-left text-[14px] text-[#EF4444] transition hover:bg-[#F7F8FC]"
+            onClick={onCancel}
+            disabled={busy}
+            className="inline-flex h-9 items-center justify-center rounded-[8px] border border-[#DDE2EC] bg-white px-4 text-[12px] font-semibold text-[#4A5271] transition hover:bg-[#F7F8FC] disabled:cursor-wait disabled:opacity-60"
           >
-            Delete
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="inline-flex h-9 items-center justify-center rounded-[8px] bg-[#B42318] px-4 text-[12px] font-semibold text-white transition hover:bg-[#991B1B] disabled:cursor-wait disabled:opacity-60"
+          >
+            {busy ? "Deleting..." : "Delete"}
           </button>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
@@ -239,7 +267,7 @@ export function SuperadminReportDetailActionMenu() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-10 z-20 min-w-[170px] overflow-hidden rounded-[6px] border border-[#E7EAF1] bg-white shadow-[0_16px_32px_-18px_rgba(15,23,42,0.35)]">
+        <div className="absolute right-0 top-10 z-[200] min-w-[170px] overflow-hidden rounded-[6px] border border-[#E7EAF1] bg-white shadow-[0_16px_32px_-18px_rgba(15,23,42,0.35)]">
           <button
             type="button"
             onClick={() => setOpen(false)}
@@ -424,6 +452,8 @@ export function SuperadminReportsPanel({
   const [reportsError, setReportsError] = useState("");
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<"All" | "Dismissed" | "Pending" | "Resolved">("All");
+  const [deleteTarget, setDeleteTarget] = useState<ReportTableRecord | null>(null);
+  const [deletingSlug, setDeletingSlug] = useState("");
   const fallbackRecords = useMemo(
     () => records.map(mapStaticReportToTableRecord).filter((record): record is ReportTableRecord => Boolean(record)),
     [records],
@@ -504,6 +534,25 @@ export function SuperadminReportsPanel({
     }
   }, [page, totalPages]);
 
+  const handleDeleteReport = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setDeletingSlug(deleteTarget.slug);
+    setReportsError("");
+
+    try {
+      await deleteReport(deleteTarget.slug);
+      setApiReports((current) => current.filter((record) => record.slug !== deleteTarget.slug));
+      setDeleteTarget(null);
+    } catch (error) {
+      setReportsError(getApiErrorMessage(error, "Unable to delete this report."));
+    } finally {
+      setDeletingSlug("");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end gap-2">
@@ -526,8 +575,8 @@ export function SuperadminReportsPanel({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-[14px] border border-[#E6E9F0] bg-white">
-        <div className="overflow-x-auto">
+      <div className="overflow-visible rounded-[14px] border border-[#E6E9F0] bg-white">
+        <div className="overflow-x-auto overflow-y-visible">
           <div className="grid min-w-[800px] grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
             <p>Report by</p>
             <p>Reported user</p>
@@ -564,8 +613,11 @@ export function SuperadminReportsPanel({
                 <div>
                   <SuperadminStatusBadge status={record.status} />
                 </div>
-                <div className="flex justify-end">
-                  <ReportActionMenu slug={record.slug} />
+                <div className="relative z-[30] flex justify-end">
+                  <SuperadminReportActionMenu
+                    slug={record.slug}
+                    onDelete={() => setDeleteTarget(record)}
+                  />
                 </div>
               </div>
             ))
@@ -583,6 +635,18 @@ export function SuperadminReportsPanel({
           totalPages={totalPages}
         />
       </div>
+
+      {deleteTarget ? (
+        <ConfirmDeleteDialog
+          busy={Boolean(deletingSlug)}
+          title="Delete report?"
+          description={`${deleteTarget.reportedName} report will be removed from this list.`}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            void handleDeleteReport();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -2,28 +2,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  getSuperadminPayment,
   getSuperadminReport,
   getSuperadminUser,
-  superadminPayments,
   superadminReports,
   superadminSettingsTabs,
 } from "./data";
 import {
   SuperadminAvatar,
   SuperadminBackLink,
-  SuperadminDocumentCard,
   SuperadminNotificationButton,
   SuperadminPageHeader,
-  SuperadminSearch,
   SuperadminStatusBadge,
 } from "./shell";
 import {
   SuperadminReportDetailActionMenu,
   SuperadminReportsPanel,
 } from "./report-controls";
-import { PaymentDetailClient } from "./detail-interactions";
-import { SuperadminPaymentActionMenu } from "./user-action-menu";
+import { SuperadminPaymentDetailClient, SuperadminPaymentManagementClient } from "./payment-management-client";
 import { SuperadminSettingsGeneralClient, SuperadminSettingsPricingClient, SuperadminSettingsShell } from "./settings-general-client";
 import { LegalSettingsClient } from "./legal-settings-client";
 import { FaqSettingsClient } from "./faq-settings-client";
@@ -32,6 +27,7 @@ import { SuperadminUserDetailClient } from "./admin-user-detail-client";
 import { SuperadminUserManagementClient } from "./admin-users-client";
 import { SuperadminReportDetailClient } from "./report-detail-client";
 import { SuperadminSupportCenterClient, SuperadminSupportDetailClient } from "./support-center-client";
+import { SuperadminIpBlockClient } from "./ip-block-client";
 
 function SectionCard({
   children,
@@ -41,36 +37,6 @@ function SectionCard({
   className?: string;
 }) {
   return <section className={`rounded-[14px] border border-[#E6E9F0] bg-white ${className ?? ""}`}>{children}</section>;
-}
-
-function TableCard({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <SectionCard className="overflow-hidden">{children}</SectionCard>;
-}
-
-function TableFooter() {
-  return (
-    <div className="flex items-center justify-between border-t border-[#EEF1F6] px-4 py-3 text-[10px] text-[#727A96]">
-      <p>Showing 1-4 of 24 members</p>
-      <div className="flex items-center gap-2">
-        <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#E4E8F0] text-[#C2C8D6]">
-          {"<"}
-        </button>
-        <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#CFD5E3] bg-white text-[#4A5271]">
-          1
-        </button>
-        <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#E4E8F0] text-[#9AA1B6]">
-          2
-        </button>
-        <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded-[8px] border border-[#E4E8F0] text-[#C2C8D6]">
-          {">"}
-        </button>
-      </div>
-    </div>
-  );
 }
 
 export function SettingsTabNav({
@@ -261,60 +227,7 @@ export function SuperadminUserDetailPage({
 }
 
 export function SuperadminPaymentManagementPage() {
-  return (
-    <div className="space-y-6">
-      <SuperadminPageHeader title="Payment Management" subtitle="Manage payment information" />
-
-      <div className="flex justify-end">
-        <SuperadminSearch />
-      </div>
-
-      <TableCard>
-        <div className="overflow-x-auto">
-          <div className="grid min-w-[800px] grid-cols-[1.6fr_1fr_1fr_1fr_0.8fr_48px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
-            <p>Name</p>
-            <p>Account Type</p>
-            <p>Type of Product</p>
-            <p>Payment Date</p>
-            <p>Amount</p>
-            <p className="text-right">Actions</p>
-          </div>
-
-          {superadminPayments.map((payment) => {
-            const user = getSuperadminUser(payment.userSlug);
-
-            if (!user) {
-              return null;
-            }
-
-            return (
-              <div
-                key={payment.slug}
-                className="grid min-w-[800px] grid-cols-[1.6fr_1fr_1fr_1fr_0.8fr_48px] gap-4 border-b border-[#F3F5F9] px-6 py-3 last:border-b-0"
-              >
-                <Link href={`/superadmin/dashboard/payment-management/${payment.slug}`} className="flex items-center gap-3">
-                  <SuperadminAvatar from={user.avatarFrom} to={user.avatarTo} initials={user.initials} size={28} />
-                  <div>
-                    <p className="text-[13px] font-medium text-[#202350]">{user.name}</p>
-                    <p className="text-[11px] text-[#8A91AB]">{user.email}</p>
-                  </div>
-                </Link>
-                <p className="text-[13px] text-[#34395B]">{user.accountType}</p>
-                <p className="text-[13px] text-[#34395B]">{payment.productType}</p>
-                <p className="text-[13px] text-[#34395B]">{payment.paymentDate}</p>
-                <p className="text-[13px] text-[#34395B]">{payment.amount}</p>
-                <div className="flex justify-end">
-                  <SuperadminPaymentActionMenu slug={payment.slug} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <TableFooter />
-      </TableCard>
-    </div>
-  );
+  return <SuperadminPaymentManagementClient />;
 }
 
 export function SuperadminPaymentDetailPage({
@@ -322,61 +235,7 @@ export function SuperadminPaymentDetailPage({
 }: {
   slug: string;
 }) {
-  const payment = getSuperadminPayment(slug);
-
-  if (!payment) {
-    notFound();
-  }
-
-  const user = getSuperadminUser(payment.userSlug);
-
-  if (!user) {
-    notFound();
-  }
-
-  return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <SuperadminBackLink href="/superadmin/dashboard/payment-management" />
-          <div>
-            <h1 className="text-[20px] font-semibold tracking-[-0.04em] text-[#202350]">View Payment information</h1>
-            <p className="mt-1 text-[13px] text-[#69729A]">This section will help you to view plan of the user</p>
-          </div>
-        </div>
-        <SuperadminNotificationButton />
-      </div>
-
-      <section className="space-y-8 rounded-[26px]  px-6 py-6  sm:px-8 lg:px-10">
-        <div className="grid gap-5 md:grid-cols-[52px_repeat(2,minmax(0,180px))_minmax(0,1fr)] md:items-start">
-          <div className="md:row-span-2">
-            <SuperadminAvatar from={user.avatarFrom} to={user.avatarTo} initials={user.initials} size={52} />
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Billing Date</p>
-            <p className="mt-1 text-[14px] font-medium text-[#202350]">October 12, 2026</p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Status</p>
-            <div className="mt-2">
-              <span className="rounded-full bg-[#FFF2E5] px-2 py-1 text-[10px] font-medium text-[#F08A32]">Pending</span>
-            </div>
-          </div>
-          <div />
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Name</p>
-            <p className="mt-1 text-[14px] font-medium text-[#202350]">{user.name}</p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Email</p>
-            <p className="mt-1 text-[14px] font-medium text-[#202350]">{user.email}</p>
-          </div>
-        </div>
-
-        <PaymentDetailClient payment={payment} user={user} />
-      </section>
-    </div>
-  );
+  return <SuperadminPaymentDetailClient paymentId={slug} />;
 }
 
 export function SuperadminReportsPage() {
@@ -579,6 +438,10 @@ export function SuperadminReportDetailPage({
 
 export function SuperadminSupportCenterPage() {
   return <SuperadminSupportCenterClient />;
+}
+
+export function SuperadminIpBlockPage() {
+  return <SuperadminIpBlockClient />;
 }
 
 export function SuperadminSupportDetailPage({

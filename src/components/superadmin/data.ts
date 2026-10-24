@@ -11,6 +11,7 @@ export type SuperadminNavIcon =
   | "schedule"
   | "settings"
   | "support"
+  | "ipBlock"
   | "users";
 
 export type SuperadminStatusTone = "active" | "offline" | "pending" | "resolved" | "dismissed" | "solved";
@@ -89,6 +90,7 @@ export const superadminNavItems: SuperadminNavItem[] = [
   { label: "Payment Management", href: "/superadmin/dashboard/payment-management", icon: "payment", section: "core" },
   { label: "Reports", href: "/superadmin/dashboard/reports", icon: "reports", section: "core" },
   { label: "Support Center", href: "/superadmin/dashboard/support-center", icon: "support", section: "core" },
+  { label: "IP Block", href: "/superadmin/dashboard/ip-block", icon: "ipBlock", section: "core" },
   { label: "Settings", href: "/superadmin/dashboard/settings", icon: "settings", section: "core" },
 ];
 

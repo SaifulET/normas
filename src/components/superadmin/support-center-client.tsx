@@ -1,9 +1,10 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getApiErrorMessage } from "@/lib/api";
 import {
   deleteSupportAttachment,
+  deleteSupportConversation,
   getSupportConversation,
   getSupportConversations,
   sendSupportMessage,
@@ -14,6 +15,8 @@ import {
   type SupportConversationListItem,
   type SupportMessage,
 } from "@/lib/support-api";
+import { Delete02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
   SuperadminAvatar,
   SuperadminBackLink,
@@ -81,6 +84,11 @@ function statusForApi(status: "All" | "Dismissed" | "Pending" | "Solved") {
     default:
       return "";
   }
+}
+
+function formatClientIp(value?: string) {
+  const ip = value?.trim();
+  return ip || "Not available";
 }
 
 function getInitials(name?: string, email?: string) {
@@ -217,50 +225,81 @@ export function SuperadminSupportCenterClient() {
     totalPages: 1,
   });
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [status, setStatus] = useState<"All" | "Dismissed" | "Pending" | "Solved">("All");
+  const [deleteTarget, setDeleteTarget] = useState<SupportConversationListItem | null>(null);
+  const [deletingId, setDeletingId] = useState("");
+
+  const loadConversations = useCallback(async (targetPage: number) => {
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      const response = await getSupportConversations({
+        limit: PAGE_LIMIT,
+        page: targetPage,
+        search: debouncedQuery || undefined,
+        status: statusForApi(status) || undefined,
+      });
+
+      const nextConversations = response.data?.conversations ?? [];
+      const nextPagination = {
+        limit: response.data?.pagination?.limit ?? PAGE_LIMIT,
+        page: response.data?.pagination?.page ?? targetPage,
+        total: response.data?.pagination?.total ?? nextConversations.length,
+        totalPages: response.data?.pagination?.totalPages ?? 1,
+      };
+
+      if (nextConversations.length === 0 && nextPagination.page > 1) {
+        setPage(nextPagination.page - 1);
+        return;
+      }
+
+      setConversations(nextConversations);
+      setPagination(nextPagination);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to load support conversations."));
+      setConversations([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedQuery, status]);
 
   useEffect(() => {
-    let active = true;
+    const timeoutId = window.setTimeout(() => {
+      const nextQuery = query.trim();
 
-    const loadConversations = async () => {
-      setLoading(true);
-      setErrorMessage("");
-
-      try {
-        const response = await getSupportConversations({
-          limit: PAGE_LIMIT,
-          page,
-          search: query.trim() || undefined,
-          status: statusForApi(status) || undefined,
-        });
-
-        if (active) {
-          setConversations(response.data?.conversations ?? []);
-          setPagination({
-            limit: response.data?.pagination?.limit ?? PAGE_LIMIT,
-            page: response.data?.pagination?.page ?? page,
-            total: response.data?.pagination?.total ?? response.data?.conversations?.length ?? 0,
-            totalPages: response.data?.pagination?.totalPages ?? 1,
-          });
-        }
-      } catch (error) {
-        if (active) {
-          setErrorMessage(getApiErrorMessage(error, "Unable to load support conversations."));
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
+      if (nextQuery !== debouncedQuery) {
+        setDebouncedQuery(nextQuery);
+        setPage(1);
       }
-    };
+    }, 250);
 
-    const timeoutId = window.setTimeout(loadConversations, 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [debouncedQuery, query]);
 
-    return () => {
-      active = false;
-      window.clearTimeout(timeoutId);
-    };
-  }, [page, query, status]);
+  useEffect(() => {
+    void loadConversations(page);
+  }, [loadConversations, page]);
+
+  const handleDeleteConversation = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setDeletingId(deleteTarget._id);
+    setErrorMessage("");
+
+    try {
+      await deleteSupportConversation(deleteTarget._id);
+      setDeleteTarget(null);
+      await loadConversations(page);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Unable to delete this support conversation."));
+    } finally {
+      setDeletingId("");
+    }
+  };
 
   const openConversationDetails = (conversationId: string) => {
     router.push(`/superadmin/dashboard/support-center/${conversationId}`);
@@ -281,7 +320,6 @@ export function SuperadminSupportCenterClient() {
               type="text"
               value={query}
               onChange={(event) => {
-                setPage(1);
                 setQuery(event.target.value);
               }}
               placeholder="Search user by name or company name"
@@ -305,11 +343,13 @@ export function SuperadminSupportCenterClient() {
 
         <div className="overflow-hidden rounded-[14px] border border-[#E6E9F0] bg-white">
           <div className="overflow-x-auto">
-            <div className="grid min-w-[760px] grid-cols-[1.2fr_1.4fr_0.7fr_0.7fr] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
+            <div className="grid min-w-[980px] grid-cols-[1.2fr_1.3fr_0.6fr_0.7fr_0.9fr_72px] gap-4 border-b border-[#EEF1F6] px-6 py-4 text-[11px] text-[#8A91AB]">
               <p>Buyer & Email</p>
               <p>Topic</p>
               <p>Status</p>
               <p>Date</p>
+              <p>IP Address</p>
+              <p className="text-right">Actions</p>
             </div>
 
             {loading ? (
@@ -333,7 +373,7 @@ export function SuperadminSupportCenterClient() {
                         openConversationDetails(conversation._id);
                       }
                     }}
-                    className="grid cursor-pointer grid-cols-[1.2fr_1.4fr_0.7fr_0.7fr] gap-4 border-b border-[#F3F5F9] px-6 py-3 transition hover:bg-[#F8FAFC] focus:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#314B6B]/20 last:border-b-0 min-w-[760px]"
+                    className="grid min-w-[980px] cursor-pointer grid-cols-[1.2fr_1.3fr_0.6fr_0.7fr_0.9fr_72px] gap-4 border-b border-[#F3F5F9] px-6 py-3 transition hover:bg-[#F8FAFC] focus:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#314B6B]/20 last:border-b-0"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={initials} size={28} />
@@ -349,46 +389,111 @@ export function SuperadminSupportCenterClient() {
                       <SuperadminStatusBadge status={normalizeSupportStatus(conversation.status)} />
                     </div>
                     <p className="text-[13px] text-[#34395B]">{formatDate(conversation.lastMessageAt || conversation.createdAt)}</p>
+                    <p className="text-[13px] text-[#34395B]">{formatClientIp(conversation.clientIp)}</p>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setDeleteTarget(conversation);
+                        }}
+                        onKeyDown={(event) => event.stopPropagation()}
+                        disabled={deletingId === conversation._id}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#F4C7C7] bg-white text-[#B42318] transition hover:bg-[#FFF5F5] disabled:cursor-wait disabled:opacity-60"
+                        aria-label={`Delete support conversation from ${participant.name || participant.email || "user"}`}
+                        title="Delete conversation"
+                      >
+                        <HugeiconsIcon icon={Delete02Icon} className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 );
               })
             )}
           </div>
 
-          {!loading && conversations.length > 0 ? (
-            <div className="flex items-center justify-between border-t border-[#EEF1F6] px-4 py-3 text-[10px] text-[#727A96]">
-              <p>
-                Showing {pageStart}-{pageEnd} of {pagination.total} support requests
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={pagination.page <= 1 || loading}
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  className={`inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#E4E8F0] px-2 ${
-                    pagination.page <= 1 || loading ? "text-[#C2C8D6]" : "text-[#4A5271] hover:bg-[#F7F8FC]"
-                  }`}
-                >
-                  Prev
-                </button>
-                <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#CFD5E3] bg-white px-2 text-[#4A5271]">
-                  {pagination.page} / {pagination.totalPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={pagination.page >= pagination.totalPages || loading}
-                  onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
-                  className={`inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#E4E8F0] px-2 ${
-                    pagination.page >= pagination.totalPages || loading ? "text-[#C2C8D6]" : "text-[#4A5271] hover:bg-[#F7F8FC]"
-                  }`}
-                >
-                  Next
-                </button>
-              </div>
+          <div className="flex items-center justify-between border-t border-[#EEF1F6] px-4 py-3 text-[10px] text-[#727A96]">
+            <p>
+              Showing {pageStart}-{pageEnd} of {pagination.total} support requests
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={pagination.page <= 1 || loading}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                className={`inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#E4E8F0] px-2 ${
+                  pagination.page <= 1 || loading ? "text-[#C2C8D6]" : "text-[#4A5271] hover:bg-[#F7F8FC]"
+                }`}
+              >
+                Prev
+              </button>
+              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#CFD5E3] bg-white px-2 text-[#4A5271]">
+                {pagination.page} / {pagination.totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={pagination.page >= pagination.totalPages || loading}
+                onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
+                className={`inline-flex h-7 min-w-7 items-center justify-center rounded-[8px] border border-[#E4E8F0] px-2 ${
+                  pagination.page >= pagination.totalPages || loading ? "text-[#C2C8D6]" : "text-[#4A5271] hover:bg-[#F7F8FC]"
+                }`}
+              >
+                Next
+              </button>
             </div>
-          ) : null}
+          </div>
         </div>
       </div>
+
+      {deleteTarget ? (
+        <div
+          className="fixed inset-0 z-[220] flex items-center justify-center bg-[#0F172A]/35 p-4"
+          onClick={() => {
+            if (!deletingId) {
+              setDeleteTarget(null);
+            }
+          }}
+        >
+          <div
+            className="w-full max-w-[360px] rounded-[14px] border border-[#E6E9F0] bg-white p-5 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#FFF5F5] text-[#B42318]">
+                <HugeiconsIcon icon={Delete02Icon} className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-[15px] font-semibold text-[#202350]">Delete support request?</h2>
+                <p className="mt-1 text-[12px] leading-5 text-[#69729A]">
+                  {deleteTarget.participant?.name || deleteTarget.subject || "This conversation"} will be removed from the support center.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={Boolean(deletingId)}
+                className="inline-flex h-9 items-center justify-center rounded-[8px] border border-[#DDE2EC] bg-white px-4 text-[12px] font-semibold text-[#4A5271] transition hover:bg-[#F7F8FC] disabled:cursor-wait disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleDeleteConversation();
+                }}
+                disabled={Boolean(deletingId)}
+                className="inline-flex h-9 items-center justify-center rounded-[8px] bg-[#B42318] px-4 text-[12px] font-semibold text-white transition hover:bg-[#991B1B] disabled:cursor-wait disabled:opacity-60"
+              >
+                {deletingId ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -550,7 +655,7 @@ export function SuperadminSupportDetailClient({
                 <div className="shrink-0">
                   <SuperadminAvatar from="#8E9BFF" to="#F59E0B" initials={getInitials(participant.name, participant.email)} size={40} />
                 </div>
-                <div className="min-w-0 flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+                <div className="min-w-0 flex-1 grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-1">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Client</p>
                     <h2 className="text-[15px] font-semibold text-[#202350] break-all">
@@ -560,6 +665,10 @@ export function SuperadminSupportDetailClient({
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">Topic</p>
                     <p className="text-[14px] font-medium text-[#202350] break-words">{conversation.subject || "Support request"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#8A91AB]">IP Address</p>
+                    <p className="text-[14px] font-medium text-[#202350] break-all">{formatClientIp(conversation.clientIp)}</p>
                   </div>
                 </div>
               </div>

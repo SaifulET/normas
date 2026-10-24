@@ -14,7 +14,7 @@ import {
 } from "@/lib/superadmin-profile-api";
 import { superadminNavItems, type SuperadminNavIcon } from "./data";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Logout03Icon, Note01Icon, Notification01Icon, Settings01Icon, SidebarRightIcon, User02Icon } from "@hugeicons/core-free-icons";
+import { Analytics01Icon, ArrowLeft02Icon, Calendar03Icon, ChatIcon, CreditCardPosIcon, DashboardSquare01Icon, Flag02Icon, HeadsetIcon, Logout03Icon, Note01Icon, Notification01Icon, Settings01Icon, SidebarRightIcon, UnavailableIcon, User02Icon } from "@hugeicons/core-free-icons";
 
 function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -82,6 +82,10 @@ function SuperadminIcon({
     case "support":
       return (
        <HugeiconsIcon icon={HeadsetIcon} className="w-[24px] h-[24px]" />
+      );
+    case "ipBlock":
+      return (
+       <HugeiconsIcon icon={UnavailableIcon} className="w-[24px] h-[24px]" />
       );
     case "users":
       return (

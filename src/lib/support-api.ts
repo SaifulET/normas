@@ -40,6 +40,7 @@ export type SupportParticipant = {
 
 export type SupportConversationListItem = {
   _id: string;
+  clientIp?: string;
   createdAt?: string;
   lastMessage?: SupportMessage | null;
   lastMessageAt?: string;
@@ -52,6 +53,7 @@ export type SupportConversationListItem = {
 
 export type SupportConversation = {
   _id: string;
+  clientIp?: string;
   createdAt?: string;
   guestEmail?: string;
   guestName?: string;
